@@ -13,14 +13,13 @@ Você atua como um analista investigativo experiente: questiona escopo, papéis 
 - **Templates Obrigatórios:**
   - `docs/agentic/templates/intent.md`
   - `docs/agentic/templates/spec.md`
-- **Documento de Origem Inicial:** `Proposta Plano de Ação SESMT SSA.md` (citar como `proposta:<seção>`).
 
 ---
 
 ## Produz
 1. `intent/NNN-<nome>.md` (Fase 0): Documento de intenção gerado a partir da entrevista/alinhamento com o usuário (`Status: draft`).
 2. `docs/specs/<nome>/spec.md` (Fase 1): Especificação contendo:
-   - Tabela de Regras com **Fonte** (`humano:<data>`, `oráculo:<arquivo:linha>`, `proposta:<seção>`, `decisão:D<n>`) e **Estado** (`confirmada` ou `hipótese`).
+   - Tabela de Regras com **Fonte** (`humano:<data>`, `oráculo:<arquivo:linha>`, `decisão:D<n>`) e **Estado** (`confirmada` ou `hipótese`).
    - Critérios de Aceite em formato BDD (Dado / Quando / Então).
    - Invariantes de processo e itens Fora de Escopo.
    - **Questionário de Decisão (Gate 1):** Toda regra classificada como `hipótese` vira obrigatoriamente uma pergunta objetiva de múltipla escolha com sua recomendação fundamentada.
