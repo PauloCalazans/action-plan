@@ -9,7 +9,6 @@ Plataforma corporativa de **tratativas e planos de ação** no SAP BTP. A entida
 - **Usuários:** SESMT, gestores, responsáveis por ações e aprovadores.
 - **Integrações:** SAP SuccessFactors (somente leitura: estrutura organizacional, colaboradores, gestores); notificações por e-mail e Microsoft Teams; consumo analítico por Power BI / SAC.
 - **Stack:** SAP CAP (Node.js + TypeScript), HANA Cloud, Fiori elements/UI5 em `app/`, SAP Build Work Zone como launchpad. SAP Build Apps fica fora deste repositório.
-- Proposta original: `Proposta Plano de Ação SESMT SSA.md`.
 
 ## Processo
 Todo trabalho segue `docs/agentic/ciclo.md`. Princípios em `docs/agentic/principios.md`. Papéis em `docs/agentic/papeis/`.
