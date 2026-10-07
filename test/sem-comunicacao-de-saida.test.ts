@@ -40,7 +40,10 @@ describe('CA3: nenhuma comunicação de saída ao aplicativo', () => {
         ),
       ).resolves.toBeUndefined();
 
-      expect(fetchSpy).not.toHaveBeenCalled();
+      // O cliente do cds.test também usa fetch para localhost; só conta o que sai para fora.
+      const destino = (arg: unknown) => String(arg instanceof Request ? arg.url : arg);
+      const externas = fetchSpy.mock.calls.filter(([alvo]) => !/^https?:\/\/(localhost|127\.0\.0\.1)[:/]/.test(destino(alvo)));
+      expect(externas).toHaveLength(0);
       expect(httpsSpy).not.toHaveBeenCalled();
     } finally {
       fetchSpy.mockRestore();
