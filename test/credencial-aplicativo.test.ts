@@ -54,7 +54,6 @@ beforeAll(async () => {
   existente = { codigo: r.data.codigo, origem: 'Advertência', idOrigem, gravada };
 });
 
-afterAll(registrarCredenciais);
 
 describe('credencial revogável de aplicativo (R18)', () => {
   it('CA19/CA20: sem autenticação, abertura e consultas respondem 401 Unauthorized sem dados', async () => {
@@ -102,7 +101,7 @@ describe('credencial revogável de aplicativo (R18)', () => {
     expect(await total()).toBe(antes);
   });
 
-  // Por último: apaga a linha de app-origem-b (o afterAll restaura).
+  // Por último: apaga a linha de app-origem-b (o banco em memória é por arquivo).
   it('aplicativo com o papel, mas sem registro em CredenciaisAplicativo, é recusado', async () => {
     await registrarCredenciais(); // app-origem-b ativa de novo
     expect((await abrir(`ADV-${sufixo()}`, comoAppB)).status).toBe(200);
