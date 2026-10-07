@@ -1,5 +1,6 @@
 import cds from '@sap/cds';
 import { agora, dataCivil } from '../lib/relogio';
+import { validarAbertura } from './validacao';
 import { diasDoPrazo, somarDiasCorridos } from './prazo';
 
 export type TipoAutor = 'Aplicativo' | 'Usuario' | 'Sistema';
@@ -13,6 +14,7 @@ const NS = 'br.com.calazanstec';
 
 /** Único ponto de entrada de abertura de Tratativa (design, decisão 6). */
 export async function abrirTratativa(dados: DadosAbertura, autor: Autor): Promise<{ codigo: string }> {
+  validarAbertura(dados, autor.tipo === 'Aplicativo');
   const codigo = cds.utils.uuid();
   const instante = agora();
   const dataCriacao = dataCivil(instante);
