@@ -3,9 +3,9 @@
 Guia para qualquer agente de IA trabalhando neste repositório. Mapa e regras — o estado do projeto é derivado (`sh scripts/agentic/status-projeto.sh`), nunca escrito aqui.
 
 ## Visão geral
-Plataforma corporativa de **tratativas e planos de ação** no SAP BTP. A entidade central é a **Origem da Tratativa** (o processo/evento que gerou a necessidade de ação), não o plano de ação: `Origem → Tipo → Tratativa → Ações (hierárquicas) + Evidências + Comentários + Histórico + Responsáveis`. Regras por origem (prazos por criticidade, templates de ações, alertas) vêm de parametrização.
+Plataforma corporativa de **tratativas e planos de ação** no SAP BTP. A **Origem** é o app externo cujo registro motivou a tratativa; o plano de ação não é a entidade principal: `[Origem + registro de origem] → Tratativa → Ações (hierárquicas) + Evidências + Comentários + Histórico + Responsáveis`. O app de origem abre a tratativa por API (um registro gera no máximo uma tratativa; repetir o pedido devolve a existente); também pode haver tratativa avulsa, sem origem. No MVP, a Origem é um campo texto (sem cadastro de origens) e não há Tipo.
 
-- **MVP:** origens do SESMT — Acidente, Quase Acidente, Condição Insegura, Ato Inseguro, Inspeção, Auditoria de Segurança. A modelagem é genérica para receber outras áreas (Qualidade, RH, Compliance, CSC, Sustentabilidade) sem mudança estrutural.
+- **MVP:** apps de origem do SESMT — Registro de Acidente + FIA, Notificação de Risco de Acidente, Advertência. A classificação da ocorrência (acidente, quase acidente etc.) fica nesses apps, fora deste repositório. A modelagem é genérica para receber apps de outras áreas (Qualidade, RH, Compliance, CSC, Sustentabilidade) sem mudança estrutural.
 - **Usuários:** SESMT, gestores, responsáveis por ações e aprovadores.
 - **Integrações:** SAP SuccessFactors (somente leitura: estrutura organizacional, colaboradores, gestores); notificações por e-mail e Microsoft Teams; consumo analítico por Power BI / SAC.
 - **Stack:** SAP CAP (Node.js + TypeScript), HANA Cloud, Fiori elements/UI5 em `app/`, SAP Build Work Zone como launchpad. SAP Build Apps fica fora deste repositório.
@@ -33,7 +33,7 @@ No Windows, rode os comandos `sh ...` no Git Bash (o PowerShell não tem `sh`); 
 - Nunca faça merge na branch principal nem altere permissões do agente.
 - Nunca afirme sucesso sem ter visto a saída do `verify.sh`.
 - Nunca desabilite ou altere testes de um commit `test(red):`.
-- Nada específico de uma área (ex.: SESMT) é codificado no modelo ou nos serviços: variação por origem vem de dados de parametrização (Origem, Tipo, prazos, templates, regras de alerta).
+- Nada específico de uma área (ex.: SESMT) é codificado no modelo ou nos serviços: variação vem de dados de parametrização (prazos, templates, regras de alerta), nunca de nomes de origem no código.
 - SuccessFactors é somente leitura: o sistema nunca escreve de volta no SF.
 - Testes nunca dependem de HANA Cloud, SuccessFactors, e-mail ou Teams reais: usam SQLite em memória (`cds.test`) e dublês.
 - Nunca commitar credenciais: service keys, `default-env.json`, `.cdsrc-private.json`, `.env`, tokens de destination.
