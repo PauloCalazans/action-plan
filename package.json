@@ -1,0 +1,38 @@
+{
+  "name": "br.com.calazanstec.action-plan",
+  "version": "0.1.0",
+  "description": "Plataforma corporativa de tratativas e planos de ação (SAP CAP, Node.js e TypeScript).",
+  "private": true,
+  "license": "UNLICENSED",
+  "scripts": {
+    "build": "cds-typer \"*\" --outputDirectory @cds-models && tsc --noEmit && cds build --production",
+    "lint": "eslint .",
+    "test": "jest",
+    "arch": "depcruise \"{db,srv,app}\" --config .dependency-cruiser.cjs"
+  },
+  "cds": {
+    "requires": {}
+  },
+  "dependencies": {
+    "@sap/cds": "^10.1.1"
+  },
+  "devDependencies": {
+    "@cap-js/cds-test": "^1.0.2",
+    "@cap-js/cds-typer": "^0.41.1",
+    "@cap-js/cds-types": "^0.20.0",
+    "@cap-js/sqlite": "^3.1.1",
+    "@eslint/js": "^9.39.5",
+    "@sap/cds-dk": "^10.1.0",
+    "@sap/eslint-plugin-cds": "^4.2.5",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^26.6.4",
+    "dependency-cruiser": "^16.10.4",
+    "eslint": "^9.39.5",
+    "globals": "^17.13.0",
+    "jest": "^30.5.2",
+    "jest-junit": "^17.0.0",
+    "ts-jest": "^29.4.14",
+    "typescript": "5.9",
+    "typescript-eslint": "^8.71.1"
+  }
+}
