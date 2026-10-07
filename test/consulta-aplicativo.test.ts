@@ -107,3 +107,32 @@ describe('consulta pelo aplicativo', () => {
     expect(props.sort()).toEqual([...CAMPOS].sort());
   });
 });
+
+describe('consulta pelo aplicativo: parâmetros ausentes e caixa do Código', () => {
+  it('consultarPorOrigem sem origem devolve 400 com target origem', async () => {
+    const r = await GET(`${BASE}/consultarPorOrigem(idOrigem='X-1')`, comoApp);
+    expect(r.status).toBe(400);
+    expect(r.data.error.target).toBe('origem');
+    expect(r.data.error.message).toBe('O campo Origem é obrigatório.');
+  });
+
+  it('consultarPorOrigem sem idOrigem devolve 400 com target idOrigem', async () => {
+    const r = await GET(`${BASE}/consultarPorOrigem(origem='${encodeURIComponent('Advertência')}')`, comoApp);
+    expect(r.status).toBe(400);
+    expect(r.data.error.target).toBe('idOrigem');
+    expect(r.data.error.message).toBe('O campo ID_Origem é obrigatório.');
+  });
+
+  it('guarda: consultarPorCodigo sem codigo devolve 400 com target codigo', async () => {
+    const r = await GET(`${BASE}/consultarPorCodigo()`, comoApp);
+    expect(r.status).toBe(400);
+    expect(r.data.error.target).toBe('codigo');
+  });
+
+  it('Código existente consultado em MAIÚSCULAS devolve 200 com o mesmo Código', async () => {
+    const { codigo, gravada } = await abrir('Advertência', `ADV-${sufixo()}`);
+    const r = await porCodigo(codigo.toUpperCase());
+    expect(r.status).toBe(200);
+    conferirCampos(r.data, gravada);
+  });
+});
