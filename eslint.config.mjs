@@ -15,4 +15,13 @@ export default [
     files: ['**/*.cjs', '**/*.js'],
     rules: { '@typescript-eslint/no-require-imports': 'off' },
   },
+  {
+    files: ['srv/**/*.ts', 'db/**/*.ts'],
+    rules: {
+      'no-restricted-syntax': ['error',
+        { selector: 'Literal[value=/advert[eê]ncia|acidente|sesmt/i]', message: 'Genericidade (AGENTS.md:36): nome de Origem/área no código.' },
+        { selector: 'TemplateElement[value.raw=/advert[eê]ncia|acidente|sesmt/i]', message: 'Genericidade (AGENTS.md:36): nome de Origem/área no código.' },
+      ],
+    },
+  },
 ];

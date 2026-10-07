@@ -39,6 +39,27 @@ Cada decisão vale para o projeto inteiro até ser revogada. Nunca apague uma de
 - **Verificado por:** por revisão
 - **Data:** 2026-10-06
 
+### D6 — Contratos de integração versionados
+- **Decisão:** vale só para serviços cujo consumidor é um sistema de terceiros (hoje, `IntegracaoOrigemService`): caminho `/api/<serviço>/v<n>`, só actions/functions com tipos de retorno explícitos, sem entity sets; mudança incompatível cria `v<n+1>`. Serviços consumidos pela UI própria ou pela administração (`TratativaService`, `AdministracaoService`) usam o mesmo padrão de caminho por consistência, mas não ficam presos a "sem entity sets"; mudanças neles continuam N3 pela D4.
+- **Por quê:** terceiros dependem de um contrato estável e mínimo; a UI própria precisa evoluir com liberdade.
+- **Consequência:** mudança incompatível em serviço de terceiros exige nova versão do caminho.
+- **Verificado por:** por revisão
+- **Data:** 2026-10-07
+
+### D7 — Autorização de aplicativos externos
+- **Decisão:** papel `AplicativoOrigem` + registro `CredenciaisAplicativo` verificado a cada pedido; revogação pela plataforma.
+- **Por quê:** a decisão "esta credencial vale" fica na plataforma, revogável sem redeploy e testável em SQLite.
+- **Consequência:** emissão e revogação são feitas pelo Administrador em `AdministracaoService`.
+- **Verificado por:** testes da spec abertura-por-apps-de-origem (`test/administracao.test.ts` e os da task de credenciais)
+- **Data:** 2026-10-07
+
+### D8 — Handlers TypeScript
+- **Decisão:** handlers em `srv/<serviço>.ts` com `CDS_TYPESCRIPT=true` nos testes; empacotamento de produção (compilação para `gen/srv`) é decisão pendente da task de deploy.
+- **Por quê:** o CAP só carrega `.ts` sob jest com essa variável (medido no CAP 10.1.1).
+- **Consequência:** a task de deploy decide como compilar os handlers para produção.
+- **Verificado por:** `npm test`
+- **Data:** 2026-10-07
+
 ## Decisões revogadas
 
 <nenhuma>
