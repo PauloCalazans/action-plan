@@ -2,3 +2,15 @@
 .agentic/verify.lock/
 .agentic/worktrees/
 .agentic/kit-conflitos/
+node_modules/
+gen/
+@cds-models/
+reports/junit/
+coverage/
+*.log
+.env
+.env.*
+default-env.json
+.cdsrc-private.json
+*.sqlite
+*.db
