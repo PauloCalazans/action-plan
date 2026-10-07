@@ -1,0 +1,32 @@
+#!/bin/sh
+# pre-push — bloqueia push para branch protegida, exclusão de branch protegida e force-push. Fail-closed.
+agentic_lib=""
+for agentic_c in "$(dirname "$0")/../scripts/agentic/lib-agentic.sh" "$(dirname "$0")/../scripts/lib-agentic.sh"; do
+  if [ -f "$agentic_c" ]; then agentic_lib=$agentic_c; break; fi
+done
+[ -n "$agentic_lib" ] || { echo "agentic: BLOQUEADO — lib-agentic.sh não encontrada (fail-closed)" >&2; exit 1; }
+. "$agentic_lib"
+
+zero="0000000000000000000000000000000000000000"
+status=0
+while read -r ref_local sha_local ref_remoto sha_remoto; do
+  [ -n "$ref_remoto" ] || continue
+  branch=${ref_remoto#refs/heads/}
+  if agentic_branch_protegida "$branch"; then
+    printf 'agentic: BLOQUEADO — push para %s (branch protegida). Abra um PR; o merge é do humano.\n' "$branch" >&2
+    status=1
+    continue
+  fi
+  [ "$sha_local" = "$zero" ] && continue    # exclusão de branch de trabalho
+  [ "$sha_remoto" = "$zero" ] && continue   # branch nova no remoto
+  if ! git cat-file -e "$sha_remoto^{commit}" 2>/dev/null; then
+    printf 'agentic: BLOQUEADO — commit remoto %s desconhecido localmente; rode git fetch (fail-closed).\n' "$sha_remoto" >&2
+    status=1
+    continue
+  fi
+  if ! git merge-base --is-ancestor "$sha_remoto" "$sha_local"; then
+    printf 'agentic: BLOQUEADO — push não fast-forward (force-push) em %s.\n' "$branch" >&2
+    status=1
+  fi
+done
+exit $status

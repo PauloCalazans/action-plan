@@ -1,0 +1,3 @@
+# Modo automático: com enabled: true o orquestrador encadeia tasks e publica PRs sem confirmação.
+# Nunca faz merge. Alterar este arquivo é decisão humana.
+enabled: false

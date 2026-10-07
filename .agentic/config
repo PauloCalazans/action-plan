@@ -1,0 +1,24 @@
+# .agentic/config — configuração dos mecanismos do framework. Preenchida no /bootstrap.
+# Superfície de política: depois de ativadas as proteções, o agente não edita este arquivo.
+BRANCH_PRINCIPAL="main"
+BRANCHES_PROTEGIDAS="main master"
+# Comando que roda build + lint + testes + arquitetura da stack (usado pelo verify.sh).
+CMD_VERIFY_STACK="npm run build && npm run lint && npm test && npm run arch"
+# Comando que roda só os testes (usado pelo verifica-red.sh no commit RED).
+CMD_TESTE="npm test"
+# Opcional: comando que roda só UM arquivo/classe de teste; {} é trocado pelo caminho relativo do arquivo
+# (ex.: npx jest {}, python -m pytest {}, node --test {}). Usado pelo verifica-red.sh para provar que CADA
+# arquivo de teste do RED falhava. Java/Maven (mvn -q test -Dtest={}) espera nome de classe, não caminho:
+# use um wrapper que converta caminho em classe, ou deixe vazio. Vazio = degradado (RED provado pela suíte).
+CMD_TESTE_ARQUIVO="npx jest {}"
+# Preparação necessária num worktree limpo antes de testar (ex.: npm ci). Vazio se não houver.
+CMD_PREPARAR_TESTE="npm ci"
+# Diretórios de teste, separados por espaço, com barra final.
+DIRS_TESTE="test/"
+# Regex (ERE) que identifica teste desabilitado na stack. Vazio = verificação degradada.
+MARCADOR_DESABILITADO="(it|test|describe)\.(skip|todo)\(|(^|[^A-Za-z0-9_])x(it|test|describe)\("
+# Regex (ERE) que identifica uma asserção nos testes.
+MARCADOR_ASSERCAO="expect\("
+# Glob dos relatórios JUnit XML gerados pelo CMD_VERIFY_STACK. Vazio = verificação degradada.
+RELATORIO_TESTES="reports/junit/*.xml"
+GITLEAKS_BIN="gitleaks"

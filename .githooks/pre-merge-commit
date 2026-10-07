@@ -1,0 +1,16 @@
+#!/bin/sh
+# pre-merge-commit — bloqueia merge local que cria commit numa branch protegida.
+# Limite declarado: merge fast-forward não dispara hooks; a proteção do remoto fica no pre-push.
+agentic_lib=""
+for agentic_c in "$(dirname "$0")/../scripts/agentic/lib-agentic.sh" "$(dirname "$0")/../scripts/lib-agentic.sh"; do
+  if [ -f "$agentic_c" ]; then agentic_lib=$agentic_c; break; fi
+done
+[ -n "$agentic_lib" ] || { echo "agentic: BLOQUEADO — lib-agentic.sh não encontrada (fail-closed)" >&2; exit 1; }
+. "$agentic_lib"
+
+branch=$(git symbolic-ref --short -q HEAD) || branch=""
+if [ -n "$branch" ] && agentic_branch_protegida "$branch"; then
+  agentic_falha "merge local em '$branch' (branch protegida). A integração é do humano, via PR."
+fi
+
+exit 0
