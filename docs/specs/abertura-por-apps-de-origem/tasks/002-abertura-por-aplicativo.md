@@ -1,7 +1,7 @@
 # Task 002: abertura-por-aplicativo
 
 **Spec:** docs/specs/abertura-por-apps-de-origem/spec.md
-**Status:** pendente
+**Status:** em-andamento
 <!-- pendente | em-andamento | em-revisão | publicada  (integrada não é escrito: deriva do git) -->
 **Branch:** abertura-por-apps-de-origem/002-abertura-por-aplicativo
 
