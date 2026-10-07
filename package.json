@@ -11,7 +11,43 @@
     "arch": "depcruise \"{db,srv,app}\" --config .dependency-cruiser.cjs"
   },
   "cds": {
-    "requires": {}
+    "requires": {
+      "auth": {
+        "[development]": {
+          "kind": "mocked",
+          "users": {
+            "app-origem-a": {
+              "password": "",
+              "roles": [
+                "AplicativoOrigem"
+              ]
+            },
+            "app-origem-b": {
+              "password": "",
+              "roles": [
+                "AplicativoOrigem"
+              ]
+            },
+            "app-revogado": {
+              "password": "",
+              "roles": [
+                "AplicativoOrigem"
+              ]
+            },
+            "admin": {
+              "password": "",
+              "roles": [
+                "Administrador"
+              ]
+            },
+            "usuario": {
+              "password": "",
+              "roles": []
+            }
+          }
+        }
+      }
+    }
   },
   "dependencies": {
     "@sap/cds": "^10.1.1"
