@@ -1,6 +1,7 @@
 import cds from '@sap/cds';
 import { agora, dataCivil } from '../lib/relogio';
 import { validarAbertura } from './validacao';
+import { buscarPorPar, reservarPar } from './chave-origem';
 import { diasDoPrazo, somarDiasCorridos } from './prazo';
 
 export type TipoAutor = 'Aplicativo' | 'Usuario' | 'Sistema';
@@ -20,6 +21,15 @@ export async function abrirTratativa(dados: DadosAbertura, autor: Autor): Promis
   const dataCriacao = dataCivil(instante);
   const criticidade = dados.criticidade as string;
   const dataPrevistaConclusao = somarDiasCorridos(dataCriacao, await diasDoPrazo(criticidade));
+
+  // R4/R16: com par, a chave primária de ChavesOrigem decide; repetição devolve o existente sem gravar nada.
+  if (dados.origem && dados.idOrigem) {
+    const existente = await buscarPorPar(dados.origem, dados.idOrigem);
+    if (existente) return { codigo: existente };
+    if (!(await reservarPar(dados.origem, dados.idOrigem, codigo))) {
+      return { codigo: (await buscarPorPar(dados.origem, dados.idOrigem)) as string };
+    }
+  }
 
   await cds.db.run(
     INSERT.into(`${NS}.Tratativas`).entries({
