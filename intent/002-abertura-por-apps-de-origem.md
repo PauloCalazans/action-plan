@@ -23,7 +23,7 @@ Conteúdo deste intent, todo por decisão do humano em 2026-10-07:
 7. **Criticidade** (`Baixa`, `Média`, `Alta`, `Crítica`; proposta, seção Regras de Negócio / Criticidade): é informada na abertura, como campo da Tratativa, pelo aplicativo de origem ou, na avulsa, por quem a cria. Resposta literal do humano: "Por criticidade, isso também será informado no cadastro, é um campo no contexto do app".
 8. **Prazo:** não há parametrização de prazo por Origem. Valores de referência da proposta (seção Regras de Negócio / Prazos): Crítica 3 dias, Alta 7, Média 15, Baixa 30; dias corridos contados da criação da Tratativa (humano:2026-10-07).
 
-   **Hipótese a confirmar na spec (não decidida):** o prazo é derivado da Criticidade por uma tabela global (3/7/15/30 dias corridos desde a criação), **ou** a data prevista de conclusão também é informada na abertura. A leitura de que a Criticidade é informada na abertura é interpretação do coordenador da fala do humano, e também não foi confirmada.
+   **Resolvido (humano:2026-10-07, questionário da spec):** o prazo é derivado da Criticidade por uma tabela global parametrizável (3/7/15/30 dias corridos desde a criação); o aplicativo não informa a data prevista. A Criticidade é informada na abertura (confirmado).
 
 ### Origens do MVP (humano:2026-10-07)
 Três aplicativos do SESMT, que preencherão o campo texto Origem: "Registro de Acidente + FIA", "Notificação de Risco de Acidente" e "Advertência". Os tipos de ocorrência (Acidente, Quase Acidente, Condição Insegura, Ato Inseguro, Inspeção, Auditoria de Segurança) ficam dentro desses aplicativos e estão fora do escopo da plataforma.
@@ -34,8 +34,8 @@ Origem como texto livre e criticidade como campo mantêm a plataforma agnóstica
 ### Conceito original da proposta (registro de divergência resolvida)
 A proposta (seções Conceito Principal, Cadastro de Origens, Prazos e MVP SESMT) descrevia Origem como área/processo com Tipos dentro dela, uma tela administrativa de cadastro e parametrização de regras próprias por Origem ("Cada origem poderá possuir regras próprias") e prazos parametrizados. As respostas do humano de 2026-10-07 prevalecem: Origem é um app externo, campo de texto, sem Tipo, sem cadastro, sem prazo por Origem. A divergência com `AGENTS.md` está resolvida: as linhas 6, 8 e 36 do `AGENTS.md` já descrevem Origem como app externo em campo texto, sem Tipo, com tratativa avulsa permitida e o MVP com os três apps.
 
-## Proposta sobre a relação com o 003 (decisão do humano pendente)
-Recomendo **manter o 002 como intent próprio**, com este conteúdo. Motivos: é um contrato de integração com sistemas externos (abertura idempotente e consulta por API, autenticação do app), que é um item de segurança e contrato público (N3) e tem critérios de aceite próprios; e o 003 fica focado no registro, no ciclo de vida e nos campos da Tratativa. A alternativa é fundir no 003, e fica a critério do humano. O 003 já referencia o 002 e não duplica as regras acima. Se mantido, sugiro renomear o arquivo para `002-abertura-por-apps-de-origem.md` (não consegui renomear).
+## Relação com o 003
+O 002 é intent próprio: é um contrato de integração com sistemas externos (abertura idempotente e consulta por API, autenticação do app), item de segurança e contrato público (N3) com critérios de aceite próprios; o 003 trata do registro, do ciclo de vida e dos campos da Tratativa. O 003 referencia o 002 e não duplica as regras acima.
 
 ## Usuários e sistemas afetados
 - Aplicativos de origem (Registro de Acidente + FIA, Notificação de Risco de Acidente, Advertência) — abrem Tratativas pela API, recebem o código e consultam a situação.
@@ -61,13 +61,16 @@ Recomendo **manter o 002 como intent próprio**, com este conteúdo. Motivos: é
 - Aplicativos de outra área usam a mesma abertura sem mudança estrutural.
 
 ## Questões abertas
-- (Bloqueante para a spec, não para o intent) Prazo: tabela global derivada da Criticidade (3/7/15/30) ou data prevista informada na abertura? (hipótese registrada acima, sem decisão). Se for tabela global, quem pode alterá-la, e a alteração vale só para novas Tratativas?
-- Confirmar que a Criticidade é informada na abertura (pelo app ou por quem cria a avulsa) e se pode ser alterada depois.
-- Quais são os "dados básicos" enviados pelo app e quais são obrigatórios? Se faltar um obrigatório, a abertura é recusada?
-- Origem como texto livre: há lista de valores aceitos, padronização (por exemplo, caixa) ou o texto é gravado como veio? Como evitar "Advertencia" e "Advertência" como origens diferentes nos indicadores?
-- Quando o app envia ID do registro, o par (Origem, ID do registro) identifica a unicidade, ou só o ID do registro? O que acontece com um ID repetido em Origem diferente?
+Respondidas na spec `docs/specs/abertura-por-apps-de-origem/spec.md` (humano:2026-10-07), sem reabrir:
+- Prazo: tabela global (3/7/15/30), alterada só pelo Administrador, valendo para novas Tratativas. A Criticidade é informada na abertura e pode ser alterada depois, com recálculo desde a criação original e histórico (a operação exposta a usuários e quem a usa ficam no 003).
+- Dados básicos: obrigatórios Título e Criticidade (mais Origem e ID_Origem para apps); Descrição, Unidade, Área e Solicitante opcionais; falta de obrigatório recusa a abertura.
+- Origem texto gravado como veio; a unicidade é do par (Origem, ID_Origem) sem diferenciar caixa nem espaços nas pontas; "Advertencia" e "Advertência" seguem distintas (lista de valores seria cadastro, adiado).
+- Autenticação por credencial própria por app; a consulta devolve Código, Origem, ID_Origem, Criticidade, Status, Data de criação e Data prevista, e quem informa Código ou par corretos consulta.
+- Avulsa: qualquer usuário autenticado.
+- Código da Tratativa: UUID opaco gerado pela plataforma (humano:2026-10-07).
+- Solicitante: identificado na abertura só pela matrícula/ID do colaborador, sem nome nem e-mail; o nome virá do SuccessFactors no 011 (humano:2026-10-07).
+
+Ainda abertas:
 - Templates (009) e alertas (010) eram "regras próprias de cada Origem" na proposta. Sem cadastro de Origens, valem para todas as Tratativas, ou variam pelo texto da Origem? ("Cada origem poderá possuir regras próprias" não foi respondido para além dos prazos.)
-- Como o app se autentica na API e o que a consulta devolve (situação, prazo, responsável)? Segurança e contrato público, N3.
 - Se o cadastro de Origens vier depois, a Tratativa existente com Origem texto será convertida? (evolução futura)
 - Dados pessoais: o app pode enviar dados de pessoas (vítimas, advertidos). O que a plataforma guarda e por quanto tempo? A Advertência traz dados sensíveis de RH (LGPD).
-- Quem pode criar Tratativa avulsa e para quais casos (todos os usuários, só SESMT)?
