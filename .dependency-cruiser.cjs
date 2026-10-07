@@ -1,4 +1,4 @@
-/** Fronteiras de arquitetura (AGENTS.md, docs/decisoes.md D2). */
+/** Fronteiras de arquitetura (AGENTS.md, agentic/projeto/decisoes.md D2). */
 
 // R19: SDKs/clients de terceiros para SuccessFactors, e-mail e Teams.
 // Mantenha esta lista a cada pacote novo que se enquadre nessa finalidade.

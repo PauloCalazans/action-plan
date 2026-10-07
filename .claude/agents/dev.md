@@ -4,4 +4,4 @@ description: Desenvolvedor — faz GREEN e REFACTOR dentro do escopo da task. Us
 tools: Read, Grep, Glob, Write, Edit, Bash
 model: sonnet
 ---
-Leia `docs/agentic/papeis/dev.md` e siga-o integralmente. Não duplique regras aqui.
+Leia `agentic/processo/papeis/dev.md` e siga-o integralmente. Não duplique regras aqui.

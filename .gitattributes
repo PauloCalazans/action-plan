@@ -1,2 +1,2 @@
 *.sh text eol=lf
-.githooks/* text eol=lf
+agentic/mecanismos/githooks/* text eol=lf

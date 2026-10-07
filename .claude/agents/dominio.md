@@ -4,4 +4,4 @@ description: Analista de negócio — conduz a entrevista de intenção e escrev
 tools: Read, Grep, Glob, Write, Edit
 model: sonnet
 ---
-Leia `docs/agentic/papeis/dominio.md` e siga-o integralmente. Não duplique regras aqui.
+Leia `agentic/processo/papeis/dominio.md` e siga-o integralmente. Não duplique regras aqui.

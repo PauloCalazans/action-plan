@@ -1,7 +1,3 @@
-.agentic/execucao/
-.agentic/verify.lock/
-.agentic/worktrees/
-.agentic/kit-conflitos/
 node_modules/
 gen/
 @cds-models/
@@ -14,3 +10,4 @@ default-env.json
 .cdsrc-private.json
 *.sqlite
 *.db
+agentic/.estado/
