@@ -2,8 +2,8 @@ using { br.com.calazanstec as m } from '../db/tratativa';
 
 /**
  * Serviço dos usuários da plataforma (spec abertura-por-apps-de-origem R6/R17; spec tratativa R1-R31).
- * Ciclo de vida por actions ligadas à Tratativa (R2), só para o papel GestorTratativa (R8).
- * Aplicativo de origem é recusado com 403.
+ * Leitura por functions com tipo de retorno explícito (R23-R26); ciclo de vida por actions ligadas à
+ * Tratativa (R2, R12, R18), só para o papel GestorTratativa (R8). Aplicativo de origem é recusado com 403.
  */
 @path    : '/api/tratativa/v1'
 @requires: 'authenticated-user'
@@ -54,16 +54,18 @@ service TratativaService {
   function consultarTratativa(codigo : UUID) returns DetalheTratativa;
 
   /**
-   * Âncora das operações de ciclo de vida (R2). Só a chave é exposta; não há criação, alteração
-   * nem exclusão pelo entity set (R11; leitura pelas functions acima).
+   * Âncora das operações de ciclo de vida (R2, R12, R18). Só a chave é exposta; não há leitura,
+   * criação, alteração nem exclusão pelo entity set (R11; leitura pelas functions acima).
    * Parâmetros sem tamanho de propósito: o domínio valida tamanho depois de papel, existência e estado (R31).
    */
   @readonly
-  @restrict: [{ grant: ['mudarStatus', 'editar'], to: 'GestorTratativa' }]
+  @restrict: [{ grant: ['mudarStatus', 'editar', 'mudarCriticidade'], to: 'GestorTratativa' }]
   entity Tratativas as projection on m.Tratativas { key codigo } actions {
     /** R2/R4/R5: a operação é identificada pelo Status de destino. */
     action mudarStatus(status : String, justificativa : String);
     /** R12/R13/R15: só estes campos; ausente = não muda; null ou só espaços = apaga (Título não pode). */
     action editar(titulo : String, descricao : String, unidade : String, area : String, solicitante : String);
+    /** R18/R19: reutiliza a regra interna do 002 com tipo de autor Usuario. */
+    action mudarCriticidade(criticidade : String);
   };
 }
