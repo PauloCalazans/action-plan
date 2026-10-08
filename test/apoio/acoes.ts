@@ -11,6 +11,11 @@ export function criarSubacao(POST: Envia, tratativa: string, dados: Record<strin
   return POST(`${BASE}/Tratativas(${tratativa})/criarSubacao`, dados, como);
 }
 
+// Transição de Ação (R6-R12): `dados` leva o Código da Ação em `acao`, o Status de destino e a justificativa.
+export function mudarStatusAcao(POST: Envia, tratativa: string, dados: Record<string, unknown>, como: unknown) {
+  return POST(`${BASE}/Tratativas(${tratativa})/mudarStatusAcao`, dados, como);
+}
+
 // Funções GET do cds.test para a leitura de Ações; sem `tratativa` (null) a URL omite o parâmetro.
 export type Consulta = (url: string, opcoes?: unknown) => Promise<Resposta>;
 
