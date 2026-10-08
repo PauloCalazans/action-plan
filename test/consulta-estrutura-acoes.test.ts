@@ -228,7 +228,10 @@ describe('consulta da estrutura hierárquica de Ações (R25)', () => {
     expect(campos).toEqual(
       ['codigo', 'origem', 'idOrigem', 'criticidade', 'status', 'dataCriacao', 'dataPrevistaConclusao'].sort(),
     );
-    expect(Object.keys(r.data).some((k) => /acao|subac/i.test(k))).toBe(false);
+    // Lista exata de nomes de Ações: não usa regex, porque 'dataCriacao' (campo legítimo) contém 'acao'.
+    const nomesDeAcao = ['acoes', 'subacoes', 'acao', 'acaoMae', 'estruturaAcoes'];
+    expect(Object.keys(r.data).some((k) => nomesDeAcao.includes(k))).toBe(false);
+    expect(Object.values(r.data).some((v) => Array.isArray(v))).toBe(false);
   });
 
   it('CA103: consulta de Subação traz o código da mãe; parâmetros ausentes → 400 citando o campo', async () => {
