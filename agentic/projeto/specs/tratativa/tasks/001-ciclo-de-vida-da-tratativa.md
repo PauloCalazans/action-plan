@@ -1,7 +1,7 @@
 # Task 001: ciclo-de-vida-da-tratativa
 
 **Spec:** agentic/projeto/specs/tratativa/spec.md
-**Status:** em-andamento
+**Status:** em-revisão
 <!-- pendente | em-andamento | em-revisão | publicada  (integrada não é escrito: deriva do git) -->
 **Branch:** tratativa/001-ciclo-de-vida-da-tratativa
 
