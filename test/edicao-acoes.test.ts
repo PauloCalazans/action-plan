@@ -233,7 +233,8 @@ describe('edição de Ações (R5, R19, R20, R28)', () => {
 
   it('CA72: reenviar os mesmos valores → 204, sem alteração e sem histórico', async () => {
     const t = await nova();
-    const a = await acao(t, { evidenciaObrigatoria: 'sim' });
+    // Criada com exatamente os valores que serão reenviados: o reenvio não pode gerar histórico.
+    const a = await acao(t, { descricao: 'Avaliar local', prazo: PRAZO, prioridade: 'Média', evidenciaObrigatoria: 'sim' });
     const r = await editar(t, a, { descricao: 'Avaliar local', prazo: PRAZO, prioridade: 'Média', evidenciaObrigatoria: 'sim' });
     expect(r.status).toBe(204);
     expect(await edicoes(a)).toHaveLength(0);
