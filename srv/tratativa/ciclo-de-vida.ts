@@ -29,8 +29,9 @@ export async function mudarStatus(
   validarAutor(autor);
   const tratativa = await bloquearTratativa(codigo);
 
-  const destino = typeof pedido.status === 'string' ? pedido.status.trim() : '';
-  if (!destino) recusar(400, 'O campo Status é obrigatório.', 'status');
+  // Decisão 8: ausente ou só espaços é 400; o valor enviado não é aparado (com espaços nas pontas fica fora da lista, 409).
+  const destino = typeof pedido.status === 'string' ? pedido.status : '';
+  if (!destino.trim()) recusar(400, 'O campo Status é obrigatório.', 'status');
 
   const transicao = TRANSICOES[`${tratativa.status}|${destino}`];
   if (!transicao) recusar(409, `Transição não permitida: de ${tratativa.status} para ${destino}.`, 'status');
