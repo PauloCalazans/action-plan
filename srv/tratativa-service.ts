@@ -1,5 +1,6 @@
 import cds from '@sap/cds';
 import { abrirTratativa, type DadosAbertura } from './tratativa/abertura';
+import { consultarAcao, consultarEstruturaAcoes } from './tratativa/acoes-consulta';
 import { criarAcao, criarSubacao, type DadosCriacaoAcao } from './tratativa/acoes-criacao';
 import { mudarStatus } from './tratativa/ciclo-de-vida';
 import { alterarCriticidade } from './tratativa/criticidade';
@@ -43,6 +44,15 @@ export default class TratativaService extends cds.ApplicationService {
         id: req.user.id,
         tipo: 'Usuario',
       });
+    });
+    // 004 R25: leitura da estrutura e do detalhe; `responsavel` só para o GestorTratativa (LGPD).
+    this.on('consultarEstruturaAcoes', (req) => {
+      const { tratativa } = req.data as { tratativa?: string };
+      return consultarEstruturaAcoes(tratativa, req.user.is('GestorTratativa'));
+    });
+    this.on('consultarAcao', (req) => {
+      const { tratativa, codigo } = req.data as { tratativa?: string; codigo?: string };
+      return consultarAcao(tratativa, codigo, req.user.is('GestorTratativa'));
     });
     // 004 R1/R2: `acaoMae` passa como texto (String) para que ausente ou null vire 'undefined'/'null' e seja recusado como Código inválido.
     this.on('criarAcao', 'Tratativas', (req) => {

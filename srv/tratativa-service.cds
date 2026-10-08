@@ -48,6 +48,45 @@ service TratativaService {
     solicitante           : String(50);
   }
 
+  /** R2/R25 (004): item de Subação dentro da árvore (sem subações aninhadas). */
+  type ItemSubacaoEstrutura {
+    codigo                : UUID;
+    descricao             : String(500);
+    responsavel           : String(50);
+    prazo                 : Date;
+    prioridade            : m.PrioridadeAcao;
+    status                : m.StatusAcao;
+    evidenciaObrigatoria  : String(3);
+    dataConclusao         : Date;
+  }
+
+  /** R25 (004): item de Ação de primeiro nível na árvore, com coleção de Subações aninhadas. */
+  type ItemEstruturaAcao {
+    codigo                : UUID;
+    descricao             : String(500);
+    responsavel           : String(50);
+    prazo                 : Date;
+    prioridade            : m.PrioridadeAcao;
+    status                : m.StatusAcao;
+    evidenciaObrigatoria  : String(3);
+    dataConclusao         : Date;
+    subacoes              : many ItemSubacaoEstrutura;
+  }
+
+  /** R25 (004): detalhe completo de uma Ação ou Subação consultada por Código. */
+  type DetalheAcao {
+    codigo                : UUID;
+    descricao             : String(500);
+    responsavel           : String(50);
+    prazo                 : Date;
+    prioridade            : m.PrioridadeAcao;
+    status                : m.StatusAcao;
+    evidenciaObrigatoria  : String(3);
+    dataConclusao         : Date;
+    acaoMae               : UUID;
+    subacoes              : many ItemSubacaoEstrutura;
+  }
+
   action   criarTratativaAvulsa(titulo : String(200), criticidade : String(10), descricao : String(5000),
                                 unidade : String(100), area : String(100), solicitante : String(50)) returns ResultadoAbertura;
 
@@ -57,6 +96,12 @@ service TratativaService {
 
   /** R26: consulta pelo Código; inexistente → 404. */
   function consultarTratativa(codigo : UUID) returns DetalheTratativa;
+
+  /** R25 (004): consulta a estrutura hierárquica completa de Ações e Subações de uma Tratativa. */
+  function consultarEstruturaAcoes(tratativa : UUID) returns many ItemEstruturaAcao;
+
+  /** R25 (004): consulta uma Ação ou Subação pelo Código dela e da Tratativa. */
+  function consultarAcao(tratativa : UUID, codigo : UUID) returns DetalheAcao;
 
   /**
    * Âncora das operações de ciclo de vida (R2, R12, R18). Só a chave é exposta; não há leitura,
