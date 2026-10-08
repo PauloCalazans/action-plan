@@ -15,7 +15,7 @@ export interface DadosCriacaoAcao {
   prioridade?: string | null; evidenciaObrigatoria?: string | null;
 }
 
-interface AcaoLocalizada { codigo: string; acaoMae_codigo: string | null }
+interface AcaoLocalizada { codigo: string; status: string; acaoMae_codigo: string | null }
 
 /** R1 (004): Ação de primeiro nível, Status Pendente. */
 export function criarAcao(codigoTratativa: string, dados: DadosCriacaoAcao, autor: Autor): Promise<{ codigo: string }> {
@@ -38,6 +38,10 @@ async function criar(codigoTratativa: string, acaoMae: string | null, dados: Dad
   const mae = acaoMae === null ? undefined : await localizarAcao(codigoTratativa, acaoMae);
   exigirAlteravel(tratativa);
   if (mae?.acaoMae_codigo) recusar(400, 'Uma Subação não pode ter Subações.');
+  // R12: mãe Concluída ou Cancelada não aceita Subação nova.
+  if (mae && (mae.status === 'Concluída' || mae.status === 'Cancelada')) {
+    recusar(409, `A Ação mãe está ${mae.status} e não aceita esta alteração.`);
+  }
 
   const hoje = dataCivil(agora());
   const campos = {
@@ -69,7 +73,7 @@ async function criar(codigoTratativa: string, acaoMae: string | null, dados: Dad
 /** Existência e pertencimento: a Ação precisa existir e ser da Tratativa informada (404 `Ação não encontrada.`). */
 async function localizarAcao(codigoTratativa: string, codigo: string): Promise<AcaoLocalizada> {
   const linha = (await cds.db.run(
-    SELECT.one.from(`${NS}.Acoes`).columns('codigo', 'acaoMae_codigo').where({ codigo, tratativa_codigo: codigoTratativa }),
+    SELECT.one.from(`${NS}.Acoes`).columns('codigo', 'status', 'acaoMae_codigo').where({ codigo, tratativa_codigo: codigoTratativa }),
   )) as AcaoLocalizada | undefined;
   if (!linha) recusar(404, 'Ação não encontrada.');
   return linha;

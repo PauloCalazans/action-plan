@@ -109,7 +109,7 @@ service TratativaService {
    * Parâmetros sem tamanho de propósito: o domínio valida tamanho depois de papel, existência e estado (R31).
    */
   @readonly
-  @restrict: [{ grant: ['mudarStatus', 'editar', 'mudarCriticidade', 'criarAcao', 'criarSubacao'], to: 'GestorTratativa' }]
+  @restrict: [{ grant: ['mudarStatus', 'editar', 'mudarCriticidade', 'criarAcao', 'criarSubacao', 'mudarStatusAcao'], to: 'GestorTratativa' }]
   entity Tratativas as projection on m.Tratativas { key codigo } actions {
     /** R2/R4/R5: a operação é identificada pelo Status de destino. */
     action mudarStatus(status : String, justificativa : String);
@@ -123,5 +123,8 @@ service TratativaService {
 
     /** 004 R2/R3/R4/R5/R12/R14/R18/R21: cria Subação sob uma Ação mãe na Tratativa. */
     action criarSubacao(acaoMae : UUID, descricao : String, responsavel : String, prazo : String, prioridade : String, evidenciaObrigatoria : String) returns ResultadoCriacaoAcao;
+
+    /** 004 R6/R8/R9/R10/R11/R12/R18: muda o Status da Ação ou Subação. */
+    action mudarStatusAcao(acao : UUID, status : String, justificativa : String);
   };
 }

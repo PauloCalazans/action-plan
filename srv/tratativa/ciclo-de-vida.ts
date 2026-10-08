@@ -36,6 +36,15 @@ export async function mudarStatus(
   const transicao = TRANSICOES[`${tratativa.status}|${destino}`];
   if (!transicao) recusar(409, `Transição não permitida: de ${tratativa.status} para ${destino}.`, 'status');
 
+  // R16 (004): encerrar exige todas as Ações e Subações concluídas ou canceladas; vem antes da justificativa (M4).
+  if (destino === 'Encerrada') {
+    const abertas = await cds.db.run(
+      SELECT.one.from(`${NS}.Acoes`).columns('codigo')
+        .where({ tratativa_codigo: codigo, status: { 'not in': ['Concluída', 'Cancelada'] } }),
+    );
+    if (abertas) recusar(409, 'Tratativa não pode ser encerrada: há Ações não concluídas nem canceladas.');
+  }
+
   const justificativa = validarJustificativa(pedido.justificativa, transicao.justificativaObrigatoria);
 
   await cds.db.run(UPDATE(`${NS}.Tratativas`).set({ status: destino }).where({ codigo }));
