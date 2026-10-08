@@ -17,3 +17,9 @@ export function statusValidos(): string[] {
 export function tiposAutorValidos(): string[] {
   return valoresDoEnum('TipoAutor');
 }
+export function prioridadesValidas(): string[] {
+  return valoresDoEnum('PrioridadeAcao');
+}
+export function statusAcaoValidos(): string[] {
+  return valoresDoEnum('StatusAcao');
+}

@@ -1,5 +1,6 @@
 import cds from '@sap/cds';
 import { abrirTratativa, type DadosAbertura } from './tratativa/abertura';
+import { criarAcao, criarSubacao, type DadosCriacaoAcao } from './tratativa/acoes-criacao';
 import { mudarStatus } from './tratativa/ciclo-de-vida';
 import { alterarCriticidade } from './tratativa/criticidade';
 import { editarTratativa } from './tratativa/edicao';
@@ -39,6 +40,19 @@ export default class TratativaService extends cds.ApplicationService {
     this.on('mudarCriticidade', 'Tratativas', async (req) => {
       const { codigo } = req.params[0] as { codigo: string };
       await alterarCriticidade(String(codigo).toLowerCase(), (req.data as { criticidade?: string }).criticidade, {
+        id: req.user.id,
+        tipo: 'Usuario',
+      });
+    });
+    // 004 R1/R2: `acaoMae` passa como texto (String) para que ausente ou null vire 'undefined'/'null' e seja recusado como Código inválido.
+    this.on('criarAcao', 'Tratativas', (req) => {
+      const { codigo } = req.params[0] as { codigo: string };
+      return criarAcao(String(codigo).toLowerCase(), req.data as DadosCriacaoAcao, { id: req.user.id, tipo: 'Usuario' });
+    });
+    this.on('criarSubacao', 'Tratativas', (req) => {
+      const { codigo } = req.params[0] as { codigo: string };
+      const { acaoMae, ...dados } = req.data as DadosCriacaoAcao & { acaoMae?: string | null };
+      return criarSubacao(String(codigo).toLowerCase(), String(acaoMae).toLowerCase(), dados, {
         id: req.user.id,
         tipo: 'Usuario',
       });

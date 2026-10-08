@@ -3,10 +3,10 @@ import { agora } from '../lib/relogio';
 import type { Autor } from './abertura';
 import { bloquearTratativa } from './bloqueio';
 import { registrarHistorico, validarAutor } from './historico';
+import { validarJustificativa } from './justificativa';
 import { recusar } from './recusa';
 
 const NS = 'br.com.calazanstec';
-const MAX_JUSTIFICATIVA = 500;
 
 interface Transicao { evento: string; justificativaObrigatoria: boolean }
 
@@ -36,13 +36,7 @@ export async function mudarStatus(
   const transicao = TRANSICOES[`${tratativa.status}|${destino}`];
   if (!transicao) recusar(409, `Transição não permitida: de ${tratativa.status} para ${destino}.`, 'status');
 
-  const justificativa = typeof pedido.justificativa === 'string' ? pedido.justificativa.trim() : '';
-  if (transicao.justificativaObrigatoria && !justificativa) {
-    recusar(400, 'O campo Justificativa é obrigatório para cancelar e reabrir.', 'justificativa');
-  }
-  if (justificativa.length > MAX_JUSTIFICATIVA) {
-    recusar(400, `O campo Justificativa aceita no máximo ${MAX_JUSTIFICATIVA} caracteres.`, 'justificativa');
-  }
+  const justificativa = validarJustificativa(pedido.justificativa, transicao.justificativaObrigatoria);
 
   await cds.db.run(UPDATE(`${NS}.Tratativas`).set({ status: destino }).where({ codigo }));
   await registrarHistorico(

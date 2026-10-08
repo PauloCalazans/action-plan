@@ -13,6 +13,11 @@ service TratativaService {
     codigo : UUID;
   }
 
+  /** R1/R2 (004): resultado da criação de Ação ou Subação. */
+  type ResultadoCriacaoAcao {
+    codigo : UUID;
+  }
+
   /** R25: exatamente estes dez campos na listagem (sem Descrição e sem Solicitante). */
   type ItemListagem {
     codigo                : UUID;
@@ -59,7 +64,7 @@ service TratativaService {
    * Parâmetros sem tamanho de propósito: o domínio valida tamanho depois de papel, existência e estado (R31).
    */
   @readonly
-  @restrict: [{ grant: ['mudarStatus', 'editar', 'mudarCriticidade'], to: 'GestorTratativa' }]
+  @restrict: [{ grant: ['mudarStatus', 'editar', 'mudarCriticidade', 'criarAcao', 'criarSubacao'], to: 'GestorTratativa' }]
   entity Tratativas as projection on m.Tratativas { key codigo } actions {
     /** R2/R4/R5: a operação é identificada pelo Status de destino. */
     action mudarStatus(status : String, justificativa : String);
@@ -67,5 +72,11 @@ service TratativaService {
     action editar(titulo : String, descricao : String, unidade : String, area : String, solicitante : String);
     /** R18/R19: reutiliza a regra interna do 002 com tipo de autor Usuario. */
     action mudarCriticidade(criticidade : String);
+
+    /** 004 R1/R3/R4/R5/R14/R18/R21: cria Ação de primeiro nível na Tratativa. */
+    action criarAcao(descricao : String, responsavel : String, prazo : String, prioridade : String, evidenciaObrigatoria : String) returns ResultadoCriacaoAcao;
+
+    /** 004 R2/R3/R4/R5/R12/R14/R18/R21: cria Subação sob uma Ação mãe na Tratativa. */
+    action criarSubacao(acaoMae : UUID, descricao : String, responsavel : String, prazo : String, prioridade : String, evidenciaObrigatoria : String) returns ResultadoCriacaoAcao;
   };
 }

@@ -17,15 +17,25 @@ export function validarAutor(autor: Autor): void {
   }
 }
 
-/** Insere todas as linhas de uma vez, no mesmo instante e com o mesmo autor. */
-export async function registrarHistorico(codigo: string, autor: Autor, linhas: LinhaHistorico[], quando: Date): Promise<void> {
+/**
+ * Insere todas as linhas de uma vez, no mesmo instante e com o mesmo autor.
+ * Sem `acao`, grava em HistoricoTratativa; com `acao` (Código da Ação), grava em HistoricoAcoes da mesma Tratativa.
+ */
+export async function registrarHistorico(
+  codigo: string,
+  autor: Autor,
+  linhas: LinhaHistorico[],
+  quando: Date,
+  acao?: string,
+): Promise<void> {
   validarAutor(autor);
   if (!linhas.length) return;
+  const referencia = acao === undefined ? { tratativa_codigo: codigo } : { tratativa_codigo: codigo, acao_codigo: acao };
   await cds.db.run(
-    INSERT.into(`${NS}.HistoricoTratativa`).entries(
+    INSERT.into(`${NS}.${acao === undefined ? 'HistoricoTratativa' : 'HistoricoAcoes'}`).entries(
       linhas.map((l) => ({
         ID: cds.utils.uuid(),
-        tratativa_codigo: codigo,
+        ...referencia,
         evento: l.evento,
         campo: l.campo ?? null,
         valorAnterior: l.valorAnterior ?? null,
