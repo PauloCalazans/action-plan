@@ -5,6 +5,7 @@ module.exports = {
   testEnvironment: 'node',
   roots: ['<rootDir>/test'],
   testMatch: ['**/*.test.ts'],
+  testTimeout: 60000, // a primeira subida do cds.test passa de 5 s (design tratativa, decisão 15)
   reporters: [
     'default',
     ['jest-junit', { outputDirectory: 'reports/junit', outputName: 'junit.xml' }],

@@ -9,3 +9,4 @@ export const comoAppB = como('app-origem-b');
 export const comoAppRevogado = como('app-revogado');
 export const comoAdmin = como('admin');
 export const comoUsuario = como('usuario');
+export const comoGestor = como('gestor');

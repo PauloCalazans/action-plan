@@ -1,8 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Bash(sh scripts/agentic/verify.sh:*)",
-      "Bash(sh scripts/agentic/status-projeto.sh:*)",
+      "Bash(sh agentic/mecanismos/scripts/verify.sh:*)",
+      "Bash(sh agentic/mecanismos/scripts/status-projeto.sh:*)",
       "Bash(git status:*)",
       "Bash(git diff:*)",
       "Bash(git log:*)",
@@ -32,23 +32,23 @@
       "Bash(git commit -n:*)",
       "Bash(git reset --hard:*)",
       "Bash(git config core.hooksPath:*)",
-      "Bash(sh scripts/agentic/ativar-protecoes.sh:*)",
+      "Bash(sh agentic/mecanismos/scripts/ativar-protecoes.sh:*)",
       "Edit(.claude/settings.json)",
       "Edit(**/.claude/settings.json)",
       "Edit(.claude/settings.local.json)",
       "Edit(**/.claude/settings.local.json)",
       "Edit(.claude/hooks/**)",
       "Edit(**/.claude/hooks/**)",
-      "Edit(.agentic/config)",
-      "Edit(**/.agentic/config)",
-      "Edit(.agentic/auto-mode)",
-      "Edit(**/.agentic/auto-mode)",
-      "Edit(.githooks/**)",
-      "Edit(**/.githooks/**)",
-      "Edit(scripts/agentic/**)",
-      "Edit(**/scripts/agentic/**)",
-      "Edit(.agentic/baseline-skips)",
-      "Edit(**/.agentic/baseline-skips)",
+      "Edit(agentic/config)",
+      "Edit(**/agentic/config)",
+      "Edit(agentic/auto-mode)",
+      "Edit(**/agentic/auto-mode)",
+      "Edit(agentic/mecanismos/githooks/**)",
+      "Edit(**/agentic/mecanismos/githooks/**)",
+      "Edit(agentic/mecanismos/scripts/**)",
+      "Edit(**/agentic/mecanismos/scripts/**)",
+      "Edit(agentic/baseline-skips)",
+      "Edit(**/agentic/baseline-skips)",
       "Edit(.gitleaksignore)",
       "Edit(**/.gitleaksignore)"
     ],
@@ -63,7 +63,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "sh \"$CLAUDE_PROJECT_DIR/scripts/agentic/status-projeto.sh\""
+            "command": "sh \"$CLAUDE_PROJECT_DIR/agentic/mecanismos/scripts/status-projeto.sh\""
           }
         ]
       }

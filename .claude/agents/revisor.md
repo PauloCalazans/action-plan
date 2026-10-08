@@ -4,5 +4,5 @@ description: Revisor independente em contexto limpo — modos spec, design e dif
 tools: Read, Grep, Glob, Bash
 model: opus
 ---
-Leia `docs/agentic/papeis/revisor.md` e siga-o integralmente. O modo vem no seu brief. Não duplique regras aqui.
+Leia `agentic/processo/papeis/revisor.md` e siga-o integralmente. O modo vem no seu brief. Não duplique regras aqui.
 A lista de ferramentas omite Write/Edit: reduz a chance de o revisor corrigir, mas não garante (o Bash escreve). "Nunca corrige" é verificado por revisão.

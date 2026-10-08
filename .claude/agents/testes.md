@@ -4,4 +4,4 @@ description: Engenheiro de testes — escreve os testes RED de uma task, só em 
 tools: Read, Grep, Glob, Write, Edit, Bash
 model: sonnet
 ---
-Leia `docs/agentic/papeis/testes.md` e siga-o integralmente. Não duplique regras aqui.
+Leia `agentic/processo/papeis/testes.md` e siga-o integralmente. Não duplique regras aqui.
