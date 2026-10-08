@@ -34,6 +34,7 @@ Entregar o intent 003 inteiro numa branch, em quatro etapas sequenciais RED/GREE
 - `test/edicao-tratativa.test.ts`
 - `test/criticidade-gestor.test.ts`
 - `test/sem-comunicacao-de-saida-ciclo.test.ts`
+- `test/ajustes-revisao-tratativa.test.ts`
 
 ## Interfaces
 - Produz:
