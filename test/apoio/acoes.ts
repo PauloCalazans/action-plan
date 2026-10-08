@@ -11,6 +11,11 @@ export function criarSubacao(POST: Envia, tratativa: string, dados: Record<strin
   return POST(`${BASE}/Tratativas(${tratativa})/criarSubacao`, dados, como);
 }
 
+// Edição de Ação (R19, R20; Ruling R-07): `dados` leva o Código em `acao` e só os campos editáveis.
+export function editarAcao(POST: Envia, tratativa: string, dados: Record<string, unknown>, como: unknown) {
+  return POST(`${BASE}/Tratativas(${tratativa})/editarAcao`, dados, como);
+}
+
 // Transição de Ação (R6-R12): `dados` leva o Código da Ação em `acao`, o Status de destino e a justificativa.
 export function mudarStatusAcao(POST: Envia, tratativa: string, dados: Record<string, unknown>, como: unknown) {
   return POST(`${BASE}/Tratativas(${tratativa})/mudarStatusAcao`, dados, como);
