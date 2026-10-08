@@ -12,15 +12,23 @@ type Criticidade : String(10) enum {
   Critica = 'Crítica';
 }
 
-/** R20: Status inicial; demais Status pertencem ao intent 003. */
+/** R1 (spec tratativa): Status da Tratativa; toda Tratativa nasce `Aberta` (R20 do 002). */
 type StatusTratativa : String(20) enum {
   Aberta;
+  EmAndamento = 'Em andamento';
+  Encerrada;
+  Cancelada;
 }
 
-/** R12/R20: eventos de histórico do 002 (o Histórico completo é do intent 008). */
+/** Eventos de histórico do 002 e do 003 (R9, R15 da spec tratativa); o Histórico completo é do intent 008. */
 type EventoHistorico : String(30) enum {
   Criacao;
   AlteracaoCriticidade;
+  MudancaStatus;
+  Encerramento;
+  Reabertura;
+  Cancelamento;
+  Edicao;
 }
 
 type TipoAutor : String(20) enum {
@@ -41,6 +49,10 @@ entity Tratativas {
       area                  : String(100);
       @PersonalData.IsPotentiallyPersonal
       solicitante           : String(50);
+      /** R24 (spec tratativa): cópias normalizadas (trim + minúsculas, acentos preservados) para o filtro da listagem. */
+      origemNormalizada     : String(100);
+      unidadeNormalizada    : String(100);
+      areaNormalizada       : String(100);
       criticidade           : Criticidade not null;
       status                : StatusTratativa not null default 'Aberta';
       dataCriacao           : Date not null;
@@ -71,8 +83,14 @@ entity HistoricoTratativa {
       tratativa     : Association to one Tratativas not null;
       evento        : EventoHistorico not null;
       campo         : String(50);
+      /** Pode conter a matrícula do Solicitante (R15 da spec tratativa); a Descrição nunca é copiada. */
+      @PersonalData.IsPotentiallyPersonal
       valorAnterior : String(200);
+      @PersonalData.IsPotentiallyPersonal
       valorNovo     : String(200);
+      /** R5/R9 (spec tratativa): texto livre do Gestor na transição. */
+      @PersonalData.IsPotentiallyPersonal
+      justificativa : String(500);
       @PersonalData.IsPotentiallyPersonal
       autor         : String(256) not null;
       tipoAutor     : TipoAutor not null;

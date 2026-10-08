@@ -43,6 +43,12 @@
             "usuario": {
               "password": "",
               "roles": []
+            },
+            "gestor": {
+              "password": "",
+              "roles": [
+                "GestorTratativa"
+              ]
             }
           }
         }

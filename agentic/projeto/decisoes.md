@@ -60,6 +60,20 @@ Cada decisão vale para o projeto inteiro até ser revogada. Nunca apague uma de
 - **Verificado por:** `npm test`
 - **Data:** 2026-10-07
 
+### D9 — Serialização por agregado
+- **Decisão:** toda operação que lê uma Tratativa para decidir e depois escreve sobre ela (e, nos intents seguintes, sobre Ações e Responsáveis dela) começa com `bloquearTratativa(codigo)` (`srv/tratativa/bloqueio.ts`: `SELECT ... FOR UPDATE` sem `.one` e sem `LIMIT`) na transação do pedido, e bloqueia a Tratativa antes de qualquer outra linha; nenhuma decisão usa leitura anterior ao bloqueio.
+- **Por quê:** no HANA o isolamento padrão é READ COMMITTED; sem bloqueio, dois pedidos simultâneos leem o mesmo estado e ambos gravam (dois Encerramentos, Criticidade e Data prevista de pedidos diferentes). Bloquear sempre a Tratativa primeiro evita ciclo de bloqueios entre operações.
+- **Consequência:** 004 e 005 bloqueiam a Tratativa antes de tocar Ações ou Responsáveis; o SQLite dos testes não emite `FOR UPDATE` (o pool de 1 conexão já serializa), então a prova automatizada é estrutural e o comportamento no HANA é conferido no primeiro deploy (intent 014).
+- **Verificado por:** espião `cds.db.before` (`test/apoio/banco-espiao.ts`, `bloqueiaAntesDeEscrever`) nos testes das etapas 1, 3 e 4 da task tratativa/001 (CA45, CA46, CA72); medição do renderizador SQL genérico registrada no design da spec tratativa (decisão 6)
+- **Data:** 2026-10-07
+
+### D10 — Contrato de recusas dos serviços de usuário
+- **Decisão:** nos serviços consumidos por usuários (hoje, `TratativaService`), a recusa segue esta precedência e estes códigos: 401 autenticação, 403 papel (inclui identidade `AplicativoOrigem`), 400 forma do pedido recusada pelo runtime (campo fora da assinatura, valor de tipo errado), 404 Tratativa inexistente, **409 estado** (transição não permitida, Tratativa que não pode ser alterada), 400 campo inválido com `target` = parâmetro.
+- **Por quê:** R31 da spec tratativa fixa a ordem papel → existência → estado → campos; 409 separa "o pedido é válido mas o estado atual não permite" de "o dado está errado" (400), e a forma do pedido é verificada pelo runtime CAP antes do handler.
+- **Consequência:** 004 e 005 reutilizam os códigos, as mensagens de estado do 003 e o `recusar(status, message, target)` de `srv/tratativa/recusa.ts`; validação de tamanho fica no domínio, depois do estado (parâmetros `String` sem tamanho nas actions).
+- **Verificado por:** CA73 (etapa 1), CA29 (etapa 3), CA30 (etapa 4) e os casos de R31 das etapas 1, 3 e 4 da task tratativa/001 (papel antes de estado, estado antes de campo); contrato de erros do design da spec tratativa
+- **Data:** 2026-10-07
+
 ## Decisões revogadas
 
 <nenhuma>
