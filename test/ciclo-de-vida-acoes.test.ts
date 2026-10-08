@@ -1,5 +1,5 @@
 import cds from '@sap/cds';
-import { criarAcao, criarSubacao, mudarStatusAcao } from './apoio/acoes';
+import { consultarAcao, criarAcao, criarSubacao, mudarStatusAcao, type Consulta } from './apoio/acoes';
 import { linhas } from './apoio/banco';
 import { bloqueiaAntesDeEscrever, instalarEspiao, type Espiao } from './apoio/banco-espiao';
 import { registrarCredenciais } from './apoio/credenciais';
@@ -7,7 +7,8 @@ import { fixarInstante, liberarRelogio } from './apoio/relogio';
 import { abrirPorApp, criarAvulsa, mudarStatus, sufixoUnico, type Envia } from './apoio/tratativas';
 import { comoApp, comoGestor, comoUsuario, semAuth } from './apoio/usuarios';
 
-const { POST } = cds.test(__dirname + '/..');
+const { GET, POST } = cds.test(__dirname + '/..');
+const consultar = GET as unknown as Consulta;
 const enviar = POST as unknown as Envia;
 const TRATATIVAS = 'br.com.calazanstec.Tratativas';
 const UUID_INEXISTENTE = '00000000-0000-4000-8000-000000000000';
@@ -213,11 +214,12 @@ describe('transições de Status da Ação (R6-R10)', () => {
     expect(await statusAcao(s1)).toBe('Em andamento');
   });
 
-  it('CA47: Ação com Evidência obrigatória "sim" conclui sem bloqueio neste intent', async () => {
+  it('CA47 (R14, Ruling R-10): Ação criada com Evidência obrigatória "sim" grava e devolve o valor na consulta do Gestor', async () => {
     const t = await nova();
     const a = await acao(t, { evidenciaObrigatoria: 'sim' });
-    await leva(t, a, 'Concluída');
-    expect(await statusAcao(a)).toBe('Concluída');
+    const r = await consultarAcao(consultar, t, a, comoGestor);
+    expect(r.status).toBe(200);
+    expect(r.data.evidenciaObrigatoria).toBe('sim');
   });
 
   it('CA49: Tratativa não conclui nem muda de status quando todas as Ações concluem', async () => {
