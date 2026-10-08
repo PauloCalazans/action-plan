@@ -8,6 +8,12 @@ function valoresDoEnum(tipo: string): string[] {
   return Object.entries(def?.enum ?? {}).map(([nome, item]) => item?.val ?? nome);
 }
 
-export const criticidadesValidas = (): string[] => valoresDoEnum('Criticidade');
-export const statusValidos = (): string[] => valoresDoEnum('StatusTratativa');
-export const tiposAutorValidos = (): string[] => valoresDoEnum('TipoAutor');
+export function criticidadesValidas(): string[] {
+  return valoresDoEnum('Criticidade');
+}
+export function statusValidos(): string[] {
+  return valoresDoEnum('StatusTratativa');
+}
+export function tiposAutorValidos(): string[] {
+  return valoresDoEnum('TipoAutor');
+}
