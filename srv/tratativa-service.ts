@@ -1,6 +1,7 @@
 import cds from '@sap/cds';
 import { abrirTratativa, type DadosAbertura } from './tratativa/abertura';
 import { mudarStatus } from './tratativa/ciclo-de-vida';
+import { consultarTratativa, listarTratativas, type FiltrosListagem } from './tratativa/listagem';
 
 /** Contrato dos usuários: só monta o Autor e delega ao domínio (decisões 6, 14 e 15). */
 export default class TratativaService extends cds.ApplicationService {
@@ -16,6 +17,12 @@ export default class TratativaService extends cds.ApplicationService {
           : 'Aplicativo de origem não usa este serviço.',
       );
     });
+    // Decisão 2: o entity set é só âncora das actions; leitura é pelas functions.
+    this.before('READ', 'Tratativas', (req) => req.reject(405, 'Use as functions listarTratativas e consultarTratativa.'));
+    this.on('listarTratativas', (req) => listarTratativas(req.data as FiltrosListagem));
+    this.on('consultarTratativa', (req) =>
+      consultarTratativa((req.data as { codigo?: string }).codigo, req.user.is('GestorTratativa')),
+    );
     this.on('criarTratativaAvulsa', (req) =>
       abrirTratativa(req.data as DadosAbertura, { id: req.user.id, tipo: 'Usuario' }),
     );

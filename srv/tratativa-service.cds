@@ -13,12 +13,49 @@ service TratativaService {
     codigo : UUID;
   }
 
+  /** R25: exatamente estes dez campos na listagem (sem Descrição e sem Solicitante). */
+  type ItemListagem {
+    codigo                : UUID;
+    titulo                : String(200);
+    origem                : String(100);
+    idOrigem              : String(50);
+    criticidade           : m.Criticidade;
+    status                : m.StatusTratativa;
+    unidade               : String(100);
+    area                  : String(100);
+    dataCriacao           : Date;
+    dataPrevistaConclusao : Date;
+  }
+
+  /** R26: campos da listagem mais Descrição e Solicitante; os dois vêm null para quem não é Gestor (R23). */
+  type DetalheTratativa {
+    codigo                : UUID;
+    titulo                : String(200);
+    origem                : String(100);
+    idOrigem              : String(50);
+    criticidade           : m.Criticidade;
+    status                : m.StatusTratativa;
+    unidade               : String(100);
+    area                  : String(100);
+    dataCriacao           : Date;
+    dataPrevistaConclusao : Date;
+    descricao             : String(5000);
+    solicitante           : String(50);
+  }
+
   action   criarTratativaAvulsa(titulo : String(200), criticidade : String(10), descricao : String(5000),
                                 unidade : String(100), area : String(100), solicitante : String(50)) returns ResultadoAbertura;
 
+  /** R24/R25: filtros combinados; página padrão 50, máximo 200; pagina começa em 1. */
+  function listarTratativas(origem : String, idOrigem : String, criticidade : String, status : String,
+                            unidade : String, area : String, tamanhoPagina : Integer, pagina : Integer) returns many ItemListagem;
+
+  /** R26: consulta pelo Código; inexistente → 404. */
+  function consultarTratativa(codigo : UUID) returns DetalheTratativa;
+
   /**
    * Âncora das operações de ciclo de vida (R2). Só a chave é exposta; não há criação, alteração
-   * nem exclusão pelo entity set (R11).
+   * nem exclusão pelo entity set (R11; leitura pelas functions acima).
    * Parâmetros sem tamanho de propósito: o domínio valida tamanho depois de papel, existência e estado (R31).
    */
   @readonly

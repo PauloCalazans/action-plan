@@ -2,6 +2,7 @@ import cds from '@sap/cds';
 import { agora, dataCivil } from '../lib/relogio';
 import { validarAbertura } from './validacao';
 import { buscarPorPar, reservarPar } from './chave-origem';
+import { normalizarTexto } from './normalizacao';
 import { diasDoPrazo, somarDiasCorridos } from './prazo';
 
 export type TipoAutor = 'Aplicativo' | 'Usuario' | 'Sistema';
@@ -41,6 +42,9 @@ export async function abrirTratativa(dados: DadosAbertura, autor: Autor): Promis
       unidade: dados.unidade,
       area: dados.area,
       solicitante: dados.solicitante,
+      origemNormalizada: normalizarTexto(dados.origem),
+      unidadeNormalizada: normalizarTexto(dados.unidade),
+      areaNormalizada: normalizarTexto(dados.area),
       criticidade,
       status: 'Aberta',
       dataCriacao,
