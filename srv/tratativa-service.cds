@@ -59,9 +59,11 @@ service TratativaService {
    * Parâmetros sem tamanho de propósito: o domínio valida tamanho depois de papel, existência e estado (R31).
    */
   @readonly
-  @restrict: [{ grant: ['mudarStatus'], to: 'GestorTratativa' }]
+  @restrict: [{ grant: ['mudarStatus', 'editar'], to: 'GestorTratativa' }]
   entity Tratativas as projection on m.Tratativas { key codigo } actions {
     /** R2/R4/R5: a operação é identificada pelo Status de destino. */
     action mudarStatus(status : String, justificativa : String);
+    /** R12/R13/R15: só estes campos; ausente = não muda; null ou só espaços = apaga (Título não pode). */
+    action editar(titulo : String, descricao : String, unidade : String, area : String, solicitante : String);
   };
 }

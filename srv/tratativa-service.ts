@@ -1,6 +1,7 @@
 import cds from '@sap/cds';
 import { abrirTratativa, type DadosAbertura } from './tratativa/abertura';
 import { mudarStatus } from './tratativa/ciclo-de-vida';
+import { editarTratativa } from './tratativa/edicao';
 import { consultarTratativa, listarTratativas, type FiltrosListagem } from './tratativa/listagem';
 
 /** Contrato dos usuários: só monta o Autor e delega ao domínio (decisões 6, 14 e 15). */
@@ -29,6 +30,10 @@ export default class TratativaService extends cds.ApplicationService {
     this.on('mudarStatus', 'Tratativas', async (req) => {
       const { codigo } = req.params[0] as { codigo: string };
       await mudarStatus(String(codigo).toLowerCase(), req.data, { id: req.user.id, tipo: 'Usuario' });
+    });
+    this.on('editar', 'Tratativas', async (req) => {
+      const { codigo } = req.params[0] as { codigo: string };
+      await editarTratativa(String(codigo).toLowerCase(), req.data, { id: req.user.id, tipo: 'Usuario' });
     });
     return super.init();
   }
