@@ -39,3 +39,12 @@ export function editar(
 ): Promise<Resposta> {
   return POST(`${BASE}/Tratativas(${codigo})/editar`, corpo, como);
 }
+
+export function mudarCriticidade(
+  POST: Envia,
+  codigo: string,
+  corpo: Record<string, unknown>,
+  como: unknown,
+): Promise<Resposta> {
+  return POST(`${BASE}/Tratativas(${codigo})/mudarCriticidade`, corpo, como);
+}
