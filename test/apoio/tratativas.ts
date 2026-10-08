@@ -30,3 +30,12 @@ export function mudarStatus(
 ): Promise<Resposta> {
   return POST(`${BASE}/Tratativas(${codigo})/mudarStatus`, corpo, como);
 }
+
+export function editar(
+  POST: Envia,
+  codigo: string,
+  corpo: Record<string, unknown>,
+  como: unknown,
+): Promise<Resposta> {
+  return POST(`${BASE}/Tratativas(${codigo})/editar`, corpo, como);
+}
