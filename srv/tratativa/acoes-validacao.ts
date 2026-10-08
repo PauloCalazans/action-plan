@@ -36,12 +36,15 @@ export function validarResponsavel(valor: unknown): string {
   return responsavel;
 }
 
-/** R21 (004): Prazo em AAAA-MM-DD, real e não anterior à data civil de hoje. */
-export function validarPrazo(valor: unknown, hoje: string): string {
+/**
+ * R21 (004): Prazo em AAAA-MM-DD, real e não anterior à data civil de hoje.
+ * Sem `hoje` (edição de Prazo já gravado, CA20) só o formato é conferido.
+ */
+export function validarPrazo(valor: unknown, hoje?: string): string {
   if (ausente(valor)) recusar(400, 'O campo Prazo é obrigatório.', 'prazo');
   const prazo = valor as string;
   if (!dataCivilValida(prazo)) recusar(400, 'Prazo inválido: use o formato AAAA-MM-DD.', 'prazo');
-  if (prazo < hoje) recusar(400, 'Prazo não pode ser anterior a hoje.', 'prazo');
+  if (hoje !== undefined && prazo < hoje) recusar(400, 'Prazo não pode ser anterior a hoje.', 'prazo');
   return prazo;
 }
 

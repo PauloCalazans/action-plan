@@ -1,6 +1,7 @@
 import cds from '@sap/cds';
 import { abrirTratativa, type DadosAbertura } from './tratativa/abertura';
 import { consultarAcao, consultarEstruturaAcoes } from './tratativa/acoes-consulta';
+import { editarAcao, type CamposEdicaoAcao } from './tratativa/acoes-edicao';
 import { mudarStatusAcao } from './tratativa/acoes-ciclo-de-vida';
 import { criarAcao, criarSubacao, type DadosCriacaoAcao } from './tratativa/acoes-criacao';
 import { mudarStatus } from './tratativa/ciclo-de-vida';
@@ -65,6 +66,15 @@ export default class TratativaService extends cds.ApplicationService {
       const { codigo } = req.params[0] as { codigo: string };
       const { acao, status, justificativa } = req.data as { acao?: string; status?: string; justificativa?: string };
       await mudarStatusAcao(String(codigo).toLowerCase(), String(acao).toLowerCase(), { status, justificativa }, {
+        id: req.user.id,
+        tipo: 'Usuario',
+      });
+    });
+    // 004 R19/R20 (Ruling R-07): `acao` é tirado dos campos; o runtime já recusou qualquer campo fora da assinatura.
+    this.on('editarAcao', 'Tratativas', async (req) => {
+      const { codigo } = req.params[0] as { codigo: string };
+      const { acao, ...campos } = req.data as { acao?: string } & CamposEdicaoAcao;
+      await editarAcao(String(codigo).toLowerCase(), String(acao).toLowerCase(), campos, {
         id: req.user.id,
         tipo: 'Usuario',
       });
