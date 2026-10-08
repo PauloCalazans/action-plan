@@ -40,7 +40,7 @@ Entregar o intent 003 inteiro numa branch, em quatro etapas sequenciais RED/GREE
   - `TratativaService` (`/api/tratativa/v1`) com o CDS da seção "`srv/tratativa-service.cds` (arquivo completo)" do design, acrescentado por etapa: `Tratativas` + `mudarStatus` (etapa 1), `ItemListagem`, `DetalheTratativa`, `listarTratativas`, `consultarTratativa` (etapa 2), `editar` (etapa 3), `mudarCriticidade` (etapa 4). O `@restrict` do entity set lista, em cada etapa, só as actions já existentes. Ao final o arquivo é idêntico ao do design.
   - Domínio com as assinaturas fixas da decisão 14 do design (`recusa.ts`, `dominios.ts`, `normalizacao.ts`, `bloqueio.ts`, `historico.ts`, `ciclo-de-vida.ts`, `edicao.ts`, `listagem.ts`; `criticidade.ts` alterado).
   - Contrato de erros da seção "Contrato de erros do `TratativaService`" do design (mensagens exatas, `target`, HTTP).
-  - Decisões de plataforma D9 e D10 em `agentic/projeto/decisoes.md` (texto da seção "Decisões de plataforma a registrar" do design).
+  - Decisões de plataforma D9 e D10 em `agentic/projeto/decisoes.md` (bloco de texto final da seção "Decisões de plataforma a registrar" do design, copiado sem mudança).
   - Para os intents 004 e 005: `bloquearTratativa`, `exigirAlteravel`, `validarAutor`, `registrarHistorico`, `recusar` e o papel `GestorTratativa`.
 - Consome (002, já integrado): `abrirTratativa`, `Autor`, `TipoAutor` (`srv/tratativa/abertura.ts`); `somarDiasCorridos`, `diasDoPrazo` (`prazo.ts`); `agora`, `dataCivil` (`srv/lib/relogio.ts`); `TratativaInternaService.alterarCriticidade`; helpers de teste `test/apoio/banco.ts`, `credenciais.ts`, `relogio.ts`, `usuarios.ts`.
 
@@ -86,15 +86,16 @@ Entregar o intent 003 inteiro numa branch, em quatro etapas sequenciais RED/GREE
 - `srv/tratativa-service.cds`: entity set `Tratativas` (`@readonly`, `{ key codigo }`) com `mudarStatus` e `@restrict` com `grant: ['mudarStatus']`.
 - `srv/tratativa-service.ts`: `before('*')` registrado **antes** de qualquer outro handler: `AplicativoOrigem` → 403 (`criarTratativaAvulsa`: `Aplicativo de origem não cria Tratativa avulsa.`; demais eventos: `Aplicativo de origem não usa este serviço.`), substituindo o `before('criarTratativaAvulsa')` atual; `on('mudarStatus', 'Tratativas')` → `mudarStatus(String(req.params[0].codigo).toLowerCase(), req.data, { id: req.user.id, tipo: 'Usuario' })`.
 - `srv/tratativa/recusa.ts`, `dominios.ts`, `bloqueio.ts`, `historico.ts`, `ciclo-de-vida.ts` com as assinaturas e a ordem das decisões 6, 7, 8, 11 e 14 do design. `bloquearTratativa` usa `SELECT.from(...).where({ codigo }).forUpdate()` sem `.one`/`limit`.
-- `agentic/projeto/decisoes.md`: D9 e D10 (texto do design).
+- `agentic/projeto/decisoes.md`: D9 e D10, copiando sem mudança o bloco de texto final da seção "Decisões de plataforma a registrar" do design (formato de D6-D8).
 
 ## Etapa 2 — Consulta e listagem (`listarTratativas`, `consultarTratativa`)
-**CAs:** CA1, CA23 (leitura), CA47 (filtro de Status), CA48, CA49, CA50, CA51, CA52, CA53, CA54, CA55, CA56, CA57, CA58, CA59, CA60, CA61, CA62, CA63, CA69, CA70, CA71.
+**CAs:** CA1, CA19 (leitura), CA23 (leitura), CA47 (filtro de Status), CA48, CA49, CA50, CA51, CA52, CA53, CA54, CA55, CA56, CA57, CA58, CA59, CA60, CA61, CA62, CA63, CA69, CA70, CA71.
 
 **RED** — commit `test(red): consulta e listagem de Tratativas para usuários (R23-R28)`:
 - `test/consulta-listagem-tratativa.test.ts` (novo), via `GET /api/tratativa/v1/listarTratativas(...)` (parâmetros com `encodeURIComponent`) e `consultarTratativa(codigo=<c>)`:
   - CA1: avulsa recém-criada → `status = 'Aberta'`.
-  - CA48, CA70: `comoUsuario` lista com e sem filtros → itens sem as chaves `descricao`/`solicitante`, `titulo` presente; consulta → `descricao` e `solicitante` `null`.
+  - CA48, CA70: `comoUsuario` lista com e sem filtros → itens sem as chaves `descricao`/`solicitante`, `titulo` presente; consulta → chaves `descricao` e `solicitante` presentes com valor `null`. `comoGestor` lista → itens também sem as duas chaves (ausentes para todos na listagem).
+  - CA19 (leitura): `semAuth` em `listarTratativas()` e em `consultarTratativa(codigo=<c>)` → 401.
   - CA61, CA69: `comoGestor` consulta Tratativa com Descrição e Solicitante → doze chaves (sem `@odata…`) com os valores; nenhuma chave de histórico.
   - CA49: `comoApp` (credencial registrada) → 403 nas duas functions.
   - CA50: Código aleatório → 404 `Tratativa não encontrada.`; `codigo=abc` → 400 `target = 'codigo'`.
@@ -175,7 +176,7 @@ Entregar o intent 003 inteiro numa branch, em quatro etapas sequenciais RED/GREE
 
 ## Critérios de pronto
 - Etapa 1: CA2-CA23 (transições e escrita), CA46, CA47 (Justificativa), CA64, CA66, CA67, CA68, CA73, CA77.
-- Etapa 2: CA1, CA23 (leitura), CA47 (Status), CA48-CA63, CA69, CA70, CA71.
+- Etapa 2: CA1, CA19 (leitura), CA23 (leitura), CA47 (Status), CA48-CA63, CA69, CA70, CA71.
 - Etapa 3: CA17-CA19 (edição), CA24-CA29, CA31-CA35, CA47 (Título), CA72, CA74.
 - Etapa 4: CA18, CA19, CA30, CA36-CA45, CA47 (Criticidade, Autor, Tipo de autor), CA65, CA75, CA76.
 - Os 77 CAs da spec cobertos (mapa em "Como isso se prova" do design); suíte do 002 inalterada e verde.
