@@ -1,46 +1,12 @@
 import cds from '@sap/cds';
-import path from 'path';
-import fs from 'fs';
 import { codigoValido } from './consulta';
 import { recusar } from './recusa';
 import { registrarHistorico } from './historico';
-import { usuarioAutenticadoEhMatricula } from './identidade';
+import { obterMatriculaUsuario, usuarioAutenticadoEhMatricula } from './identidade';
+import { getStorage } from './evidencias-storage';
 
 const NS = 'br.com.calazanstec';
 const FINAIS = ['Concluída', 'Cancelada'];
-
-interface StorageModule {
-  salvar: (id: string, conteudo: Buffer) => Promise<void>;
-  obter: (id: string) => Promise<Buffer | null>;
-  excluir: (id: string) => Promise<void>;
-}
-
-let storageModule: StorageModule | null = null;
-async function getStorage(): Promise<StorageModule> {
-  if (!storageModule) {
-    await cds.connect.to('ArmazenamentoEvidencias');
-    const impl = cds.env.requires?.ArmazenamentoEvidencias?.impl || './armazenamento-evidencias';
-    let modulePath = impl;
-    
-    if (!path.isAbsolute(impl)) {
-      const fromRoot = path.resolve(process.cwd(), impl);
-      const fromHere = path.resolve(__dirname, impl);
-      
-      if (fs.existsSync(fromRoot + '.ts') || fs.existsSync(fromRoot + '.js')) {
-        modulePath = fromRoot;
-      } else if (fs.existsSync(fromHere + '.ts') || fs.existsSync(fromHere + '.js')) {
-        modulePath = fromHere;
-      }
-    }
-    
-    const imported = await import(modulePath);
-    storageModule = imported.default || imported;
-  }
-  if (!storageModule) {
-    throw new Error('Falha ao carregar módulo de armazenamento');
-  }
-  return storageModule;
-}
 
 interface PendenciaEvidencia {
   acao: string;
@@ -93,7 +59,7 @@ export async function listarPendenciasEvidenciasTratativa(
   if (!tratativa) recusar(404, 'Tratativa não encontrada.');
 
   const ehGestor = req.user.is('GestorTratativa');
-  const matriculaUsuario = req.user.id;
+  const matriculaUsuario = obterMatriculaUsuario(req);
 
   // Buscar Ações com evidência obrigatória, não finalizadas, sem evidências ativas
   const acoes = (await cds.db.run(
@@ -233,7 +199,7 @@ export async function listarEvidenciasTratativa(
   if (!tratativa) recusar(404, 'Tratativa não encontrada.');
 
   const ehGestor = req.user.is('GestorTratativa');
-  const matriculaUsuario = req.user.id;
+  const matriculaUsuario = obterMatriculaUsuario(req);
 
   // Buscar todas as evidências ativas da Tratativa com código da Ação
   const evidencias = (await cds.db.run(
@@ -336,7 +302,7 @@ export async function baixarEvidencia(
   // Se falhar, a transação é revertida e o binário não é entregue
   await registrarHistorico(
     codigoTratativa,
-    { id: req.user.id, tipo: 'Usuario' },
+    { id: obterMatriculaUsuario(req), tipo: 'Usuario' },
     [
       {
         evento: 'DownloadEvidencia',
