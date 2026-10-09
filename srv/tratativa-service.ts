@@ -8,14 +8,19 @@ import { mudarStatus } from './tratativa/ciclo-de-vida';
 import { alterarCriticidade } from './tratativa/criticidade';
 import { editarTratativa } from './tratativa/edicao';
 import { consultarTratativa, listarTratativas, type FiltrosListagem } from './tratativa/listagem';
+import { atribuirResponsavelPrincipal, incluirParticipante, removerParticipante, consultarResponsaveis } from './tratativa/responsaveis-tratativa';
 
 /** Contrato dos usuários: só monta o Autor e delega ao domínio (decisões 6, 14 e 15). */
 export default class TratativaService extends cds.ApplicationService {
   async init() {
     // Decisão 3 (design tratativa): aplicativo de origem é recusado em todo o serviço, antes de qualquer gravação.
     // Registrado antes de qualquer outro handler.
+    // Permite consultas (listarTratativas, consultarTratativa, consultarEstruturaAcoes, consultarAcao)
     this.before('*', (req) => {
       if (!req.user.is('AplicativoOrigem')) return;
+      // Permite functions de leitura
+      const permitidas = ['listarTratativas', 'consultarTratativa', 'consultarEstruturaAcoes', 'consultarAcao'];
+      if (permitidas.includes(req.event)) return;
       req.reject(
         403,
         req.event === 'criarTratativaAvulsa'
@@ -86,6 +91,32 @@ export default class TratativaService extends cds.ApplicationService {
         id: req.user.id,
         tipo: 'Usuario',
       });
+    });
+    // 005 R17, R26 (Ruling R-02): consulta de responsáveis exclusiva para o Gestor (403 estático do runtime para não-gestores).
+    this.on('consultarResponsaveis', (req) => {
+      const { tratativa } = req.data as { tratativa?: string };
+      return consultarResponsaveis(String(tratativa).toLowerCase());
+    });
+    // 005 R7, R14: atribuição ou reatribuição de Responsável Principal.
+    this.on('atribuirResponsavelPrincipal', 'Tratativas', async (req) => {
+      const { codigo } = req.params[0] as { codigo: string };
+      const { responsavelPrincipal, justificativa } = req.data as { responsavelPrincipal?: string; justificativa?: string };
+      await atribuirResponsavelPrincipal(String(codigo).toLowerCase(), responsavelPrincipal!, justificativa, {
+        id: req.user.id,
+        tipo: 'Usuario',
+      });
+    });
+    // 005 R9, R14: inclusão de participante.
+    this.on('incluirParticipante', 'Tratativas', async (req) => {
+      const { codigo } = req.params[0] as { codigo: string };
+      const { participante } = req.data as { participante?: string };
+      await incluirParticipante(String(codigo).toLowerCase(), participante!, { id: req.user.id, tipo: 'Usuario' });
+    });
+    // 005 R9, R14: remoção de participante.
+    this.on('removerParticipante', 'Tratativas', async (req) => {
+      const { codigo } = req.params[0] as { codigo: string };
+      const { participante } = req.data as { participante?: string };
+      await removerParticipante(String(codigo).toLowerCase(), participante!, { id: req.user.id, tipo: 'Usuario' });
     });
     return super.init();
   }

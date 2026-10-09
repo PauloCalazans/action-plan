@@ -48,6 +48,12 @@ service TratativaService {
     solicitante           : String(50);
   }
 
+  /** R17, R26 (005; Ruling R-02): estrutura de responsáveis e participantes para o Gestor. */
+  type DetalheResponsaveis {
+    responsavelPrincipal : String(50);
+    participantes        : many String;
+  }
+
   /** R2/R25 (004): item de Subação dentro da árvore (sem subações aninhadas). */
   type ItemSubacaoEstrutura {
     codigo                : UUID;
@@ -97,6 +103,10 @@ service TratativaService {
   /** R26: consulta pelo Código; inexistente → 404. */
   function consultarTratativa(codigo : UUID) returns DetalheTratativa;
 
+  /** R17, R26 (005; Ruling R-02): consulta de responsáveis exclusiva para o Gestor. */
+  @restrict: [{ grant: '*', to: 'GestorTratativa' }]
+  function consultarResponsaveis(tratativa : UUID) returns DetalheResponsaveis;
+
   /** R25 (004): consulta a estrutura hierárquica completa de Ações e Subações de uma Tratativa. */
   function consultarEstruturaAcoes(tratativa : UUID) returns many ItemEstruturaAcao;
 
@@ -109,7 +119,7 @@ service TratativaService {
    * Parâmetros sem tamanho de propósito: o domínio valida tamanho depois de papel, existência e estado (R31).
    */
   @readonly
-  @restrict: [{ grant: ['mudarStatus', 'editar', 'mudarCriticidade', 'criarAcao', 'criarSubacao', 'mudarStatusAcao', 'editarAcao'], to: 'GestorTratativa' }]
+  @restrict: [{ grant: ['mudarStatus', 'editar', 'mudarCriticidade', 'criarAcao', 'criarSubacao', 'mudarStatusAcao', 'editarAcao', 'atribuirResponsavelPrincipal', 'incluirParticipante', 'removerParticipante'], to: 'GestorTratativa' }]
   entity Tratativas as projection on m.Tratativas { key codigo } actions {
     /** R2/R4/R5: a operação é identificada pelo Status de destino. */
     action mudarStatus(status : String, justificativa : String);
@@ -129,5 +139,14 @@ service TratativaService {
 
     /** 004 R19/R20/R21: edita campos editáveis de Ação ou Subação Pendente ou Em andamento (responsavel não é editável, Ruling R-07). */
     action editarAcao(acao : UUID, descricao : String, prazo : String, prioridade : String, evidenciaObrigatoria : String);
+
+    /** R7, R14 (005): primeira atribuição ou reatribuição de Responsável Principal da Tratativa. */
+    action atribuirResponsavelPrincipal(responsavelPrincipal : String, justificativa : String);
+
+    /** R9, R14 (005): inclusão de participante na Tratativa (até 20). */
+    action incluirParticipante(participante : String);
+
+    /** R9, R14 (005): remoção de participante da Tratativa. */
+    action removerParticipante(participante : String);
   };
 }
