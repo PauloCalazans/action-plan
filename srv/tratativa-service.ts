@@ -64,13 +64,11 @@ export default class TratativaService extends cds.ApplicationService {
       return criarAcao(String(codigo).toLowerCase(), req.data as DadosCriacaoAcao, { id: req.user.id, tipo: 'Usuario' });
     });
     // 004 R6-R12: `acao` passa como texto (String), pelo mesmo motivo de `acaoMae`: ausente ou null vira 'Código inválido.'.
+    // 005 R11, R16, R28: autorização dinâmica implementada no domínio; passa Request completo.
     this.on('mudarStatusAcao', 'Tratativas', async (req) => {
       const { codigo } = req.params[0] as { codigo: string };
       const { acao, status, justificativa } = req.data as { acao?: string; status?: string; justificativa?: string };
-      await mudarStatusAcao(String(codigo).toLowerCase(), String(acao).toLowerCase(), { status, justificativa }, {
-        id: req.user.id,
-        tipo: 'Usuario',
-      });
+      await mudarStatusAcao(req, String(codigo).toLowerCase(), String(acao).toLowerCase(), { status, justificativa });
     });
     // 004 R19/R20 (Ruling R-07): `acao` é tirado dos campos; o runtime já recusou qualquer campo fora da assinatura.
     this.on('editarAcao', 'Tratativas', async (req) => {
