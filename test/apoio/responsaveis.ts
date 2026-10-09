@@ -43,3 +43,23 @@ export function listarTratativas(GET: Consulta, params: Record<string, unknown> 
 export function delegarAcao(POST: Envia, tratativa: string, dados: Record<string, unknown>, como: unknown): Promise<Resposta> {
   return POST(`${BASE}/Tratativas(${tratativa})/delegarAcao`, dados, como);
 }
+
+// Helper para function minhasAcoes
+export function minhasAcoes(GET: Consulta, params: Record<string, unknown> = {}, como: unknown): Promise<Resposta> {
+  const parametros = Object.entries(params)
+    .filter(([_, valor]) => valor !== null && valor !== undefined)
+    .map(([chave, valor]) => `${chave}=${encodeURIComponent(String(valor))}`)
+    .join(',');
+  const url = parametros ? `${BASE}/minhasAcoes(${parametros})` : `${BASE}/minhasAcoes()`;
+  return GET(url, como);
+}
+
+// Helper para function minhasTratativas
+export function minhasTratativas(GET: Consulta, params: Record<string, unknown> = {}, como: unknown): Promise<Resposta> {
+  const parametros = Object.entries(params)
+    .filter(([_, valor]) => valor !== null && valor !== undefined)
+    .map(([chave, valor]) => `${chave}=${encodeURIComponent(String(valor))}`)
+    .join(',');
+  const url = parametros ? `${BASE}/minhasTratativas(${parametros})` : `${BASE}/minhasTratativas()`;
+  return GET(url, como);
+}
