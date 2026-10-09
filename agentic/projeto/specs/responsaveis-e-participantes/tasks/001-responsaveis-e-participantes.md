@@ -1,7 +1,7 @@
 # Task 001: responsaveis-e-participantes
 
 **Spec:** agentic/projeto/specs/responsaveis-e-participantes/spec.md  
-**Status:** pendente  
+**Status:** em-andamento  
 <!-- pendente | em-andamento | em-revisão | publicada (integrada não é escrito: deriva do git) -->  
 **Branch:** responsaveis-e-participantes/001-responsaveis-e-participantes
 
