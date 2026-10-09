@@ -341,6 +341,6 @@ describe('Etapa 1: Complemento de Testes de Inclusão e Armazenamento de Evidên
     );
     // Esperamos 409 (estado da Tratativa na etapa 7) antes de 400 (campos na etapa 10)
     expect(r.status).toBe(409);
-    expect((r.data as Record<string, unknown>).error?.message).toContain('Tratativa Encerrada não pode ser alterada');
+    expect((r.data as ErrorResponse).error?.message).toContain('Tratativa Encerrada não pode ser alterada');
   });
 });
