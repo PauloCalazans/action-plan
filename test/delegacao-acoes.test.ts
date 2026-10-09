@@ -1,9 +1,10 @@
 import cds from '@sap/cds';
 import { registrarCredenciais } from './apoio/credenciais';
-import { sufixoUnico, type Envia, type Resposta, criarAvulsa, abrirPorApp, mudarStatus } from './apoio/tratativas';
+import { sufixoUnico, type Envia, criarAvulsa, abrirPorApp, mudarStatus } from './apoio/tratativas';
 import { comoApp, comoGestor, comoUsuario, semAuth } from './apoio/usuarios';
 import { delegarAcao } from './apoio/responsaveis';
 import { linhas } from './apoio/banco';
+import { criarAcao, criarSubacao, mudarStatusAcao, editarAcao } from './apoio/acoes';
 
 const UUID_INEXISTENTE = '00000000-0000-4000-8000-000000000000';
 
@@ -20,7 +21,7 @@ async function criarTratativaAberta(dados: Record<string, unknown> = {}): Promis
 }
 
 async function criarAcaoComResponsavel(tratativa: string, responsavel: string): Promise<string> {
-  const r = await enviar(`/api/tratativa/v1/Tratativas(${tratativa})/criarAcao`, {
+  const r = await criarAcao(enviar, tratativa, {
     descricao: `Descrição da Ação ${sufixoUnico()}`,
     prioridade: 'Alta',
     prazo: '2027-01-01',
@@ -28,10 +29,6 @@ async function criarAcaoComResponsavel(tratativa: string, responsavel: string): 
   }, comoGestor);
   expect(r.status).toBe(200);
   return r.data.codigo as string;
-}
-
-async function mudarStatusAcao(codigoAcao: string, status: string, como: unknown = comoGestor): Promise<Resposta> {
-  return enviar(`/api/tratativa/v1/Acoes(${codigoAcao})/mudarStatus`, { status }, como);
 }
 
 describe('Etapa 2 - Delegação de Ações com justificativa obrigatória', () => {
@@ -97,7 +94,8 @@ describe('Etapa 2 - Delegação de Ações com justificativa obrigatória', () =
       const acaoMae = await criarAcaoComResponsavel(tratativa, 'M1001');
       
       // Criar Subação
-      const rSub = await enviar(`/api/tratativa/v1/Acoes(${acaoMae})/criarSubacao`, {
+      const rSub = await criarSubacao(enviar, tratativa, {
+        acaoMae: acaoMae,
         descricao: `Subação ${sufixoUnico()}`,
         prioridade: 'Média',
         prazo: '2027-01-02',
@@ -171,7 +169,8 @@ describe('Etapa 2 - Delegação de Ações com justificativa obrigatória', () =
       const tratativa = await criarTratativaAberta();
       const acao = await criarAcaoComResponsavel(tratativa, 'M1001');
       
-      const r = await enviar(`/api/tratativa/v1/Acoes(${acao})/editarAcao`, {
+      const r = await editarAcao(enviar, tratativa, {
+        acao: acao,
         descricao: 'Nova descrição',
         responsavel: 'M2002' // Campo que não existe na edição
       }, comoGestor);
@@ -221,7 +220,7 @@ describe('Etapa 2 - Delegação de Ações com justificativa obrigatória', () =
       const acao = await criarAcaoComResponsavel(tratativa, 'M1001');
       
       // Antes de encerrar, concluir a Ação
-      const rConcluir = await mudarStatusAcao(acao, 'Concluída', comoGestor);
+      const rConcluir = await mudarStatusAcao(enviar, tratativa, { acao: acao, status: 'Concluída', justificativa: 'Conclusão de teste' }, comoGestor);
       expect(rConcluir.status).toBe(204);
       
       // Agora encerrar Tratativa
@@ -242,7 +241,7 @@ describe('Etapa 2 - Delegação de Ações com justificativa obrigatória', () =
       const acao = await criarAcaoComResponsavel(tratativa, 'M1001');
       
       // Antes de cancelar, concluir a Ação
-      const rConcluir = await mudarStatusAcao(acao, 'Concluída', comoGestor);
+      const rConcluir = await mudarStatusAcao(enviar, tratativa, { acao: acao, status: 'Concluída', justificativa: 'Conclusão de teste' }, comoGestor);
       expect(rConcluir.status).toBe(204);
       
       // Cancelar Tratativa (precisa de justificativa)
@@ -265,7 +264,7 @@ describe('Etapa 2 - Delegação de Ações com justificativa obrigatória', () =
       const acao = await criarAcaoComResponsavel(tratativa, 'M1001');
       
       // Concluir Ação
-      const rConcluir = await mudarStatusAcao(acao, 'Concluída', comoGestor);
+      const rConcluir = await mudarStatusAcao(enviar, tratativa, { acao: acao, status: 'Concluída', justificativa: 'Conclusão de teste' }, comoGestor);
       expect(rConcluir.status).toBe(204);
       
       const r = await delegarAcao(enviar, tratativa, {
@@ -282,7 +281,7 @@ describe('Etapa 2 - Delegação de Ações com justificativa obrigatória', () =
       const acao = await criarAcaoComResponsavel(tratativa, 'M1001');
       
       // Cancelar Ação
-      const rCancelar = await mudarStatusAcao(acao, 'Cancelada', comoGestor);
+      const rCancelar = await mudarStatusAcao(enviar, tratativa, { acao: acao, status: 'Cancelada', justificativa: 'Cancelamento de teste' }, comoGestor);
       expect(rCancelar.status).toBe(204);
       
       const r = await delegarAcao(enviar, tratativa, {
@@ -413,7 +412,7 @@ describe('Etapa 2 - Delegação de Ações com justificativa obrigatória', () =
       const acao = await criarAcaoComResponsavel(tratativa, 'M1001');
       
       // Antes de encerrar, concluir a Ação
-      const rConcluir = await mudarStatusAcao(acao, 'Concluída', comoGestor);
+      const rConcluir = await mudarStatusAcao(enviar, tratativa, { acao: acao, status: 'Concluída', justificativa: 'Conclusão de teste' }, comoGestor);
       expect(rConcluir.status).toBe(204);
       
       // Encerrar Tratativa
@@ -532,7 +531,7 @@ describe('Etapa 2 - Delegação de Ações com justificativa obrigatória', () =
     it('criar Ação com "Ana Lima" recusa nomeando Responsável', async () => {
       const tratativa = await criarTratativaAberta();
       
-      const r = await enviar(`/api/tratativa/v1/Tratativas(${tratativa})/criarAcao`, {
+      const r = await criarAcao(enviar, tratativa, {
         descricao: `Descrição ${sufixoUnico()}`,
         prioridade: 'Alta',
         prazo: '2027-01-01',
@@ -546,7 +545,7 @@ describe('Etapa 2 - Delegação de Ações com justificativa obrigatória', () =
     it('criar Ação com "@email.com" recusa nomeando Responsável', async () => {
       const tratativa = await criarTratativaAberta();
       
-      const r = await enviar(`/api/tratativa/v1/Tratativas(${tratativa})/criarAcao`, {
+      const r = await criarAcao(enviar, tratativa, {
         descricao: `Descrição ${sufixoUnico()}`,
         prioridade: 'Alta',
         prazo: '2027-01-01',
@@ -560,7 +559,7 @@ describe('Etapa 2 - Delegação de Ações com justificativa obrigatória', () =
     it('criar Ação com valor vazio mantém mensagem semântica do 004', async () => {
       const tratativa = await criarTratativaAberta();
       
-      const r = await enviar(`/api/tratativa/v1/Tratativas(${tratativa})/criarAcao`, {
+      const r = await criarAcao(enviar, tratativa, {
         descricao: `Descrição ${sufixoUnico()}`,
         prioridade: 'Alta',
         prazo: '2027-01-01',
@@ -575,7 +574,7 @@ describe('Etapa 2 - Delegação de Ações com justificativa obrigatória', () =
     it('criar Ação com 51 caracteres mantém mensagem semântica do 004', async () => {
       const tratativa = await criarTratativaAberta();
       
-      const r = await enviar(`/api/tratativa/v1/Tratativas(${tratativa})/criarAcao`, {
+      const r = await criarAcao(enviar, tratativa, {
         descricao: `Descrição ${sufixoUnico()}`,
         prioridade: 'Alta',
         prazo: '2027-01-01',
@@ -590,7 +589,7 @@ describe('Etapa 2 - Delegação de Ações com justificativa obrigatória', () =
     it('criar Ação com matrícula válida "M1001" é aceita', async () => {
       const tratativa = await criarTratativaAberta();
       
-      const r = await enviar(`/api/tratativa/v1/Tratativas(${tratativa})/criarAcao`, {
+      const r = await criarAcao(enviar, tratativa, {
         descricao: `Descrição ${sufixoUnico()}`,
         prioridade: 'Alta',
         prazo: '2027-01-01',
@@ -606,7 +605,8 @@ describe('Etapa 2 - Delegação de Ações com justificativa obrigatória', () =
       const tratativa = await criarTratativaAberta();
       const acao = await criarAcaoComResponsavel(tratativa, 'M1001');
       
-      const r = await enviar(`/api/tratativa/v1/Acoes(${acao})/editarAcao`, {
+      const r = await editarAcao(enviar, tratativa, {
+        acao: acao,
         descricao: 'Nova descrição editada'
       }, comoGestor);
       
