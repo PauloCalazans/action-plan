@@ -38,3 +38,6 @@ export function contemArquivo(id: string): boolean {
 export function falharProximoArmazenamento(): void {
   falharProxima = true;
 }
+
+// Export default para que o CAP possa importar como serviço
+export default { salvar, obter, excluir };

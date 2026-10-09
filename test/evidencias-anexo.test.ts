@@ -21,7 +21,7 @@ const { POST } = cds.test(__dirname + '/..');
 const enviar = POST as unknown as Envia;
 const TRATATIVAS = 'br.com.calazanstec.Tratativas';
 const ACOES = 'br.com.calazanstec.Acoes';
-const EVIDENCIAS = 'br.com.calazanstec.Evidencias';
+const EVIDENCIAS = 'Evidencias';
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const HOJE = '2026-10-08';
 

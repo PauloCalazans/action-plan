@@ -5,23 +5,25 @@ import { registrarCredenciais } from './apoio/credenciais';
 import { instalarEspiao, type Espiao } from './apoio/banco-espiao';
 import { fixarInstante, liberarRelogio } from './apoio/relogio';
 import { criarAvulsa, sufixoUnico, type Envia } from './apoio/tratativas';
-import { comoApp, comoGestor, comoM1001, comoM2002 } from './apoio/usuarios';
+import { comoApp, comoGestor, comoM2002 } from './apoio/usuarios';
 import {
   anexarEvidencia,
   gerarPDF,
-  gerarJPG,
-  gerarPNG,
-  gerarExatamente10MB,
   gerarAcimaDe10MB,
 } from './apoio/evidencias';
-import { limparArmazenamento, contemArquivo, falharProximoArmazenamento } from './apoio/armazenamento-espiao';
+import { limparArmazenamento, falharProximoArmazenamento } from './apoio/armazenamento-espiao';
+
+interface ErrorResponse {
+  error?: {
+    message?: string;
+    target?: string;
+  };
+}
 
 const { POST } = cds.test(__dirname + '/..');
 const enviar = POST as unknown as Envia;
 const TRATATIVAS = 'br.com.calazanstec.Tratativas';
 const ACOES = 'br.com.calazanstec.Acoes';
-const EVIDENCIAS = 'br.com.calazanstec.Evidencias';
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const HOJE = '2026-10-08';
 
 jest.setTimeout(60000);
@@ -87,8 +89,8 @@ describe('Etapa 1: Complemento de Testes de Inclusão e Armazenamento de Evidên
       comoGestor
     );
     expect(r.status).toBe(415);
-    expect((r.data as any).error?.message).toContain('Tipo de arquivo não permitido');
-    expect((r.data as any).error?.target).toBe('arquivo');
+    expect((r.data as ErrorResponse).error?.message).toContain('Tipo de arquivo não permitido');
+    expect((r.data as ErrorResponse).error?.target).toBe('arquivo');
   });
 
   // ===== CA21, CA22, CA23: Autorização — Responsável Principal, Participante, Terceiro =====
@@ -133,7 +135,7 @@ describe('Etapa 1: Complemento de Testes de Inclusão e Armazenamento de Evidên
     await cds.db.run(UPDATE.entity(ACOES).set({ status: 'Cancelada' }).where({ codigo: a }));
     const r = await anexarEvidencia(enviar, t, { acao: a, ...evidenciaValida() }, comoGestor);
     expect(r.status).toBe(409);
-    expect((r.data as any).error?.message).toContain('Ação Cancelada não pode ser alterada');
+    expect((r.data as ErrorResponse).error?.message).toContain('Ação Cancelada não pode ser alterada');
   });
 
   // ===== CA51: Histórico registra tipo MIME, tamanho e autor sem copiar nome do arquivo =====
@@ -160,7 +162,7 @@ describe('Etapa 1: Complemento de Testes de Inclusão e Armazenamento de Evidên
     expect(ev?.mimeType).toBe('application/pdf');
     expect(ev?.tamanho).toBe(2000);
     expect(ev?.autor).toBe('gestor'); // Matrícula do usuário autenticado
-    expect((ev as any)?.nomeArquivo).toBeUndefined(); // NÃO deve estar no histórico
+    expect((ev as Record<string, unknown>)?.nomeArquivo).toBeUndefined(); // NÃO deve estar no histórico
   });
 
   // ===== CA53: Falha na gravação após salvar binário aciona compensação =====
@@ -280,7 +282,7 @@ describe('Etapa 1: Complemento de Testes de Inclusão e Armazenamento de Evidên
     );
     // Esperamos 409 (estado da Tratativa na etapa 7) antes de 413 (campos na etapa 10)
     expect(r.status).toBe(409);
-    expect((r.data as any).error?.message).toContain('Tratativa Encerrada não pode ser alterada');
+    expect((r.data as ErrorResponse).error?.message).toContain('Tratativa Encerrada não pode ser alterada');
   });
 
   // ===== CA59a: Arquivo de 10.485.761 bytes → 413 do domínio =====
@@ -295,8 +297,8 @@ describe('Etapa 1: Complemento de Testes de Inclusão e Armazenamento de Evidên
     );
     // Esperamos 413 (tamanho na etapa 10)
     expect(r.status).toBe(413);
-    expect((r.data as any).error?.message).toContain('Arquivo excede o tamanho máximo permitido');
-    expect((r.data as any).error?.target).toBe('arquivo');
+    expect((r.data as ErrorResponse).error?.message).toContain('Arquivo excede o tamanho máximo permitido');
+    expect((r.data as ErrorResponse).error?.target).toBe('arquivo');
   });
 
   // ===== CA60: Arquivo válido + Tratativa ou Ação inexistente → 404 =====
@@ -339,6 +341,6 @@ describe('Etapa 1: Complemento de Testes de Inclusão e Armazenamento de Evidên
     );
     // Esperamos 409 (estado da Tratativa na etapa 7) antes de 400 (campos na etapa 10)
     expect(r.status).toBe(409);
-    expect((r.data as any).error?.message).toContain('Tratativa Encerrada não pode ser alterada');
+    expect((r.data as Record<string, unknown>).error?.message).toContain('Tratativa Encerrada não pode ser alterada');
   });
 });
