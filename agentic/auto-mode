@@ -1,3 +1,4 @@
 # Modo automático: com enabled: true o orquestrador encadeia tasks e publica PRs sem confirmação.
 # Nunca faz merge. Alterar este arquivo é decisão humana.
-enabled: false
+enabled: true
+# Gate 1 delegado ao orquestrador por Paulo Calazans (2026-10-08, decisão D11). Gate 2 (merge) permanece humano.
