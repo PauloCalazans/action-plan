@@ -17,7 +17,7 @@ const enviar = POST as unknown as Envia;
 const TRATATIVAS = 'br.com.calazanstec.Tratativas';
 const ACOES = 'br.com.calazanstec.Acoes';
 const EVIDENCIAS = 'Evidencias';
-const HISTORICO = 'br.com.calazanstec.HistoricoAcoes';
+const HISTORICO = 'HistoricoAcoes';
 const HOJE = '2026-10-08';
 
 jest.setTimeout(60000);
@@ -371,7 +371,7 @@ describe('Etapa 2: Remoção Lógica e Auditoria de Evidências (removerEvidenci
     const evId = await anexarValidoEm(t, a);
 
     // Injeta falha na próxima escrita
-    espiao.falharEm('HistoricoAcoes', 'INSERT');
+    espiao.falharEm('CREATE', 'br.com.calazanstec.HistoricoAcoes');
 
     const r = await removerEvidencia(enviar, t, { acao: a, evidencia: evId }, comoGestor);
     // A remoção deve falhar (500 ou 400)
