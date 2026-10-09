@@ -10,6 +10,7 @@ Entregar o intent 006 inteiro numa branch empilhada sobre os intents 004 e 005, 
 
 ## Arquivos
 - `package.json`
+- `agentic/projeto/decisoes.md`
 - `db/tratativa.cds`
 - `srv/tratativa-service.cds`
 - `srv/tratativa-service.ts`
