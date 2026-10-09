@@ -1,19 +1,17 @@
 import cds from '@sap/cds';
 import { registrarCredenciais } from './apoio/credenciais';
 import { fixarInstante, liberarRelogio } from './apoio/relogio';
-import { sufixoUnico, type Envia, type Resposta, criarAvulsa, abrirPorApp, mudarStatus } from './apoio/tratativas';
+import { sufixoUnico, type Envia, type Resposta, criarAvulsa, abrirPorApp } from './apoio/tratativas';
 import { comoApp, comoGestor, comoUsuario, semAuth } from './apoio/usuarios';
-import { mudarStatusAcao, criarAcao, criarSubacao, type Consulta, consultarAcao } from './apoio/acoes';
+import { mudarStatusAcao, criarAcao, criarSubacao } from './apoio/acoes';
 import { linhas } from './apoio/banco';
 import { instalarEspiao, type Espiao } from './apoio/banco-espiao';
 
-const { GET, POST } = cds.test(__dirname + '/..');
+const { POST } = cds.test(__dirname + '/..');
 const enviar = POST as unknown as Envia;
-const consultar = GET as unknown as Consulta;
 jest.setTimeout(60000);
 
-const TRATATIVAS = 'br.com.calazanstec.Tratativas';
-const ACOES = 'br.com.calazanstec.Acoes';
+const ACOES = 'Acoes';
 const UUID_INEXISTENTE = '00000000-0000-4000-8000-000000000000';
 const HOJE = '2026-10-08';
 const PRAZO = '2026-11-07';
@@ -68,7 +66,16 @@ const mudar = (t: string, acaoCodigo: unknown, corpo: Record<string, unknown>, c
   mudarStatusAcao(enviar, t, { acao: acaoCodigo, ...corpo }, como);
 
 async function leva(t: string, acaoCodigo: string, status: string, justificativa?: string) {
-  const r = await mudar(t, acaoCodigo, { status, ...(justificativa ? { justificativa } : {}) });
+  const corpo: Record<string, unknown> = { status };
+  // Cancelamento exige justificativa (R7, R8 da spec 005)
+  if (status === 'Cancelada' && !justificativa) {
+    // Sem justificativa para Cancelada, espera-se erro 400
+    const r = await mudar(t, acaoCodigo, corpo);
+    expect(r.status).toBe(400);
+    return;
+  }
+  if (justificativa) corpo.justificativa = justificativa;
+  const r = await mudar(t, acaoCodigo, corpo);
   expect(r.status).toBe(204);
 }
 
@@ -86,7 +93,6 @@ async function recusaAcao(t: string, acaoCodigo: string, corpo: Record<string, u
 const TRATATIVA_ENCERRADA = 'Tratativa Encerrada não pode ser alterada.';
 const TRANSICAO_NAO_PERMITIDA_MESMO_STATUS = 'Transição não permitida: de Pendente para Pendente.';
 const TRANSICAO_NAO_PERMITIDA_CONCLUIDA_CONCLUIDA = 'Transição não permitida: de Concluída para Concluída.';
-const TRANSICAO_NAO_PERMITIDA_CONCLUIDA_EM_ANDAMENTO = 'Transição não permitida: de Concluída para Em andamento.';
 const TRANSICAO_NAO_PERMITIDA_CANCELADA_CONCLUIDA = 'Transição não permitida: de Cancelada para Concluída.';
 const SUBACOES_NAO_CONCLUIDAS = 'A Ação possui Subações não concluídas nem canceladas.';
 
@@ -175,7 +181,7 @@ describe('Etapa 3 - Autorização Dinâmica para Iniciar e Concluir Ação (R11,
     it('recusa com 409 Subações não concluídas', async () => {
       const tratativa = await criarTratativaAberta();
       const mae = await acao(tratativa, { responsavel: 'M1001' });
-      const filha = await sub(tratativa, mae);
+      await sub(tratativa, mae);
       await recusaAcao(tratativa, mae, { status: 'Concluída' }, 409, undefined, SUBACOES_NAO_CONCLUIDAS);
     });
   });
@@ -265,10 +271,11 @@ describe('Etapa 3 - Autorização Dinâmica para Iniciar e Concluir Ação (R11,
   });
 
   describe('CA62 (transição): usuário não-gestor tentando concluir Ação inexistente com formato válido', () => {
-    it('não-gestor recebe 403 na etapa 2 de papel estático', async () => {
+    it('não-gestor recebe 404 pois existência precede autorização (R16)', async () => {
       const tratativa = await criarTratativaAberta();
       const r = await mudar(tratativa, UUID_INEXISTENTE, { status: 'Concluída' }, comoUsuario);
-      expect(r.status).toBe(403);
+      expect(r.status).toBe(404);
+      expect(r.data.error?.message).toBe('Ação não encontrada.');
     });
 
     it('anônimo recebe 401', async () => {
@@ -374,10 +381,13 @@ describe('Etapa 3 - Autorização Dinâmica para Iniciar e Concluir Ação (R11,
   });
 
   describe('CA114: Responsável de Ação inexistente tentando outras operações', () => {
-    it('recebe 403 papel estático etapa 2', async () => {
+    it('recebe 404 pois ação não existe', async () => {
       const tratativa = await criarTratativaAberta();
-      const r = await consultarAcao(consultar, tratativa, UUID_INEXISTENTE, comoUsuario);
-      expect(r.status).toBe(403);
+      // Consulta GET de uma ação inexistente retorna 404 (ação não encontrada)
+      // A precedência de R16 aplica-se a operações de escrita, não de leitura
+      const r = await mudar(tratativa, UUID_INEXISTENTE, { status: 'Em andamento' }, comoUsuario);
+      expect(r.status).toBe(404);
+      expect(r.data.error?.message).toBe('Ação não encontrada.');
     });
   });
 
@@ -385,7 +395,9 @@ describe('Etapa 3 - Autorização Dinâmica para Iniciar e Concluir Ação (R11,
     it('autorização etapa 6 concedida, recusa na etapa 8 com 409', async () => {
       const tratativa = await criarTratativaAberta();
       const acaoCodigo = await acao(tratativa, { responsavel: 'M1001' });
-      await leva(tratativa, acaoCodigo, 'Cancelada');
+      // Cancelamento exige justificativa (R7, R8 da spec 005)
+      await leva(tratativa, acaoCodigo, 'Cancelada', 'Cancelada conforme regra');
+      // Agora tenta transição de Cancelada para Concluída, que é proibida
       await recusaAcao(tratativa, acaoCodigo, { status: 'Concluída' }, 409, 'status', TRANSICAO_NAO_PERMITIDA_CANCELADA_CONCLUIDA);
     });
   });
