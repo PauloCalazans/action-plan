@@ -4,6 +4,7 @@ import { fixarInstante, liberarRelogio } from './apoio/relogio';
 import { sufixoUnico, type Envia, type Resposta, criarAvulsa, abrirPorApp } from './apoio/tratativas';
 import { comoApp, comoGestor, comoUsuario, semAuth } from './apoio/usuarios';
 import { mudarStatusAcao, criarAcao, criarSubacao } from './apoio/acoes';
+import { delegarAcao } from './apoio/responsaveis';
 import { linhas } from './apoio/banco';
 import { instalarEspiao, type Espiao } from './apoio/banco-espiao';
 
@@ -382,13 +383,17 @@ describe('Etapa 3 - Autorização Dinâmica para Iniciar e Concluir Ação (R11,
   });
 
   describe('CA114: Responsável de Ação inexistente tentando outras operações', () => {
-    it('recebe 404 pois ação não existe', async () => {
+    it('recebe 403 na etapa 2 (papel estático precede existência) ao chamar operação estática com Ação inexistente', async () => {
       const tratativa = await criarTratativaAberta();
-      // Consulta GET de uma ação inexistente retorna 404 (ação não encontrada)
-      // A precedência de R16 aplica-se a operações de escrita, não de leitura
-      const r = await mudar(tratativa, UUID_INEXISTENTE, { status: 'Em andamento' }, comoUsuario);
-      expect(r.status).toBe(404);
-      expect(r.data.error?.message).toBe('Ação não encontrada.');
+      // CA114: operação estática (@restrict) verifica papel ANTES de existência (R16 etapa 2 vs. etapa 5)
+      // Usuário comum (não-Gestor) não tem papel para invocar delegarAcao, então recebe 403
+      const r = await delegarAcao(enviar, tratativa, {
+        acao: UUID_INEXISTENTE,
+        novoResponsavel: 'M2002',
+        justificativa: 'Tentativa de delegação'
+      }, comoUsuario);
+      expect(r.status).toBe(403);
+      expect(r.data.error?.message).toContain('Forbidden');
     });
   });
 

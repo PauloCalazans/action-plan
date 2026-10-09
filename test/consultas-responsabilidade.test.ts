@@ -4,7 +4,7 @@ import { liberarRelogio } from './apoio/relogio';
 import { sufixoUnico, type Envia, criarAvulsa } from './apoio/tratativas';
 import { comoApp, comoGestor, comoUsuario, comoM1001 } from './apoio/usuarios';
 import { minhasAcoes, minhasTratativas, atribuirResponsavelPrincipal, incluirParticipante, delegarAcao } from './apoio/responsaveis';
-import { criarAcao, mudarStatusAcao } from './apoio/acoes';
+import { criarAcao, mudarStatusAcao, consultarAcao } from './apoio/acoes';
 
 const { GET, POST } = cds.test(__dirname + '/..');
 const enviar = POST as unknown as Envia;
@@ -47,10 +47,19 @@ describe('Etapa 4 - Consultas "Minhas Ações" e "Minhas Tratativas" com pagina�
 
   describe('CA65: consultarEstruturaAcoes e detalhe devolve responsavel conforme papel', () => {
     it('consulta devolve responsavel = null para não-gestor', async () => {
-      // Este teste é documentário: CA65 refere-se a consultarEstruturaAcoes/consultarAcao (do 003)
-      // que já foi testado. Verificação de que o campo responsavel volta como null para não-gestores
-      // é feita em testes específicos de consulta já existentes.
-      expect(true).toBe(true);
+      const tratativa = await criarTratativaAberta();
+      await atribuirResponsavelPrincipal(enviar, tratativa, { responsavelPrincipal: 'M1001' }, comoGestor);
+      const acao = await criarAcaoComResponsavel(tratativa, 'M1001');
+      
+      // Consulta como Gestor deve retornar o responsável
+      const rGestor = await consultarAcao(consultar, tratativa, acao, comoGestor);
+      expect(rGestor.status).toBe(200);
+      expect(rGestor.data.responsavel).toBe('M1001');
+      
+      // Consulta como não-gestor deve retornar responsável = null (LGPD)
+      const rNaoGestor = await consultarAcao(consultar, tratativa, acao, comoUsuario);
+      expect(rNaoGestor.status).toBe(200);
+      expect(rNaoGestor.data.responsavel).toBeNull();
     });
   });
 
@@ -450,6 +459,20 @@ describe('Etapa 4 - Consultas "Minhas Ações" e "Minhas Tratativas" com pagina�
 
       expect(r.status).toBe(200);
       // Deve encontrar Ações de M1001 mesmo que o usuário seja M1001
+      expect(r.data.length).toBeGreaterThan(0);
+    });
+
+    it('CA100: colaborador com login minúsculo "m1001" encontra Ações gravadas como "M1001" (normalização case-insensitive)', async () => {
+      const tratativa = await criarTratativaAberta();
+      await atribuirResponsavelPrincipal(enviar, tratativa, { responsavelPrincipal: 'M1001' }, comoGestor);
+      await criarAcaoComResponsavel(tratativa, 'M1001');
+
+      // Autentica com login em minúsculas m1001
+      const comoM1001Minusculo = { auth: { username: 'm1001', password: '' }, validateStatus: () => true };
+      const r = await minhasAcoes(consultar, {}, comoM1001Minusculo);
+
+      // Deve encontrar as Ações mesmo com login em minúsculas (normalização case-insensitive)
+      expect(r.status).toBe(200);
       expect(r.data.length).toBeGreaterThan(0);
     });
   });

@@ -60,13 +60,9 @@ describe('CA88: Gestor listando Tratativas recebe itens sem responsavelPrincipal
       // Consulta os responsáveis (function existe)
       const rConsultar = await consultarResponsaveis(consultar, tratativa, comoGestor);
       // A function existe, não é 404
-      expect(rConsultar.status).not.toBe(404);
-      
-      // Se implementada corretamente, deveria retornar 200 com os campos
-      if (rConsultar.status === 200) {
-        expect(rConsultar.data).toHaveProperty('responsavelPrincipal');
-        expect(rConsultar.data).toHaveProperty('participantes');
-      }
+      expect(rConsultar.status).toBe(200);
+      expect(rConsultar.data).toHaveProperty('responsavelPrincipal');
+      expect(rConsultar.data).toHaveProperty('participantes');
     });
   });
 
@@ -105,15 +101,11 @@ describe('CA88: Gestor listando Tratativas recebe itens sem responsavelPrincipal
       // Consulta os responsáveis (function existe)
       const rResponsaveis = await consultarResponsaveis(consultar, tratativa, comoGestor);
       // A function existe, não é 404
-      expect(rResponsaveis.status).not.toBe(404);
-      
-      // Se implementada corretamente:
-      if (rResponsaveis.status === 200) {
-        expect(rResponsaveis.data).toHaveProperty('responsavelPrincipal');
-        expect(rResponsaveis.data).toHaveProperty('participantes');
-        expect(rResponsaveis.data.responsavelPrincipal).toBeNull(); // Não atribuído ainda
-        expect(rResponsaveis.data.participantes).toEqual([]);
-      }
+      expect(rResponsaveis.status).toBe(200);
+      expect(rResponsaveis.data).toHaveProperty('responsavelPrincipal');
+      expect(rResponsaveis.data).toHaveProperty('participantes');
+      expect(rResponsaveis.data.responsavelPrincipal).toBeNull(); // Não atribuído ainda
+      expect(rResponsaveis.data.participantes).toEqual([]);
     });
   });
 

@@ -570,13 +570,49 @@ describe('Etapa 1 - Responsáveis e Participantes da Tratativa', () => {
     });
 
     it('falha simulada no banco dispara rollback total', async () => {
-      // Teste será implementado quando houver mecanismo de simulação de falha
+      const tratativa = await criarTratativaAberta();
+      
+      // Antes de atribuir, consulta para verificar baseline
+      const antes = await consultarResponsaveis(consultar, tratativa, comoGestor);
+      expect(antes.data.responsavelPrincipal).toBeNull();
+      
+      // Instala espião para simular falha em CREATE de HistoricoTratativa
+      const espiao = require('./apoio/banco-espiao').instalarEspiao();
+      espiao.falharEm('CREATE', 'br.com.calazanstec.HistoricoTratativa');
+      
+      // Tenta atribuir com falha simulada
+      const r = await atribuirResponsavelPrincipal(enviar, tratativa, { responsavelPrincipal: 'M1001' }, comoGestor);
+      expect(r.status).toBe(500); // Espera erro de servidor pela falha simulada
+      
+      // Verifica que o responsável NÃO foi gravado (rollback)
+      const depois = await consultarResponsaveis(consultar, tratativa, comoGestor);
+      expect(depois.data.responsavelPrincipal).toBeNull();
+      
+      // Desativa espião
+      espiao.naoFalhar();
     });
   });
 
   describe('CA58 + D9: duas inclusões simultâneas do mesmo participante resultam em registro único', () => {
     it('lista sem duplicidade', async () => {
-      // Duas inclusões simultâneas será testada quando houver mecanismo de concorrência
+      const tratativa = await criarTratativaAberta();
+      
+      // Tenta incluir o mesmo participante duas vezes simultaneamente
+      const promessas = [
+        incluirParticipante(enviar, tratativa, { participante: 'M3003' }, comoGestor),
+        incluirParticipante(enviar, tratativa, { participante: 'M3003' }, comoGestor)
+      ];
+      
+      const resultados = await Promise.all(promessas);
+      
+      // Ambas devem ter sucesso (204)
+      expect(resultados[0].status).toBe(204);
+      expect(resultados[1].status).toBe(204);
+      
+      // Consulta confirma que há apenas UM participante (não duplicado)
+      const consulta = await consultarResponsaveis(consultar, tratativa, comoGestor);
+      expect(consulta.data.participantes).toEqual(['M3003']);
+      expect(consulta.data.participantes).toHaveLength(1);
     });
   });
 
@@ -639,8 +675,15 @@ describe('Etapa 1 - Responsáveis e Participantes da Tratativa', () => {
   });
 
   describe('CA84, CA86, CA87: sem papel aprovador; genericidade de Origem', () => {
-    it('sem papel aprovador (conceitual)', () => {
-      // Não há role de Aprovador no sistema
+    it('CA84: não existe papel Aprovador no sistema (genericidade da Origem conforme design 005 D2)', async () => {
+      // CA84: O design 005 não prevê papel de Aprovador. Roles existentes: GestorTratativa
+      // Esta asserção documenta que o sistema não tem implementação de aprovação em dois níveis
+      const tratativa = await criarTratativaAberta();
+      const r = await consultarTratativa(consultar, tratativa, comoGestor);
+      expect(r.status).toBe(200);
+      // Verificar que não há campo de aprovação na resposta (design conforme)
+      expect(r.data).not.toHaveProperty('aprovador');
+      expect(r.data).not.toHaveProperty('statusAprovacao');
     });
 
     it('edição comum da Tratativa enviando responsáveis recusa com 400 campo desconhecido', async () => {
