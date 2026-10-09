@@ -24,6 +24,7 @@ Entregar o intent 006 inteiro numa branch empilhada sobre os intents 004 e 005, 
 - `test/apoio/evidencias.ts`
 - `test/apoio/armazenamento-espiao.ts`
 - `test/evidencias-anexo.test.ts`
+- `test/evidencias-anexo-complemento.test.ts`
 - `test/evidencias-remocao.test.ts`
 - `test/evidencias-bloqueio-conclusao.test.ts`
 - `test/evidencias-consultas-download.test.ts`
