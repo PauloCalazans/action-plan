@@ -114,3 +114,58 @@ export async function removerEvidencia(
 ): Promise<Resposta> {
   return POST(`/api/tratativa/v1/Tratativas('${tratativa}')/removerEvidencia`, dados, como);
 }
+
+// Interface para GET (functions OData V4)
+export interface Consulta {
+  (url: string, config?: Record<string, unknown>): Promise<Resposta>;
+}
+
+// Helper para listar evidências por Ação (etapa 4)
+export async function listarEvidenciasAcao(
+  GET: Consulta,
+  tratativa: string | null,
+  acao: string | null,
+  como: Record<string, unknown> = {}
+): Promise<Resposta> {
+  const parametros = [
+    tratativa === null ? null : `tratativa=${tratativa}`,
+    acao === null ? null : `acao=${acao}`,
+  ].filter(Boolean);
+  return GET(`/api/tratativa/v1/listarEvidenciasAcao(${parametros.join(',')})`, como);
+}
+
+// Helper para listar evidências por Tratativa (etapa 4)
+export async function listarEvidenciasTratativa(
+  GET: Consulta,
+  tratativa: string | null,
+  como: Record<string, unknown> = {}
+): Promise<Resposta> {
+  const parametro = tratativa === null ? '' : `tratativa=${tratativa}`;
+  return GET(`/api/tratativa/v1/listarEvidenciasTratativa(${parametro})`, como);
+}
+
+// Helper para baixar evidência (etapa 4)
+export async function baixarEvidencia(
+  GET: Consulta,
+  tratativa: string | null,
+  acao: string | null,
+  evidencia: string | null,
+  como: Record<string, unknown> = {}
+): Promise<Resposta> {
+  const parametros = [
+    tratativa === null ? null : `tratativa=${tratativa}`,
+    acao === null ? null : `acao=${acao}`,
+    evidencia === null ? null : `evidencia=${evidencia}`,
+  ].filter(Boolean);
+  return GET(`/api/tratativa/v1/baixarEvidencia(${parametros.join(',')})`, como);
+}
+
+// Helper para listar pendências de evidências da Tratativa (etapa 4)
+export async function listarPendenciasEvidenciasTratativa(
+  GET: Consulta,
+  tratativa: string | null,
+  como: Record<string, unknown> = {}
+): Promise<Resposta> {
+  const parametro = tratativa === null ? '' : `tratativa=${tratativa}`;
+  return GET(`/api/tratativa/v1/listarPendenciasEvidenciasTratativa(${parametro})`, como);
+}
