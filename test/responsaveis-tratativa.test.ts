@@ -4,6 +4,7 @@ import { fixarInstante, liberarRelogio } from './apoio/relogio';
 import { sufixoUnico, type Envia, type Resposta, criarAvulsa, abrirPorApp, mudarStatus } from './apoio/tratativas';
 import { comoApp, comoGestor, comoUsuario, semAuth } from './apoio/usuarios';
 import { atribuirResponsavelPrincipal, incluirParticipante, removerParticipante, consultarResponsaveis, consultarTratativa } from './apoio/responsaveis';
+import { linhas } from './apoio/banco';
 
 const { GET, POST } = cds.test(__dirname + '/..');
 const enviar = POST as unknown as Envia;
@@ -202,18 +203,28 @@ describe('Etapa 1 - Responsáveis e Participantes da Tratativa', () => {
   describe('CA17, CA97: incluir participante já existente resulta em 204 idempotente', () => {
     it('nada muda e nenhum histórico é gravado', async () => {
       const tratativa = await criarTratativaAberta();
+      const antes = (await linhas('HistoricoTratativa', { tratativa_codigo: tratativa })).length;
       const r1 = await incluirParticipante(enviar, tratativa, { participante: 'M3003' }, comoGestor);
       expect(r1.status).toBe(204);
+      const historicoAposPrimeira = (await linhas('HistoricoTratativa', { tratativa_codigo: tratativa })).length;
+      expect(historicoAposPrimeira).toBe(antes + 1);
+      
       const r2 = await incluirParticipante(enviar, tratativa, { participante: 'M3003' }, comoGestor);
       expect(r2.status).toBe(204);
+      const historicoAposSegunda = (await linhas('HistoricoTratativa', { tratativa_codigo: tratativa })).length;
+      // Não deve gravar histórico adicional para inclusão idempotente
+      expect(historicoAposSegunda).toBe(historicoAposPrimeira);
     });
   });
 
   describe('CA18: remover participante inexistente resulta em 204 idempotente', () => {
     it('nada muda e nenhum histórico é gravado', async () => {
       const tratativa = await criarTratativaAberta();
+      const antes = (await linhas('HistoricoTratativa', { tratativa_codigo: tratativa })).length;
       const r = await removerParticipante(enviar, tratativa, { participante: 'M9999' }, comoGestor);
       expect(r.status).toBe(204);
+      const depois = (await linhas('HistoricoTratativa', { tratativa_codigo: tratativa })).length;
+      expect(depois).toBe(antes);
     });
   });
 
@@ -249,9 +260,22 @@ describe('Etapa 1 - Responsáveis e Participantes da Tratativa', () => {
 
     it('justificativa opcional informada é aceita e gravada no histórico', async () => {
       const tratativa = await criarTratativaAberta();
+      const antes = (await linhas('HistoricoTratativa', { tratativa_codigo: tratativa })).length;
       const r = await atribuirResponsavelPrincipal(enviar, tratativa, { responsavelPrincipal: 'M1001', justificativa: 'Responsável pela área' }, comoGestor);
       expect(r.status).toBe(204);
-      // Verificação de histórico será feita quando implementado
+      
+      // Verificação de histórico
+      const historico = await linhas('HistoricoTratativa', { tratativa_codigo: tratativa });
+      expect(historico).toHaveLength(antes + 1);
+      
+      const novoHistorico = historico[historico.length - 1];
+      expect(novoHistorico.evento).toBe('Atribuicao');
+      expect(novoHistorico.campo).toBe('responsavelPrincipal');
+      expect(novoHistorico.valorAnterior).toBeNull();
+      expect(novoHistorico.valorNovo).toBe('M1001');
+      expect(novoHistorico.justificativa).toBe('Responsável pela área');
+      expect(novoHistorico.autor).toBe('gestor');
+      expect(novoHistorico.tipoAutor).toBe('Usuario');
     });
   });
 
@@ -296,12 +320,24 @@ describe('Etapa 1 - Responsáveis e Participantes da Tratativa', () => {
   describe('CA23, CA98: atribuir a mesma matrícula já gravada resulta em 204', () => {
     it('nada muda e grafia é preservada', async () => {
       const tratativa = await criarTratativaAberta();
+      const antes = (await linhas('HistoricoTratativa', { tratativa_codigo: tratativa })).length;
       const r1 = await atribuirResponsavelPrincipal(enviar, tratativa, { responsavelPrincipal: 'M1001' }, comoGestor);
       expect(r1.status).toBe(204);
+      const historicoAposPrimeira = (await linhas('HistoricoTratativa', { tratativa_codigo: tratativa })).length;
+      expect(historicoAposPrimeira).toBe(antes + 1);
+      
       const r2 = await atribuirResponsavelPrincipal(enviar, tratativa, { responsavelPrincipal: 'M1001' }, comoGestor);
       expect(r2.status).toBe(204);
+      const historicoAposSegunda = (await linhas('HistoricoTratativa', { tratativa_codigo: tratativa })).length;
+      // Não deve gravar histórico adicional para atribuição idempotente
+      expect(historicoAposSegunda).toBe(historicoAposPrimeira);
+      
       const r3 = await atribuirResponsavelPrincipal(enviar, tratativa, { responsavelPrincipal: ' m1001 ' }, comoGestor);
       expect(r3.status).toBe(204);
+      const historicoAposTerceira = (await linhas('HistoricoTratativa', { tratativa_codigo: tratativa })).length;
+      // Também não deve gravar histórico para atribuição idempotente com espaços
+      expect(historicoAposTerceira).toBe(historicoAposSegunda);
+      
       const consulta = await consultarResponsaveis(consultar, tratativa, comoGestor);
       expect(consulta.data.responsavelPrincipal).toBe('M1001');
     });
@@ -406,52 +442,131 @@ describe('Etapa 1 - Responsáveis e Participantes da Tratativa', () => {
 
     it('consulta do app não traz responsáveis', async () => {
       const tratativa = await criarTratativaApp();
-      const r = await consultarTratativa(consultar, tratativa, comoApp);
+      const r = await GET(`/api/integracao-origem/v1/consultarPorCodigo(codigo=${tratativa})`, comoApp);
       expect(r.status).toBe(200);
-      // Não deve ter campos de responsáveis
+      // Deve retornar exatamente as 7 chaves do 002, sem campos de responsáveis
+      const chaves = Object.keys(r.data).filter(k => !k.startsWith('@')).sort();
+      expect(chaves).toEqual(['codigo', 'origem', 'idOrigem', 'criticidade', 'status', 'dataCriacao', 'dataPrevistaConclusao'].sort());
+      // Verifica que não há campos relacionados a responsáveis
+      const camposResponsaveis = ['responsavelPrincipal', 'participantes', 'responsavel', 'autor'];
+      expect(chaves.some(k => camposResponsaveis.includes(k))).toBe(false);
     });
   });
 
   describe('CA51, CA52, CA54: gravação correta de histórico', () => {
     it('Atribuição grava histórico', async () => {
       const tratativa = await criarTratativaAberta();
+      const antes = (await linhas('HistoricoTratativa', { tratativa_codigo: tratativa })).length;
       const r = await atribuirResponsavelPrincipal(enviar, tratativa, { responsavelPrincipal: 'M1001', justificativa: 'Responsável pela área' }, comoGestor);
       expect(r.status).toBe(204);
-      // Verificação de histórico será feita quando implementado
+      
+      // Verificação de histórico
+      const historico = await linhas('HistoricoTratativa', { tratativa_codigo: tratativa });
+      expect(historico).toHaveLength(antes + 1);
+      
+      const novoHistorico = historico[historico.length - 1];
+      expect(novoHistorico.evento).toBe('Atribuicao');
+      expect(novoHistorico.campo).toBe('responsavelPrincipal');
+      expect(novoHistorico.valorAnterior).toBeNull();
+      expect(novoHistorico.valorNovo).toBe('M1001');
+      expect(novoHistorico.justificativa).toBe('Responsável pela área');
+      expect(novoHistorico.autor).toBe('gestor');
+      expect(novoHistorico.tipoAutor).toBe('Usuario');
     });
 
     it('Reatribuição grava histórico', async () => {
       const tratativa = await criarTratativaAberta();
+      const antes = (await linhas('HistoricoTratativa', { tratativa_codigo: tratativa })).length;
       const r1 = await atribuirResponsavelPrincipal(enviar, tratativa, { responsavelPrincipal: 'M1001' }, comoGestor);
       expect(r1.status).toBe(204);
       const r2 = await atribuirResponsavelPrincipal(enviar, tratativa, { responsavelPrincipal: 'M2002', justificativa: 'Mudou de turno' }, comoGestor);
       expect(r2.status).toBe(204);
-      // Verificação de histórico será feita quando implementado
+      
+      // Verificação de histórico
+      const historico = await linhas('HistoricoTratativa', { tratativa_codigo: tratativa });
+      expect(historico).toHaveLength(antes + 2);
+      
+      const primeiroHistorico = historico[historico.length - 2];
+      expect(primeiroHistorico.evento).toBe('Atribuicao');
+      expect(primeiroHistorico.campo).toBe('responsavelPrincipal');
+      expect(primeiroHistorico.valorAnterior).toBeNull();
+      expect(primeiroHistorico.valorNovo).toBe('M1001');
+      expect(primeiroHistorico.justificativa).toBeNull();
+      expect(primeiroHistorico.autor).toBe('gestor');
+      expect(primeiroHistorico.tipoAutor).toBe('Usuario');
+      
+      const segundoHistorico = historico[historico.length - 1];
+      expect(segundoHistorico.evento).toBe('Reatribuicao');
+      expect(segundoHistorico.campo).toBe('responsavelPrincipal');
+      expect(segundoHistorico.valorAnterior).toBe('M1001');
+      expect(segundoHistorico.valorNovo).toBe('M2002');
+      expect(segundoHistorico.justificativa).toBe('Mudou de turno');
+      expect(segundoHistorico.autor).toBe('gestor');
+      expect(segundoHistorico.tipoAutor).toBe('Usuario');
     });
 
     it('Inclusão de Participante grava histórico', async () => {
       const tratativa = await criarTratativaAberta();
+      const antes = (await linhas('HistoricoTratativa', { tratativa_codigo: tratativa })).length;
       const r = await incluirParticipante(enviar, tratativa, { participante: 'M3003' }, comoGestor);
       expect(r.status).toBe(204);
-      // Verificação de histórico será feita quando implementado
+      
+      // Verificação de histórico
+      const historico = await linhas('HistoricoTratativa', { tratativa_codigo: tratativa });
+      expect(historico).toHaveLength(antes + 1);
+      
+      const novoHistorico = historico[historico.length - 1];
+      expect(novoHistorico.evento).toBe('InclusaoParticipante');
+      expect(novoHistorico.campo).toBe('participante');
+      expect(novoHistorico.valorAnterior).toBeNull();
+      expect(novoHistorico.valorNovo).toBe('M3003');
+      expect(novoHistorico.justificativa).toBeNull();
+      expect(novoHistorico.autor).toBe('gestor');
+      expect(novoHistorico.tipoAutor).toBe('Usuario');
     });
 
     it('Remoção de Participante grava histórico', async () => {
       const tratativa = await criarTratativaAberta();
+      const antes = (await linhas('HistoricoTratativa', { tratativa_codigo: tratativa })).length;
       const r1 = await incluirParticipante(enviar, tratativa, { participante: 'M3003' }, comoGestor);
       expect(r1.status).toBe(204);
       const r2 = await removerParticipante(enviar, tratativa, { participante: 'M3003' }, comoGestor);
       expect(r2.status).toBe(204);
-      // Verificação de histórico será feita quando implementado
+      
+      // Verificação de histórico
+      const historico = await linhas('HistoricoTratativa', { tratativa_codigo: tratativa });
+      expect(historico).toHaveLength(antes + 2);
+      
+      const inclusaoHistorico = historico[historico.length - 2];
+      expect(inclusaoHistorico.evento).toBe('InclusaoParticipante');
+      expect(inclusaoHistorico.campo).toBe('participante');
+      expect(inclusaoHistorico.valorAnterior).toBeNull();
+      expect(inclusaoHistorico.valorNovo).toBe('M3003');
+      expect(inclusaoHistorico.justificativa).toBeNull();
+      expect(inclusaoHistorico.autor).toBe('gestor');
+      expect(inclusaoHistorico.tipoAutor).toBe('Usuario');
+      
+      const remocaoHistorico = historico[historico.length - 1];
+      expect(remocaoHistorico.evento).toBe('RemocaoParticipante');
+      expect(remocaoHistorico.campo).toBe('participante');
+      expect(remocaoHistorico.valorAnterior).toBe('M3003');
+      expect(remocaoHistorico.valorNovo).toBeNull();
+      expect(remocaoHistorico.justificativa).toBeNull();
+      expect(remocaoHistorico.autor).toBe('gestor');
+      expect(remocaoHistorico.tipoAutor).toBe('Usuario');
     });
   });
 
   describe('CA55, CA56: pedidos recusados não gravam histórico', () => {
     it('pedido recusado por permissão não grava histórico', async () => {
       const tratativa = await criarTratativaAberta();
+      const antes = (await linhas('HistoricoTratativa', { tratativa_codigo: tratativa })).length;
       const r = await atribuirResponsavelPrincipal(enviar, tratativa, { responsavelPrincipal: 'M1001' }, comoUsuario);
       expect(r.status).toBe(403);
-      // Verificação de histórico será feita quando implementado
+      
+      // Verificação de que não houve gravação de histórico
+      const depois = (await linhas('HistoricoTratativa', { tratativa_codigo: tratativa })).length;
+      expect(depois).toBe(antes);
     });
 
     it('falha simulada no banco dispara rollback total', async () => {

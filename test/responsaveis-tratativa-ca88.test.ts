@@ -139,4 +139,63 @@ describe('CA88: Gestor listando Tratativas recebe itens sem responsavelPrincipal
       expect(r.status).toBe(403); // Usuário não-gestor não tem acesso
     });
   });
+
+  describe('Verificações adicionais de segregação CA88', () => {
+    it('detalhe da tratativa não contém campos aninhados de responsáveis', async () => {
+      const tratativa = await criarTratativaAberta();
+      
+      const r = await consultarTratativa(consultar, tratativa, comoGestor);
+      expect(r.status).toBe(200);
+      
+      // Verifica que não há campos relacionados a responsáveis em nenhum nível
+      expect(r.data).not.toHaveProperty('responsavelPrincipal');
+      expect(r.data).not.toHaveProperty('participantes');
+      expect(r.data).not.toHaveProperty('responsavel');
+      expect(r.data).not.toHaveProperty('autorResponsavel');
+      
+      // Verifica estrutura completa dos dados
+      const campos = Object.keys(r.data).filter(k => !k.startsWith('@')).sort();
+      expect(campos).toEqual(CHAVES_DETALHE);
+    });
+
+    it('listagem com tratativas com responsáveis atribuídos ainda não mostra os campos', async () => {
+      // Primeiro cria uma tratativa (atribuição de responsável não afeta a listagem)
+      await criarTratativaAberta();
+      // A listagem não deve mostrar campos de responsáveis independentemente de atribuição
+      
+      const r = await listarTratativas(consultar, { tamanhoPagina: 20 }, comoGestor);
+      expect(r.status).toBe(200);
+      
+      const itens = r.data.value as Record<string, unknown>[];
+      expect(itens.length).toBeGreaterThan(0);
+      
+      // Verifica que nenhum item tem campos de responsáveis
+      for (const item of itens) {
+        expect(item).not.toHaveProperty('responsavelPrincipal');
+        expect(item).not.toHaveProperty('participantes');
+        expect(semAnotacoes(item)).toEqual(CHAVES_ITEM);
+      }
+      
+      // Verifica contagem total de campos por item
+      for (const item of itens) {
+        const camposItem = semAnotacoes(item);
+        expect(camposItem.length).toBe(10); // CHAVES_ITEM tem 10 elementos
+      }
+    });
+
+    it('consulta de tratativa por usuário não-gestor também não mostra responsáveis', async () => {
+      const tratativa = await criarTratativaAberta();
+      
+      const r = await consultarTratativa(consultar, tratativa, comoUsuario);
+      expect(r.status).toBe(200);
+      
+      // Usuário não-gestor também não deve ver campos de responsáveis
+      expect(r.data).not.toHaveProperty('responsavelPrincipal');
+      expect(r.data).not.toHaveProperty('participantes');
+      
+      // Deve ter as mesmas 12 chaves que o gestor
+      const campos = Object.keys(r.data).filter(k => !k.startsWith('@')).sort();
+      expect(campos).toEqual(CHAVES_DETALHE);
+    });
+  });
 });
