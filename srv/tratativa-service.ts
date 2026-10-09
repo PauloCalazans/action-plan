@@ -15,11 +15,8 @@ export default class TratativaService extends cds.ApplicationService {
   async init() {
     // Decisão 3 (design tratativa): aplicativo de origem é recusado em todo o serviço, antes de qualquer gravação.
     // Registrado antes de qualquer outro handler.
-    // Exceção (005): permite consultarTratativa (sem campos de responsáveis, filtrados no handler)
     this.before('*', (req) => {
       if (!req.user.is('AplicativoOrigem')) return;
-      // Permite apenas consultarTratativa (sem campos sensíveis)
-      if (req.event === 'consultarTratativa') return;
       req.reject(
         403,
         req.event === 'criarTratativaAvulsa'
