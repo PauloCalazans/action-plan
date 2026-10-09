@@ -25,8 +25,12 @@ async function criarTratativaApp(dados: Record<string, unknown> = {}): Promise<s
   return r.data.codigo as string;
 }
 
-async function mudarStatusTratativa(codigo: string, status: string, como: unknown = comoGestor): Promise<Resposta> {
-  return mudarStatus(enviar, codigo, { status }, como);
+async function mudarStatusTratativa(codigo: string, status: string, justificativa?: string, como: unknown = comoGestor): Promise<Resposta> {
+  const corpo: Record<string, unknown> = { status };
+  if (justificativa !== undefined) {
+    corpo.justificativa = justificativa;
+  }
+  return mudarStatus(enviar, codigo, corpo, como);
 }
 
 describe('Etapa 1 - Responsáveis e Participantes da Tratativa', () => {
@@ -365,7 +369,8 @@ describe('Etapa 1 - Responsáveis e Participantes da Tratativa', () => {
 
     it('incluir participante em Tratativa Cancelada recusa com 409', async () => {
       const tratativa = await criarTratativaAberta();
-      await mudarStatusTratativa(tratativa, 'Cancelada');
+      const rCancelar = await mudarStatusTratativa(tratativa, 'Cancelada', 'Motivo do cancelamento');
+      expect(rCancelar.status).toBe(204); // Cancelar exige justificativa
       const r = await incluirParticipante(enviar, tratativa, { participante: 'M3003' }, comoGestor);
       expect(r.status).toBe(409);
       expect(r.data.error?.message).toBe('Tratativa Cancelada não pode ser alterada.');
@@ -379,7 +384,8 @@ describe('Etapa 1 - Responsáveis e Participantes da Tratativa', () => {
       expect(r1.status).toBe(204);
       await mudarStatusTratativa(tratativa, 'Em andamento');
       await mudarStatusTratativa(tratativa, 'Encerrada');
-      await mudarStatusTratativa(tratativa, 'Reaberta');
+      const rReabrir = await mudarStatusTratativa(tratativa, 'Em andamento', 'Justificativa para reabertura');
+      expect(rReabrir.status).toBe(204); // Reabrir exige justificativa
       const r2 = await atribuirResponsavelPrincipal(enviar, tratativa, { responsavelPrincipal: 'M2002', justificativa: 'Mudança' }, comoGestor);
       expect(r2.status).toBe(204);
     });
