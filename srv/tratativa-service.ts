@@ -12,6 +12,7 @@ import { obterMatriculaUsuario } from './tratativa/identidade';
 import { consultarTratativa, listarTratativas, type FiltrosListagem } from './tratativa/listagem';
 import { atribuirResponsavelPrincipal, incluirParticipante, removerParticipante, consultarResponsaveis } from './tratativa/responsaveis-tratativa';
 import { minhasAcoes, minhasTratativas } from './tratativa/consultas-responsabilidade';
+import { anexarEvidencia, type DadosAnexoEvidencia } from './tratativa/evidencias-anexo';
 
 /** Contrato dos usuários: só monta o Autor e delega ao domínio (decisões 6, 14 e 15). */
 export default class TratativaService extends cds.ApplicationService {
@@ -150,6 +151,14 @@ export default class TratativaService extends cds.ApplicationService {
         justificativa!,
         { id: obterMatriculaUsuario(req), tipo: 'Usuario' },
       );
+    });
+    // 006 R1-R7, R12-R14: anexa arquivo de Evidência à Ação ou Subação.
+    this.on('anexarEvidencia', 'Tratativas', (req) => {
+      const { codigo } = req.params[0] as { codigo: string };
+      return anexarEvidencia(req, String(codigo).toLowerCase(), req.data as DadosAnexoEvidencia, {
+        id: req.user.id,
+        tipo: 'Usuario',
+      });
     });
     return super.init();
   }

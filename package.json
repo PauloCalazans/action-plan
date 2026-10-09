@@ -11,6 +11,11 @@
     "arch": "depcruise \"{db,srv,app}\" --config .dependency-cruiser.cjs"
   },
   "cds": {
+    "server": {
+      "body_parser": {
+        "limit": "20mb"
+      }
+    },
     "requires": {
       "auth": {
         "[development]": {
@@ -51,6 +56,15 @@
               ]
             }
           }
+        }
+      },
+      "ArmazenamentoEvidencias": {
+        "impl": "srv/tratativa/armazenamento-evidencias",
+        "[development]": {
+          "impl": "test/apoio/armazenamento-espiao"
+        },
+        "[test]": {
+          "impl": "test/apoio/armazenamento-espiao"
         }
       }
     }

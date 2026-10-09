@@ -6,7 +6,14 @@ import { recusar } from './recusa';
 const NS = 'br.com.calazanstec';
 
 export interface LinhaHistorico {
-  evento: string; campo?: string | null; valorAnterior?: string | null; valorNovo?: string | null; justificativa?: string | null;
+  evento: string;
+  campo?: string | null;
+  valorAnterior?: string | null;
+  valorNovo?: string | null;
+  justificativa?: string | null;
+  evidencia?: string | null;
+  mimeType?: string | null;
+  tamanho?: number | null;
 }
 
 /** R20: autor e tipo de autor válidos antes de qualquer gravação. */
@@ -44,6 +51,9 @@ export async function registrarHistorico(
         autor: autor.id,
         tipoAutor: autor.tipo,
         quando: quando.toISOString(),
+        ...(l.evidencia ? { evidencia: l.evidencia } : {}),
+        ...(l.mimeType ? { mimeType: l.mimeType } : {}),
+        ...(l.tamanho !== undefined && l.tamanho !== null ? { tamanho: l.tamanho } : {}),
       })),
     ),
   );

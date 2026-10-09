@@ -123,6 +123,18 @@ service TratativaService {
     meuPapel              : m.PapelUsuarioTratativa;
   }
 
+  /** R1, R12 (006): detalhe da Evidência anexada. */
+  type DetalheEvidencia {
+    codigo      : UUID;
+    acao        : UUID;
+    nomeArquivo : String(255);
+    mimeType    : String(100);
+    tamanho     : Integer;
+    descricao   : String(500);
+    criadoEm    : Timestamp;
+    autorAnexo  : String(50);
+  }
+
   action   criarTratativaAvulsa(titulo : String(200), criticidade : String(10), descricao : String(5000),
                                 unidade : String(100), area : String(100), solicitante : String(50)) returns ResultadoAbertura;
 
@@ -157,7 +169,8 @@ service TratativaService {
   @readonly
   @restrict: [
     { grant: ['mudarStatus', 'editar', 'mudarCriticidade', 'criarAcao', 'criarSubacao', 'editarAcao', 'atribuirResponsavelPrincipal', 'incluirParticipante', 'removerParticipante', 'delegarAcao'], to: 'GestorTratativa' },
-    { grant: ['mudarStatusAcao'], to: 'authenticated-user' }
+    { grant: ['mudarStatusAcao'], to: 'authenticated-user' },
+    { grant: ['anexarEvidencia', 'removerEvidencia'], to: 'authenticated-user' }
   ]
   entity Tratativas as projection on m.Tratativas { key codigo } actions {
     /** R2/R4/R5: a operação é identificada pelo Status de destino. */
@@ -190,5 +203,11 @@ service TratativaService {
 
     /** R8, R14, R29, R30 (005): delegação de Ação com justificativa obrigatória e histórico dedicado. */
     action delegarAcao(acao : UUID, novoResponsavel : String, justificativa : String);
+
+    /** R1-R7, R12-R14 (006): anexa arquivo de Evidência à Ação ou Subação. */
+    action anexarEvidencia(acao : UUID, nomeArquivo : String, mimeType : String, conteudo : String, descricao : String) returns TratativaService.DetalheEvidencia;
+
+    /** R1, R6, R7, R10, R12, R13 (006): remove logicamente Evidência da Ação ou Subação. */
+    action removerEvidencia(acao : UUID, evidencia : UUID);
   };
 }
