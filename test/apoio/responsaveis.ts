@@ -48,7 +48,15 @@ export function delegarAcao(POST: Envia, tratativa: string, dados: Record<string
 export async function minhasAcoes(GET: Consulta, params: Record<string, unknown> = {}, como: unknown): Promise<Resposta> {
   const parametros = Object.entries(params)
     .filter(([, valor]) => valor !== null && valor !== undefined)
-    .map(([chave, valor]) => `${chave}=${encodeURIComponent(String(valor))}`)
+    .map(([chave, valor]) => {
+      // Parâmetros String vão entre aspas simples com aspas internas duplicadas
+      if (typeof valor === 'string') {
+        const escapado = String(valor).replace(/'/g, "''");
+        return `${chave}='${encodeURIComponent(escapado)}'`;
+      }
+      // Inteiros sem aspas
+      return `${chave}=${valor}`;
+    })
     .join(',');
   const url = parametros ? `${BASE}/minhasAcoes(${parametros})` : `${BASE}/minhasAcoes()`;
   const r = await GET(url, como);
@@ -64,7 +72,15 @@ export async function minhasAcoes(GET: Consulta, params: Record<string, unknown>
 export async function minhasTratativas(GET: Consulta, params: Record<string, unknown> = {}, como: unknown): Promise<Resposta> {
   const parametros = Object.entries(params)
     .filter(([, valor]) => valor !== null && valor !== undefined)
-    .map(([chave, valor]) => `${chave}=${encodeURIComponent(String(valor))}`)
+    .map(([chave, valor]) => {
+      // Parâmetros String vão entre aspas simples com aspas internas duplicadas
+      if (typeof valor === 'string') {
+        const escapado = String(valor).replace(/'/g, "''");
+        return `${chave}='${encodeURIComponent(escapado)}'`;
+      }
+      // Inteiros sem aspas
+      return `${chave}=${valor}`;
+    })
     .join(',');
   const url = parametros ? `${BASE}/minhasTratativas(${parametros})` : `${BASE}/minhasTratativas()`;
   const r = await GET(url, como);
