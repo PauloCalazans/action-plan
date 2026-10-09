@@ -345,8 +345,36 @@ describe('Etapa 1 - Responsáveis e Participantes da Tratativa', () => {
   });
 
   describe('CA24: não existe operação para deixar a Tratativa sem Responsável Principal após atribuído', () => {
-    it('não há action para remover Responsável Principal', async () => {
-      // Esta verificação é conceitual - não há action no serviço
+    it('atribuir responsavelPrincipal null recusa com 400', async () => {
+      const tratativa = await criarTratativaAberta();
+      const r1 = await atribuirResponsavelPrincipal(enviar, tratativa, { responsavelPrincipal: 'M1001' }, comoGestor);
+      expect(r1.status).toBe(204);
+      
+      // Tentar atribuir null deve recusar
+      const r2 = await atribuirResponsavelPrincipal(enviar, tratativa, { responsavelPrincipal: null as unknown as string }, comoGestor);
+      expect(r2.status).toBe(400);
+      expect(r2.data.error?.target).toBe('responsavelPrincipal');
+      
+      // Responsável Principal permanece gravado
+      const consulta = await consultarResponsaveis(consultar, tratativa, comoGestor);
+      expect(consulta.status).toBe(200);
+      expect(consulta.data.responsavelPrincipal).toBe('M1001');
+    });
+
+    it('atribuir responsavelPrincipal vazio recusa com 400', async () => {
+      const tratativa = await criarTratativaAberta();
+      const r1 = await atribuirResponsavelPrincipal(enviar, tratativa, { responsavelPrincipal: 'M1001' }, comoGestor);
+      expect(r1.status).toBe(204);
+      
+      // Tentar atribuir string vazia deve recusar
+      const r2 = await atribuirResponsavelPrincipal(enviar, tratativa, { responsavelPrincipal: '' }, comoGestor);
+      expect(r2.status).toBe(400);
+      expect(r2.data.error?.target).toBe('responsavelPrincipal');
+      
+      // Responsável Principal permanece gravado
+      const consulta = await consultarResponsaveis(consultar, tratativa, comoGestor);
+      expect(consulta.status).toBe(200);
+      expect(consulta.data.responsavelPrincipal).toBe('M1001');
     });
   });
 
@@ -753,10 +781,9 @@ describe('Etapa 1 - Responsáveis e Participantes da Tratativa', () => {
       expect(r.status).not.toBe(404);
       expect(r.status).not.toBe(501);
       // Se implementada corretamente, deveria retornar 200 com dados
-      if (r.status === 200) {
-        expect(r.data).toHaveProperty('responsavelPrincipal');
-        expect(r.data).toHaveProperty('participantes');
-      }
+      expect(r.status).toBe(200);
+      expect(r.data).toHaveProperty('responsavelPrincipal');
+      expect(r.data).toHaveProperty('participantes');
     });
   });
 });
