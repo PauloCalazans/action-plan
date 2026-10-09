@@ -38,3 +38,8 @@ export function listarTratativas(GET: Consulta, params: Record<string, unknown> 
   const url = parametros ? `${BASE}/listarTratativas(${parametros})` : `${BASE}/listarTratativas()`;
   return GET(url, como);
 }
+
+// Helper para action delegarAcao
+export function delegarAcao(POST: Envia, tratativa: string, dados: Record<string, unknown>, como: unknown): Promise<Resposta> {
+  return POST(`${BASE}/Tratativas(${tratativa})/delegarAcao`, dados, como);
+}
