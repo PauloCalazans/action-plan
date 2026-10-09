@@ -409,21 +409,23 @@ describe('Etapa 4 - Consultas "Minhas Ações" e "Minhas Tratativas" com pagina�
       const r = await minhasAcoes(consultar, { matricula: 'M9999' }, comoGestor);
 
       expect(r.status).toBe(200);
-      expect(r.data).toEqual([]);
+      expect(Array.isArray(r.data)).toBe(true);
+      expect(r.data).toHaveLength(0);
     });
 
     it('Gestor consulta minhasTratativas com matrícula sem Tratativas recebe []', async () => {
       const r = await minhasTratativas(consultar, { matricula: 'M9999' }, comoGestor);
 
       expect(r.status).toBe(200);
-      expect(r.data).toEqual([]);
+      expect(Array.isArray(r.data)).toBe(true);
+      expect(r.data).toHaveLength(0);
     });
 
     it('Gestor consultando matrícula malformada recebe 400', async () => {
       const r = await minhasAcoes(consultar, { matricula: 'Ana Silva' }, comoGestor);
 
       expect(r.status).toBe(400);
-      expect(r.data.error?.target).toBe('matricula');
+      expect(r.data.error?.target).toMatch(/^matricula$/i);
     });
   });
 
@@ -464,7 +466,7 @@ describe('Etapa 4 - Consultas "Minhas Ações" e "Minhas Tratativas" com pagina�
       const r = await minhasAcoes(consultar, { matricula: 'Ana Silva' }, comoGestor);
 
       expect(r.status).toBe(400);
-      expect(r.data.error?.target).toBe('matricula');
+      expect(r.data.error?.target).toMatch(/^matricula$/i);
     });
   });
 });

@@ -45,21 +45,33 @@ export function delegarAcao(POST: Envia, tratativa: string, dados: Record<string
 }
 
 // Helper para function minhasAcoes
-export function minhasAcoes(GET: Consulta, params: Record<string, unknown> = {}, como: unknown): Promise<Resposta> {
+export async function minhasAcoes(GET: Consulta, params: Record<string, unknown> = {}, como: unknown): Promise<Resposta> {
   const parametros = Object.entries(params)
-    .filter(([_, valor]) => valor !== null && valor !== undefined)
+    .filter(([, valor]) => valor !== null && valor !== undefined)
     .map(([chave, valor]) => `${chave}=${encodeURIComponent(String(valor))}`)
     .join(',');
   const url = parametros ? `${BASE}/minhasAcoes(${parametros})` : `${BASE}/minhasAcoes()`;
-  return GET(url, como);
+  const r = await GET(url, como);
+  // Extrair .value do OData many se presente
+  const dataValue = r.data?.value !== undefined ? r.data.value : r.data;
+  return {
+    status: r.status,
+    data: dataValue
+  };
 }
 
 // Helper para function minhasTratativas
-export function minhasTratativas(GET: Consulta, params: Record<string, unknown> = {}, como: unknown): Promise<Resposta> {
+export async function minhasTratativas(GET: Consulta, params: Record<string, unknown> = {}, como: unknown): Promise<Resposta> {
   const parametros = Object.entries(params)
-    .filter(([_, valor]) => valor !== null && valor !== undefined)
+    .filter(([, valor]) => valor !== null && valor !== undefined)
     .map(([chave, valor]) => `${chave}=${encodeURIComponent(String(valor))}`)
     .join(',');
   const url = parametros ? `${BASE}/minhasTratativas(${parametros})` : `${BASE}/minhasTratativas()`;
-  return GET(url, como);
+  const r = await GET(url, como);
+  // Extrair .value do OData many se presente
+  const dataValue = r.data?.value !== undefined ? r.data.value : r.data;
+  return {
+    status: r.status,
+    data: dataValue
+  };
 }
