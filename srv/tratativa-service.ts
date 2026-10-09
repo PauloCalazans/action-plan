@@ -14,7 +14,7 @@ import { atribuirResponsavelPrincipal, incluirParticipante, removerParticipante,
 import { minhasAcoes, minhasTratativas } from './tratativa/consultas-responsabilidade';
 import { anexarEvidencia, type DadosAnexoEvidencia } from './tratativa/evidencias-anexo';
 import { removerEvidencia, type DadosRemocaoEvidencia } from './tratativa/evidencias-remocao';
-import { listarPendenciasEvidenciasTratativa } from './tratativa/evidencias-consultas';
+import { listarPendenciasEvidenciasTratativa, listarEvidenciasAcao, listarEvidenciasTratativa, baixarEvidencia } from './tratativa/evidencias-consultas';
 
 /** Contrato dos usuários: só monta o Autor e delega ao domínio (decisões 6, 14 e 15). */
 export default class TratativaService extends cds.ApplicationService {
@@ -174,6 +174,21 @@ export default class TratativaService extends cds.ApplicationService {
     this.on('listarPendenciasEvidenciasTratativa', (req) => {
       const { tratativa } = req.data as { tratativa?: string };
       return listarPendenciasEvidenciasTratativa(req, String(tratativa).toLowerCase());
+    });
+    // 006 R11 (etapa 4): lista Evidências ativas de uma Ação ou Subação.
+    this.on('listarEvidenciasAcao', (req) => {
+      const { tratativa, acao } = req.data as { tratativa?: string; acao?: string };
+      return listarEvidenciasAcao(req, String(tratativa).toLowerCase(), String(acao).toLowerCase());
+    });
+    // 006 R11 (etapa 4): lista todas as Evidências ativas da Tratativa.
+    this.on('listarEvidenciasTratativa', (req) => {
+      const { tratativa } = req.data as { tratativa?: string };
+      return listarEvidenciasTratativa(req, String(tratativa).toLowerCase());
+    });
+    // 006 R11, R12 (etapa 4): baixa Evidência com conteúdo em Base64 e auditoria prévia.
+    this.on('baixarEvidencia', (req) => {
+      const { tratativa, acao, evidencia } = req.data as { tratativa?: string; acao?: string; evidencia?: string };
+      return baixarEvidencia(req, String(tratativa).toLowerCase(), String(acao).toLowerCase(), String(evidencia).toLowerCase());
     });
     return super.init();
   }

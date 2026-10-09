@@ -143,6 +143,38 @@ service TratativaService {
     status      : String(20);
   }
 
+  /** R11 (006): item de Evidência retornado pela listagem por Ação. */
+  type ItemEvidencia {
+    codigo      : UUID;
+    nomeArquivo : String(255);
+    mimeType    : String(100);
+    tamanho     : Integer;
+    descricao   : String(500);
+    criadoEm    : Timestamp;
+    autorAnexo  : String(50);
+  }
+
+  /** R11 (006): item de Evidência retornado pela listagem por Tratativa (com código da Ação). */
+  type ItemEvidenciaTratativa {
+    codigo      : UUID;
+    acao        : UUID;
+    nomeArquivo : String(255);
+    mimeType    : String(100);
+    tamanho     : Integer;
+    descricao   : String(500);
+    criadoEm    : Timestamp;
+    autorAnexo  : String(50);
+  }
+
+  /** R11, R12 (006): detalhe do download de Evidência com conteúdo em Base64. */
+  type DetalheDownloadEvidencia {
+    codigo      : UUID;
+    nomeArquivo : String(255);
+    mimeType    : String(100);
+    tamanho     : Integer;
+    conteudo    : String;
+  }
+
   action   criarTratativaAvulsa(titulo : String(200), criticidade : String(10), descricao : String(5000),
                                 unidade : String(100), area : String(100), solicitante : String(50)) returns ResultadoAbertura;
 
@@ -171,6 +203,15 @@ service TratativaService {
 
   /** R9, R17 (006): lista Ações com evidência obrigatória sem Evidências ativas. */
   function listarPendenciasEvidenciasTratativa(tratativa : UUID) returns many ItemPendenciaEvidenciaTratativa;
+
+  /** R11 (006): lista Evidências ativas de uma Ação ou Subação. */
+  function listarEvidenciasAcao(tratativa : UUID, acao : UUID) returns many ItemEvidencia;
+
+  /** R11 (006): lista todas as Evidências ativas da Tratativa. */
+  function listarEvidenciasTratativa(tratativa : UUID) returns many ItemEvidenciaTratativa;
+
+  /** R11, R12 (006): baixa Evidência com conteúdo em Base64 e auditoria prévia. */
+  function baixarEvidencia(tratativa : UUID, acao : UUID, evidencia : UUID) returns DetalheDownloadEvidencia;
 
   /**
    * Âncora das operações de ciclo de vida (R2, R12, R18). Só a chave é exposta; não há leitura,
