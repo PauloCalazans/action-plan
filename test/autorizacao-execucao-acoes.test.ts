@@ -92,6 +92,7 @@ async function recusaAcao(t: string, acaoCodigo: string, corpo: Record<string, u
 
 const TRATATIVA_ENCERRADA = 'Tratativa Encerrada não pode ser alterada.';
 const TRANSICAO_NAO_PERMITIDA_MESMO_STATUS = 'Transição não permitida: de Pendente para Pendente.';
+const TRANSICAO_NAO_PERMITIDA_EM_ANDAMENTO = 'Transição não permitida: de Em andamento para Em andamento.';
 const TRANSICAO_NAO_PERMITIDA_CONCLUIDA_CONCLUIDA = 'Transição não permitida: de Concluída para Concluída.';
 const TRANSICAO_NAO_PERMITIDA_CANCELADA_CONCLUIDA = 'Transição não permitida: de Cancelada para Concluída.';
 const SUBACOES_NAO_CONCLUIDAS = 'A Ação possui Subações não concluídas nem canceladas.';
@@ -226,7 +227,7 @@ describe('Etapa 3 - Autorização Dinâmica para Iniciar e Concluir Ação (R11,
       const tratativa = await criarTratativaAberta();
       const acaoCodigo = await acao(tratativa, { responsavel: 'M1001' });
       await leva(tratativa, acaoCodigo, 'Em andamento');
-      await recusaAcao(tratativa, acaoCodigo, { status: 'Em andamento' }, 409, 'status', TRANSICAO_NAO_PERMITIDA_MESMO_STATUS);
+      await recusaAcao(tratativa, acaoCodigo, { status: 'Em andamento' }, 409, 'status', TRANSICAO_NAO_PERMITIDA_EM_ANDAMENTO);
     });
   });
 
