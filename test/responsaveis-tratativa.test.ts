@@ -67,9 +67,9 @@ describe('Etapa 1 - Responsáveis e Participantes da Tratativa', () => {
     it('Tratativa permanece com um único Responsável Principal após reatribuição', async () => {
       const tratativa = await criarTratativaAberta();
       const r1 = await atribuirResponsavelPrincipal(enviar, tratativa, { responsavelPrincipal: 'M1001', justificativa: 'Primeira atribuição' }, comoGestor);
-      expect(r1.status).toBe(200);
+      expect(r1.status).toBe(204);
       const r2 = await atribuirResponsavelPrincipal(enviar, tratativa, { responsavelPrincipal: 'M2002', justificativa: 'Reatribuição' }, comoGestor);
-      expect(r2.status).toBe(200);
+      expect(r2.status).toBe(204);
       const consulta = await consultarResponsaveis(consultar, tratativa, comoGestor);
       expect(consulta.data.responsavelPrincipal).toBe('M2002');
     });
@@ -101,14 +101,14 @@ describe('Etapa 1 - Responsáveis e Participantes da Tratativa', () => {
     it('"M1001" é aceita', async () => {
       const tratativa = await criarTratativaAberta();
       const r = await atribuirResponsavelPrincipal(enviar, tratativa, { responsavelPrincipal: 'M1001' }, comoGestor);
-      expect(r.status).toBe(200);
+      expect(r.status).toBe(204);
     });
 
     it('matrícula com 50 caracteres é aceita', async () => {
       const tratativa = await criarTratativaAberta();
       const matricula50 = 'A'.repeat(50);
       const r = await atribuirResponsavelPrincipal(enviar, tratativa, { responsavelPrincipal: matricula50 }, comoGestor);
-      expect(r.status).toBe(200);
+      expect(r.status).toBe(204);
     });
   });
 
@@ -139,7 +139,7 @@ describe('Etapa 1 - Responsáveis e Participantes da Tratativa', () => {
     it('espaços nas pontas são removidos e valor gravado sem espaços', async () => {
       const tratativa = await criarTratativaAberta();
       const r = await atribuirResponsavelPrincipal(enviar, tratativa, { responsavelPrincipal: '  M1001  ' }, comoGestor);
-      expect(r.status).toBe(200);
+      expect(r.status).toBe(204);
       const consulta = await consultarResponsaveis(consultar, tratativa, comoGestor);
       expect(consulta.data.responsavelPrincipal).toBe('M1001');
     });
@@ -159,7 +159,7 @@ describe('Etapa 1 - Responsáveis e Participantes da Tratativa', () => {
     it('atribuir participante existente como Responsável Principal recusa com 409', async () => {
       const tratativa = await criarTratativaAberta();
       const r1 = await incluirParticipante(enviar, tratativa, { participante: 'M3003' }, comoGestor);
-      expect(r1.status).toBe(200);
+      expect(r1.status).toBe(204);
       const r2 = await atribuirResponsavelPrincipal(enviar, tratativa, { responsavelPrincipal: 'M3003' }, comoGestor);
       expect(r2.status).toBe(409);
       expect(r2.data.error?.message).toBe('Responsável Principal e Participante não podem ser a mesma pessoa.');
@@ -169,7 +169,7 @@ describe('Etapa 1 - Responsáveis e Participantes da Tratativa', () => {
     it('incluir Responsável Principal existente como participante recusa com 409', async () => {
       const tratativa = await criarTratativaAberta();
       const r1 = await atribuirResponsavelPrincipal(enviar, tratativa, { responsavelPrincipal: 'M1001' }, comoGestor);
-      expect(r1.status).toBe(200);
+      expect(r1.status).toBe(204);
       const r2 = await incluirParticipante(enviar, tratativa, { participante: 'M1001' }, comoGestor);
       expect(r2.status).toBe(409);
       expect(r2.data.error?.message).toBe('Responsável Principal e Participante não podem ser a mesma pessoa.');
@@ -181,7 +181,7 @@ describe('Etapa 1 - Responsáveis e Participantes da Tratativa', () => {
     it('M1001 pode ser Responsável de Ação e Participante', async () => {
       const tratativa = await criarTratativaAberta();
       const r1 = await atribuirResponsavelPrincipal(enviar, tratativa, { responsavelPrincipal: 'M1001' }, comoGestor);
-      expect(r1.status).toBe(200);
+      expect(r1.status).toBe(204);
       // Criação de ação com responsável M1001 será testada em outra etapa
     });
   });
@@ -191,9 +191,9 @@ describe('Etapa 1 - Responsáveis e Participantes da Tratativa', () => {
       const tratativa = await criarTratativaAberta();
       fixarInstante('2026-10-08T12:00:00Z');
       const r1 = await incluirParticipante(enviar, tratativa, { participante: 'M3003' }, comoGestor);
-      expect(r1.status).toBe(200);
+      expect(r1.status).toBe(204);
       const r2 = await incluirParticipante(enviar, tratativa, { participante: 'M4004' }, comoGestor);
-      expect(r2.status).toBe(200);
+      expect(r2.status).toBe(204);
       const consulta = await consultarResponsaveis(consultar, tratativa, comoGestor);
       expect(consulta.data.participantes).toEqual(['M3003', 'M4004']);
     });
@@ -203,7 +203,7 @@ describe('Etapa 1 - Responsáveis e Participantes da Tratativa', () => {
     it('nada muda e nenhum histórico é gravado', async () => {
       const tratativa = await criarTratativaAberta();
       const r1 = await incluirParticipante(enviar, tratativa, { participante: 'M3003' }, comoGestor);
-      expect(r1.status).toBe(200);
+      expect(r1.status).toBe(204);
       const r2 = await incluirParticipante(enviar, tratativa, { participante: 'M3003' }, comoGestor);
       expect(r2.status).toBe(204);
     });
@@ -222,7 +222,7 @@ describe('Etapa 1 - Responsáveis e Participantes da Tratativa', () => {
       const tratativa = await criarTratativaAberta();
       for (let i = 1; i <= 20; i++) {
         const r = await incluirParticipante(enviar, tratativa, { participante: `M${1000 + i}` }, comoGestor);
-        expect(r.status).toBe(200);
+        expect(r.status).toBe(204);
       }
       const r = await incluirParticipante(enviar, tratativa, { participante: 'M1021' }, comoGestor);
       expect(r.status).toBe(409);
@@ -233,7 +233,7 @@ describe('Etapa 1 - Responsáveis e Participantes da Tratativa', () => {
       const tratativa = await criarTratativaAberta();
       for (let i = 1; i <= 20; i++) {
         const r = await incluirParticipante(enviar, tratativa, { participante: `M${2000 + i}` }, comoGestor);
-        expect(r.status).toBe(200);
+        expect(r.status).toBe(204);
       }
       const consulta = await consultarResponsaveis(consultar, tratativa, comoGestor);
       expect(consulta.data.participantes.length).toBe(20);
@@ -244,13 +244,13 @@ describe('Etapa 1 - Responsáveis e Participantes da Tratativa', () => {
     it('sem justificativa é aceita', async () => {
       const tratativa = await criarTratativaAberta();
       const r = await atribuirResponsavelPrincipal(enviar, tratativa, { responsavelPrincipal: 'M1001' }, comoGestor);
-      expect(r.status).toBe(200);
+      expect(r.status).toBe(204);
     });
 
     it('justificativa opcional informada é aceita e gravada no histórico', async () => {
       const tratativa = await criarTratativaAberta();
       const r = await atribuirResponsavelPrincipal(enviar, tratativa, { responsavelPrincipal: 'M1001', justificativa: 'Responsável pela área' }, comoGestor);
-      expect(r.status).toBe(200);
+      expect(r.status).toBe(204);
       // Verificação de histórico será feita quando implementado
     });
   });
@@ -259,15 +259,15 @@ describe('Etapa 1 - Responsáveis e Participantes da Tratativa', () => {
     it('reatribuição com justificativa é aceita', async () => {
       const tratativa = await criarTratativaAberta();
       const r1 = await atribuirResponsavelPrincipal(enviar, tratativa, { responsavelPrincipal: 'M1001' }, comoGestor);
-      expect(r1.status).toBe(200);
+      expect(r1.status).toBe(204);
       const r2 = await atribuirResponsavelPrincipal(enviar, tratativa, { responsavelPrincipal: 'M2002', justificativa: 'Mudou de turno' }, comoGestor);
-      expect(r2.status).toBe(200);
+      expect(r2.status).toBe(204);
     });
 
     it('reatribuição sem justificativa recusa com 400', async () => {
       const tratativa = await criarTratativaAberta();
       const r1 = await atribuirResponsavelPrincipal(enviar, tratativa, { responsavelPrincipal: 'M1001' }, comoGestor);
-      expect(r1.status).toBe(200);
+      expect(r1.status).toBe(204);
       const r2 = await atribuirResponsavelPrincipal(enviar, tratativa, { responsavelPrincipal: 'M2002' }, comoGestor);
       expect(r2.status).toBe(400);
       expect(r2.data.error?.target).toBe('justificativa');
@@ -276,7 +276,7 @@ describe('Etapa 1 - Responsáveis e Participantes da Tratativa', () => {
     it('justificativa só com espaços recusa', async () => {
       const tratativa = await criarTratativaAberta();
       const r1 = await atribuirResponsavelPrincipal(enviar, tratativa, { responsavelPrincipal: 'M1001' }, comoGestor);
-      expect(r1.status).toBe(200);
+      expect(r1.status).toBe(204);
       const r2 = await atribuirResponsavelPrincipal(enviar, tratativa, { responsavelPrincipal: 'M2002', justificativa: '   ' }, comoGestor);
       expect(r2.status).toBe(400);
       expect(r2.data.error?.target).toBe('justificativa');
@@ -285,7 +285,7 @@ describe('Etapa 1 - Responsáveis e Participantes da Tratativa', () => {
     it('501 caracteres recusa', async () => {
       const tratativa = await criarTratativaAberta();
       const r1 = await atribuirResponsavelPrincipal(enviar, tratativa, { responsavelPrincipal: 'M1001' }, comoGestor);
-      expect(r1.status).toBe(200);
+      expect(r1.status).toBe(204);
       const justificativaLonga = 'A'.repeat(501);
       const r2 = await atribuirResponsavelPrincipal(enviar, tratativa, { responsavelPrincipal: 'M2002', justificativa: justificativaLonga }, comoGestor);
       expect(r2.status).toBe(400);
@@ -297,7 +297,7 @@ describe('Etapa 1 - Responsáveis e Participantes da Tratativa', () => {
     it('nada muda e grafia é preservada', async () => {
       const tratativa = await criarTratativaAberta();
       const r1 = await atribuirResponsavelPrincipal(enviar, tratativa, { responsavelPrincipal: 'M1001' }, comoGestor);
-      expect(r1.status).toBe(200);
+      expect(r1.status).toBe(204);
       const r2 = await atribuirResponsavelPrincipal(enviar, tratativa, { responsavelPrincipal: 'M1001' }, comoGestor);
       expect(r2.status).toBe(204);
       const r3 = await atribuirResponsavelPrincipal(enviar, tratativa, { responsavelPrincipal: ' m1001 ' }, comoGestor);
@@ -329,7 +329,7 @@ describe('Etapa 1 - Responsáveis e Participantes da Tratativa', () => {
     it('usuário comum não pode remover participante', async () => {
       const tratativa = await criarTratativaAberta();
       const r1 = await incluirParticipante(enviar, tratativa, { participante: 'M3003' }, comoGestor);
-      expect(r1.status).toBe(200);
+      expect(r1.status).toBe(204);
       const r2 = await removerParticipante(enviar, tratativa, { participante: 'M3003' }, comoUsuario);
       expect(r2.status).toBe(403);
     });
@@ -345,15 +345,15 @@ describe('Etapa 1 - Responsáveis e Participantes da Tratativa', () => {
     it('inclusão sem justificativa funciona', async () => {
       const tratativa = await criarTratativaAberta();
       const r = await incluirParticipante(enviar, tratativa, { participante: 'M3003' }, comoGestor);
-      expect(r.status).toBe(200);
+      expect(r.status).toBe(204);
     });
 
     it('remoção sem justificativa funciona', async () => {
       const tratativa = await criarTratativaAberta();
       const r1 = await incluirParticipante(enviar, tratativa, { participante: 'M3003' }, comoGestor);
-      expect(r1.status).toBe(200);
+      expect(r1.status).toBe(204);
       const r2 = await removerParticipante(enviar, tratativa, { participante: 'M3003' }, comoGestor);
-      expect(r2.status).toBe(200);
+      expect(r2.status).toBe(204);
     });
   });
 
@@ -380,12 +380,12 @@ describe('Etapa 1 - Responsáveis e Participantes da Tratativa', () => {
     it('reatribui após reabertura', async () => {
       const tratativa = await criarTratativaAberta();
       const r1 = await atribuirResponsavelPrincipal(enviar, tratativa, { responsavelPrincipal: 'M1001' }, comoGestor);
-      expect(r1.status).toBe(200);
+      expect(r1.status).toBe(204);
       await mudarStatusTratativa(tratativa, 'Em andamento');
       await mudarStatusTratativa(tratativa, 'Encerrada');
       await mudarStatusTratativa(tratativa, 'Reaberta');
       const r2 = await atribuirResponsavelPrincipal(enviar, tratativa, { responsavelPrincipal: 'M2002', justificativa: 'Mudança' }, comoGestor);
-      expect(r2.status).toBe(200);
+      expect(r2.status).toBe(204);
     });
   });
 
@@ -414,32 +414,32 @@ describe('Etapa 1 - Responsáveis e Participantes da Tratativa', () => {
     it('Atribuição grava histórico', async () => {
       const tratativa = await criarTratativaAberta();
       const r = await atribuirResponsavelPrincipal(enviar, tratativa, { responsavelPrincipal: 'M1001', justificativa: 'Responsável pela área' }, comoGestor);
-      expect(r.status).toBe(200);
+      expect(r.status).toBe(204);
       // Verificação de histórico será feita quando implementado
     });
 
     it('Reatribuição grava histórico', async () => {
       const tratativa = await criarTratativaAberta();
       const r1 = await atribuirResponsavelPrincipal(enviar, tratativa, { responsavelPrincipal: 'M1001' }, comoGestor);
-      expect(r1.status).toBe(200);
+      expect(r1.status).toBe(204);
       const r2 = await atribuirResponsavelPrincipal(enviar, tratativa, { responsavelPrincipal: 'M2002', justificativa: 'Mudou de turno' }, comoGestor);
-      expect(r2.status).toBe(200);
+      expect(r2.status).toBe(204);
       // Verificação de histórico será feita quando implementado
     });
 
     it('Inclusão de Participante grava histórico', async () => {
       const tratativa = await criarTratativaAberta();
       const r = await incluirParticipante(enviar, tratativa, { participante: 'M3003' }, comoGestor);
-      expect(r.status).toBe(200);
+      expect(r.status).toBe(204);
       // Verificação de histórico será feita quando implementado
     });
 
     it('Remoção de Participante grava histórico', async () => {
       const tratativa = await criarTratativaAberta();
       const r1 = await incluirParticipante(enviar, tratativa, { participante: 'M3003' }, comoGestor);
-      expect(r1.status).toBe(200);
+      expect(r1.status).toBe(204);
       const r2 = await removerParticipante(enviar, tratativa, { participante: 'M3003' }, comoGestor);
-      expect(r2.status).toBe(200);
+      expect(r2.status).toBe(204);
       // Verificação de histórico será feita quando implementado
     });
   });
@@ -476,9 +476,9 @@ describe('Etapa 1 - Responsáveis e Participantes da Tratativa', () => {
     it('Gestor recebe dados', async () => {
       const tratativa = await criarTratativaAberta();
       const r1 = await atribuirResponsavelPrincipal(enviar, tratativa, { responsavelPrincipal: 'M1001' }, comoGestor);
-      expect(r1.status).toBe(200);
+      expect(r1.status).toBe(204);
       const r2 = await incluirParticipante(enviar, tratativa, { participante: 'M3003' }, comoGestor);
-      expect(r2.status).toBe(200);
+      expect(r2.status).toBe(204);
       const consulta = await consultarResponsaveis(consultar, tratativa, comoGestor);
       expect(consulta.data.responsavelPrincipal).toBe('M1001');
       expect(consulta.data.participantes).toEqual(['M3003']);
