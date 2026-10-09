@@ -23,6 +23,7 @@ Entregar o intent 005 inteiro numa branch empilhada sobre o intent 004, em quatr
 - `srv/tratativa/listagem.ts`
 - `test/apoio/responsaveis.ts`
 - `test/responsaveis-tratativa.test.ts`
+- `test/responsaveis-tratativa-ca88.test.ts`
 - `test/delegacao-acoes.test.ts`
 - `test/autorizacao-execucao-acoes.test.ts`
 - `test/consultas-responsabilidade.test.ts`
