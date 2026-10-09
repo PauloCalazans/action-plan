@@ -91,7 +91,6 @@ async function recusaAcao(t: string, acaoCodigo: string, corpo: Record<string, u
 }
 
 const TRATATIVA_ENCERRADA = 'Tratativa Encerrada não pode ser alterada.';
-const TRANSICAO_NAO_PERMITIDA_MESMO_STATUS = 'Transição não permitida: de Pendente para Pendente.';
 const TRANSICAO_NAO_PERMITIDA_EM_ANDAMENTO = 'Transição não permitida: de Em andamento para Em andamento.';
 const TRANSICAO_NAO_PERMITIDA_CONCLUIDA_CONCLUIDA = 'Transição não permitida: de Concluída para Concluída.';
 const TRANSICAO_NAO_PERMITIDA_CANCELADA_CONCLUIDA = 'Transição não permitida: de Cancelada para Concluída.';
@@ -133,7 +132,7 @@ describe('Etapa 3 - Autorização Dinâmica para Iniciar e Concluir Ação (R11,
       expect(r.status).toBe(204);
       expect(await statusAcao(acaoCodigo)).toBe('Em andamento');
       const historico = await historicoAcao(acaoCodigo);
-      expect(historico.some((h) => h.tipo === 'MudancaStatus')).toBe(true);
+      expect(historico.some((h) => h.evento === 'MudancaStatus')).toBe(true);
     });
   });
 
@@ -172,7 +171,7 @@ describe('Etapa 3 - Autorização Dinâmica para Iniciar e Concluir Ação (R11,
     it('de Cancelada para Em andamento recusa com 403 etapa 6', async () => {
       const tratativa = await criarTratativaAberta();
       const acaoCodigo = await acao(tratativa, { responsavel: 'M1001' });
-      await leva(tratativa, acaoCodigo, 'Cancelada');
+      await leva(tratativa, acaoCodigo, 'Cancelada', 'Cancelada conforme regra');
       const r = await mudar(tratativa, acaoCodigo, { status: 'Em andamento' }, comoM1001('m1001'));
       expect(r.status).toBe(403);
     });
@@ -209,6 +208,7 @@ describe('Etapa 3 - Autorização Dinâmica para Iniciar e Concluir Ação (R11,
     it('recusa com 409 Tratativa Encerrada não pode ser alterada.', async () => {
       const tratativa = await criarTratativaAberta();
       const acaoCodigo = await acao(tratativa, { responsavel: 'M1001' });
+      await mudarStatusAcao(enviar, tratativa, { acao: acaoCodigo, status: 'Concluída' }, comoGestor);
       await mudarStatusTratativa(tratativa, 'Em andamento', undefined, comoGestor);
       await mudarStatusTratativa(tratativa, 'Encerrada', undefined, comoGestor);
       await recusaAcao(tratativa, acaoCodigo, { status: 'Concluída' }, 409, undefined, TRATATIVA_ENCERRADA);
@@ -263,7 +263,7 @@ describe('Etapa 3 - Autorização Dinâmica para Iniciar e Concluir Ação (R11,
       const tratativa = await criarTratativaAberta();
       const acaoCodigo = await acao(tratativa, { responsavel: 'M1001' });
       const statusAntes = await statusAcao(acaoCodigo);
-      espiao.falharEm('CREATE', 'HistoricoAcoes');
+      espiao.falharEm('CREATE', 'br.com.calazanstec.HistoricoAcoes');
       const r = await mudar(tratativa, acaoCodigo, { status: 'Em andamento' }, comoM1001('m1001'));
       expect(r.status).toBe(500);
       expect(await statusAcao(acaoCodigo)).toBe(statusAntes);
