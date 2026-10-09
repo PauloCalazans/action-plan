@@ -28,7 +28,13 @@ const TRANSICOES: Record<string, Transicao> = {
   [`${CONCLUIDA}|${EM_ANDAMENTO}`]: { evento: 'Reabertura', justificativaObrigatoria: true },
 };
 
-interface AcaoAlvo { codigo: string; status: string; acaoMae_codigo: string | null; responsavel: string }
+interface AcaoAlvo { 
+  codigo: string; 
+  status: string; 
+  acaoMae_codigo: string | null; 
+  responsavel: string;
+  evidenciaObrigatoria: boolean;
+}
 
 /**
  * R11, R16, R28 (005): autorização dinâmica para execução de Ações.
@@ -43,7 +49,8 @@ interface AcaoAlvo { codigo: string; status: string; acaoMae_codigo: string | nu
  * 7. Estado da Tratativa (409: Encerrada/Cancelada)
  * 8. Estado da Ação e Transição (409/400: status ausente 400 para Gestor; par proibido 409)
  * 9. Relação mãe-filhas (409: concluir mãe com subações abertas)
- * 10. Justificativa (400)
+ * 10. Evidência obrigatória (409: Conclusao com evidenciaObrigatoria=true e zero evidências ativas; R8, R15 do 006)
+ * 11. Justificativa (400)
  */
 export async function mudarStatusAcao(
   req: cds.Request,
@@ -57,7 +64,7 @@ export async function mudarStatusAcao(
   // Etapa 5: bloqueio D9 e existência
   const tratativa = await bloquearTratativa(codigoTratativa);
   const acao = (await cds.db.run(
-    SELECT.one.from(`${NS}.Acoes`).columns('codigo', 'status', 'acaoMae_codigo', 'responsavel')
+    SELECT.one.from(`${NS}.Acoes`).columns('codigo', 'status', 'acaoMae_codigo', 'responsavel', 'evidenciaObrigatoria')
       .where({ codigo: codigoAcao, tratativa_codigo: codigoTratativa }),
   )) as AcaoAlvo | undefined;
   if (!acao) recusar(404, 'Ação não encontrada.');
@@ -114,7 +121,19 @@ export async function mudarStatusAcao(
     if (FINAIS.includes(mae.status)) recusar(409, `A Ação mãe está ${mae.status} e não aceita esta alteração.`);
   }
 
-  // Etapa 10: justificativa
+  // Etapa 10: evidência obrigatória (R8, R15 do 006; substitui 004:R14 via Ruling R-10)
+  if (transicao.evento === 'Conclusao' && acao.evidenciaObrigatoria) {
+    const evidenciasAtivas = (await cds.db.run(
+      SELECT.one.from(`${NS}.Evidencias`).columns('count(*) as total')
+        .where({ acao_codigo: codigoAcao, ativo: true }),
+    )) as { total: number } | undefined;
+    const contagem = evidenciasAtivas?.total ?? 0;
+    if (contagem === 0) {
+      recusar(409, 'Ação com Evidência obrigatória não pode ser concluída sem Evidência.');
+    }
+  }
+
+  // Justificativa
   const justificativa = validarJustificativa(pedido.justificativa, transicao.justificativaObrigatoria);
 
   // Atualização e histórico

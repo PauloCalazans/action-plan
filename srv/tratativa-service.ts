@@ -14,6 +14,7 @@ import { atribuirResponsavelPrincipal, incluirParticipante, removerParticipante,
 import { minhasAcoes, minhasTratativas } from './tratativa/consultas-responsabilidade';
 import { anexarEvidencia, type DadosAnexoEvidencia } from './tratativa/evidencias-anexo';
 import { removerEvidencia, type DadosRemocaoEvidencia } from './tratativa/evidencias-remocao';
+import { listarPendenciasEvidenciasTratativa } from './tratativa/evidencias-consultas';
 
 /** Contrato dos usuários: só monta o Autor e delega ao domínio (decisões 6, 14 e 15). */
 export default class TratativaService extends cds.ApplicationService {
@@ -168,6 +169,11 @@ export default class TratativaService extends cds.ApplicationService {
         id: obterMatriculaUsuario(req),
         tipo: 'Usuario',
       });
+    });
+    // 006 R9, R17 (etapa 3): lista Ações com evidência obrigatória sem Evidências ativas.
+    this.on('listarPendenciasEvidenciasTratativa', (req) => {
+      const { tratativa } = req.data as { tratativa?: string };
+      return listarPendenciasEvidenciasTratativa(req, String(tratativa).toLowerCase());
     });
     return super.init();
   }

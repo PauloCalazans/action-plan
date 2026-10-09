@@ -135,6 +135,14 @@ service TratativaService {
     autorAnexo  : String(50);
   }
 
+  /** R9, I8 (006): item de Ação com pendência de Evidência obrigatória. */
+  type ItemPendenciaEvidenciaTratativa {
+    acao        : UUID;
+    descricao   : String(500);
+    responsavel : String(50);
+    status      : String(20);
+  }
+
   action   criarTratativaAvulsa(titulo : String(200), criticidade : String(10), descricao : String(5000),
                                 unidade : String(100), area : String(100), solicitante : String(50)) returns ResultadoAbertura;
 
@@ -160,6 +168,9 @@ service TratativaService {
 
   /** R19, R20 (005): lista Tratativas em que o colaborador é Responsável Principal ou Participante. */
   function minhasTratativas(status : String, matricula : String, tamanhoPagina : Integer, pagina : Integer) returns many ItemMinhasTratativas;
+
+  /** R9, R17 (006): lista Ações com evidência obrigatória sem Evidências ativas. */
+  function listarPendenciasEvidenciasTratativa(tratativa : UUID) returns many ItemPendenciaEvidenciaTratativa;
 
   /**
    * Âncora das operações de ciclo de vida (R2, R12, R18). Só a chave é exposta; não há leitura,
