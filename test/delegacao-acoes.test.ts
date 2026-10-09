@@ -55,7 +55,7 @@ describe('Etapa 2 - Delegação de Ações com justificativa obrigatória', () =
       }, comoGestor);
       
       expect(r.status).toBe(400);
-      expect(r.data).toHaveProperty('target', 'novoResponsavel');
+      expect(r.data.error?.target).toBe('novoResponsavel');
     });
 
     it('delegar com "ana@x.com" recusa com 400 nomeando novoResponsavel', async () => {
@@ -69,7 +69,7 @@ describe('Etapa 2 - Delegação de Ações com justificativa obrigatória', () =
       }, comoGestor);
       
       expect(r.status).toBe(400);
-      expect(r.data).toHaveProperty('target', 'novoResponsavel');
+      expect(r.data.error?.target).toBe('novoResponsavel');
     });
   });
 
@@ -84,8 +84,7 @@ describe('Etapa 2 - Delegação de Ações com justificativa obrigatória', () =
         justificativa: 'Responsável mudou de área'
       }, comoGestor);
       
-      expect(r.status).toBe(200);
-      expect(r.data).toEqual({}); // Action sem retorno = 204/200 com corpo vazio
+      expect(r.status).toBe(204);
       
       // Verificar no banco que o responsável mudou
       const linhasAcoes = await linhas('Acoes', { codigo: acao });
@@ -114,7 +113,7 @@ describe('Etapa 2 - Delegação de Ações com justificativa obrigatória', () =
         justificativa: 'Responsável da Subação mudou'
       }, comoGestor);
       
-      expect(r.status).toBe(200);
+      expect(r.status).toBe(204);
       
       // Verificar no banco
       const linhasSub = await linhas('Acoes', { codigo: subacao });
@@ -135,7 +134,7 @@ describe('Etapa 2 - Delegação de Ações com justificativa obrigatória', () =
       }, comoGestor);
       
       expect(r.status).toBe(400);
-      expect(r.data).toHaveProperty('target', 'justificativa');
+      expect(r.data.error?.target).toBe('justificativa');
     });
 
     it('delegação com justificativa só com espaços recusa com 400', async () => {
@@ -149,7 +148,7 @@ describe('Etapa 2 - Delegação de Ações com justificativa obrigatória', () =
       }, comoGestor);
       
       expect(r.status).toBe(400);
-      expect(r.data).toHaveProperty('target', 'justificativa');
+      expect(r.data.error?.target).toBe('justificativa');
     });
 
     it('delegação com justificativa de 501 caracteres recusa com 400', async () => {
@@ -163,7 +162,7 @@ describe('Etapa 2 - Delegação de Ações com justificativa obrigatória', () =
       }, comoGestor);
       
       expect(r.status).toBe(400);
-      expect(r.data).toHaveProperty('target', 'justificativa');
+      expect(r.data.error?.target).toBe('justificativa');
     });
   });
 
@@ -178,7 +177,7 @@ describe('Etapa 2 - Delegação de Ações com justificativa obrigatória', () =
       }, comoGestor);
       
       expect(r.status).toBe(400);
-      expect(r.data).toHaveProperty('target'); // Runtime não especifica campo, mas pode usar 'responsavel'
+      expect(r.data.error?.target).toBeDefined(); // Runtime não especifica campo, mas pode usar 'responsavel'
     });
   });
 
@@ -221,8 +220,13 @@ describe('Etapa 2 - Delegação de Ações com justificativa obrigatória', () =
       const tratativa = await criarTratativaAberta();
       const acao = await criarAcaoComResponsavel(tratativa, 'M1001');
       
-      // Encerrar Tratativa
-      await mudarStatus(enviar, tratativa, { status: 'Encerrada' }, comoGestor);
+      // Antes de encerrar, concluir a Ação
+      const rConcluir = await mudarStatusAcao(acao, 'Concluída', comoGestor);
+      expect(rConcluir.status).toBe(204);
+      
+      // Agora encerrar Tratativa
+      const rEncerrar = await mudarStatus(enviar, tratativa, { status: 'Encerrada' }, comoGestor);
+      expect(rEncerrar.status).toBe(204);
       
       const r = await delegarAcao(enviar, tratativa, {
         acao: acao,
@@ -231,15 +235,19 @@ describe('Etapa 2 - Delegação de Ações com justificativa obrigatória', () =
       }, comoGestor);
       
       expect(r.status).toBe(409);
-      expect(r.data).toHaveProperty('target'); // Pode ser null ou não ter target
     });
 
     it('delegar Ação em Tratativa Cancelada recusa com 409', async () => {
       const tratativa = await criarTratativaAberta();
       const acao = await criarAcaoComResponsavel(tratativa, 'M1001');
       
-      // Cancelar Tratativa
-      await mudarStatus(enviar, tratativa, { status: 'Cancelada' }, comoGestor);
+      // Antes de cancelar, concluir a Ação
+      const rConcluir = await mudarStatusAcao(acao, 'Concluída', comoGestor);
+      expect(rConcluir.status).toBe(204);
+      
+      // Cancelar Tratativa (precisa de justificativa)
+      const rCancelar = await mudarStatus(enviar, tratativa, { status: 'Cancelada', justificativa: 'Cancelamento de teste' }, comoGestor);
+      expect(rCancelar.status).toBe(204);
       
       const r = await delegarAcao(enviar, tratativa, {
         acao: acao,
@@ -257,7 +265,8 @@ describe('Etapa 2 - Delegação de Ações com justificativa obrigatória', () =
       const acao = await criarAcaoComResponsavel(tratativa, 'M1001');
       
       // Concluir Ação
-      await mudarStatusAcao(acao, 'Concluída', comoGestor);
+      const rConcluir = await mudarStatusAcao(acao, 'Concluída', comoGestor);
+      expect(rConcluir.status).toBe(204);
       
       const r = await delegarAcao(enviar, tratativa, {
         acao: acao,
@@ -273,7 +282,8 @@ describe('Etapa 2 - Delegação de Ações com justificativa obrigatória', () =
       const acao = await criarAcaoComResponsavel(tratativa, 'M1001');
       
       // Cancelar Ação
-      await mudarStatusAcao(acao, 'Cancelada', comoGestor);
+      const rCancelar = await mudarStatusAcao(acao, 'Cancelada', comoGestor);
+      expect(rCancelar.status).toBe(204);
       
       const r = await delegarAcao(enviar, tratativa, {
         acao: acao,
@@ -329,7 +339,7 @@ describe('Etapa 2 - Delegação de Ações com justificativa obrigatória', () =
         justificativa: 'Responsável mudou de turno'
       }, comoGestor);
       
-      expect(r.status).toBe(200);
+      expect(r.status).toBe(204);
       
       const historico = await linhas('HistoricoAcoes', { acao: acao, evento: 'Delegacao' });
       expect(historico).toHaveLength(1);
@@ -351,18 +361,20 @@ describe('Etapa 2 - Delegação de Ações com justificativa obrigatória', () =
       const acao = await criarAcaoComResponsavel(tratativa, 'M1001');
       
       // Primeira delegação
-      await delegarAcao(enviar, tratativa, {
+      const r1 = await delegarAcao(enviar, tratativa, {
         acao: acao,
         novoResponsavel: 'M2002',
         justificativa: 'Primeira delegação'
       }, comoGestor);
+      expect(r1.status).toBe(204);
       
       // Segunda delegação
-      await delegarAcao(enviar, tratativa, {
+      const r2 = await delegarAcao(enviar, tratativa, {
         acao: acao,
         novoResponsavel: 'M3003',
         justificativa: 'Segunda delegação'
       }, comoGestor);
+      expect(r2.status).toBe(204);
       
       const historico = await linhas('HistoricoAcoes', { acao: acao, evento: 'Delegacao' });
       expect(historico).toHaveLength(2);
@@ -400,15 +412,21 @@ describe('Etapa 2 - Delegação de Ações com justificativa obrigatória', () =
       const tratativa = await criarTratativaAberta();
       const acao = await criarAcaoComResponsavel(tratativa, 'M1001');
       
+      // Antes de encerrar, concluir a Ação
+      const rConcluir = await mudarStatusAcao(acao, 'Concluída', comoGestor);
+      expect(rConcluir.status).toBe(204);
+      
       // Encerrar Tratativa
-      await mudarStatus(enviar, tratativa, { status: 'Encerrada' }, comoGestor);
+      const rEncerrar = await mudarStatus(enviar, tratativa, { status: 'Encerrada' }, comoGestor);
+      expect(rEncerrar.status).toBe(204);
       
       // Tentativa em Tratativa Encerrada (será recusada)
-      await delegarAcao(enviar, tratativa, {
+      const rDelegarAntes = await delegarAcao(enviar, tratativa, {
         acao: acao,
         novoResponsavel: 'M2002',
         justificativa: 'Delegação'
       }, comoGestor);
+      expect(rDelegarAntes.status).toBe(409);
       
       // Verificar que não há histórico
       const historico = await linhas('HistoricoAcoes', { acao: acao, evento: 'Delegacao' });
@@ -455,7 +473,7 @@ describe('Etapa 2 - Delegação de Ações com justificativa obrigatória', () =
         justificativa: 'Delegação para novo responsável'
       }, comoGestor);
       
-      expect(r.status).toBe(200); // Aceita sem validação externa
+      expect(r.status).toBe(204);
       
       // Verificar no banco
       const linhasAcoes = await linhas('Acoes', { codigo: acao });
@@ -475,7 +493,7 @@ describe('Etapa 2 - Delegação de Ações com justificativa obrigatória', () =
         justificativa: 'Delegação imediata'
       }, comoGestor);
       
-      expect(r.status).toBe(200);
+      expect(r.status).toBe(204);
     });
   });
 
@@ -490,7 +508,7 @@ describe('Etapa 2 - Delegação de Ações com justificativa obrigatória', () =
         justificativa: 'Delegação avulsa'
       }, comoGestor);
       
-      expect(r.status).toBe(200);
+      expect(r.status).toBe(204);
     });
 
     it('delegação em Tratativa de app funciona', async () => {
@@ -506,7 +524,7 @@ describe('Etapa 2 - Delegação de Ações com justificativa obrigatória', () =
         justificativa: 'Delegação app'
       }, comoGestor);
       
-      expect(r.status).toBe(200);
+      expect(r.status).toBe(204);
     });
   });
 
@@ -522,7 +540,7 @@ describe('Etapa 2 - Delegação de Ações com justificativa obrigatória', () =
       }, comoGestor);
       
       expect(r.status).toBe(400);
-      expect(r.data).toHaveProperty('target', 'responsavel');
+      expect(r.data.error?.target).toBe('responsavel');
     });
 
     it('criar Ação com "@email.com" recusa nomeando Responsável', async () => {
@@ -536,7 +554,7 @@ describe('Etapa 2 - Delegação de Ações com justificativa obrigatória', () =
       }, comoGestor);
       
       expect(r.status).toBe(400);
-      expect(r.data).toHaveProperty('target', 'responsavel');
+      expect(r.data.error?.target).toBe('responsavel');
     });
 
     it('criar Ação com valor vazio mantém mensagem semântica do 004', async () => {
@@ -551,7 +569,7 @@ describe('Etapa 2 - Delegação de Ações com justificativa obrigatória', () =
       
       expect(r.status).toBe(400);
       // Mensagem do 004: "O campo Responsável é obrigatório."
-      expect(r.data).toHaveProperty('target', 'responsavel');
+      expect(r.data.error?.target).toBe('responsavel');
     });
 
     it('criar Ação com 51 caracteres mantém mensagem semântica do 004', async () => {
@@ -566,7 +584,7 @@ describe('Etapa 2 - Delegação de Ações com justificativa obrigatória', () =
       
       expect(r.status).toBe(400);
       // Mensagem do 004: "O campo Responsável aceita no máximo 50 caracteres."
-      expect(r.data).toHaveProperty('target', 'responsavel');
+      expect(r.data.error?.target).toBe('responsavel');
     });
 
     it('criar Ação com matrícula válida "M1001" é aceita', async () => {
