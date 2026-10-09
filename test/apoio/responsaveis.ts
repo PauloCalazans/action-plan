@@ -27,7 +27,7 @@ export function consultarResponsaveis(GET: Consulta, tratativa: string, como: un
 
 // Helper para function consultarTratativa (já existe em tratativas.ts, mas refazemos para manter consistência)
 export function consultarTratativa(GET: Consulta, tratativa: string, como: unknown): Promise<Resposta> {
-  return GET(`${BASE}/consultarTratativa(tratativa=${tratativa})`, como);
+  return GET(`${BASE}/consultarTratativa(codigo=${tratativa})`, como);
 }
 
 // Helper para function listarTratativas
