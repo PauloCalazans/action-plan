@@ -5,6 +5,7 @@ import { sufixoUnico, type Envia, type Resposta, criarAvulsa, abrirPorApp, mudar
 import { comoApp, comoGestor, comoUsuario, semAuth } from './apoio/usuarios';
 import { atribuirResponsavelPrincipal, incluirParticipante, removerParticipante, consultarResponsaveis, consultarTratativa } from './apoio/responsaveis';
 import { linhas } from './apoio/banco';
+import { instalarEspiao } from './apoio/banco-espiao';
 
 const { GET, POST } = cds.test(__dirname + '/..');
 const enviar = POST as unknown as Envia;
@@ -577,7 +578,7 @@ describe('Etapa 1 - Responsáveis e Participantes da Tratativa', () => {
       expect(antes.data.responsavelPrincipal).toBeNull();
       
       // Instala espião para simular falha em CREATE de HistoricoTratativa
-      const espiao = require('./apoio/banco-espiao').instalarEspiao();
+      const espiao = instalarEspiao();
       espiao.falharEm('CREATE', 'br.com.calazanstec.HistoricoTratativa');
       
       // Tenta atribuir com falha simulada

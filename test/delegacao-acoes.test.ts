@@ -7,7 +7,7 @@ import { linhas } from './apoio/banco';
 import { instalarEspiao, type Espiao } from './apoio/banco-espiao';
 import { criarAcao, criarSubacao, mudarStatusAcao, editarAcao } from './apoio/acoes';
 
-const UUID_INEXISTENTE = '00000000-4000-8000-000000000000';
+const UUID_INEXISTENTE = '00000000-0000-4000-8000-000000000000';
 
 const { POST, GET } = cds.test(__dirname + '/..');
 const enviar = POST as unknown as Envia;
