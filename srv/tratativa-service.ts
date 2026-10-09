@@ -4,6 +4,7 @@ import { consultarAcao, consultarEstruturaAcoes } from './tratativa/acoes-consul
 import { editarAcao, type CamposEdicaoAcao } from './tratativa/acoes-edicao';
 import { mudarStatusAcao } from './tratativa/acoes-ciclo-de-vida';
 import { criarAcao, criarSubacao, type DadosCriacaoAcao } from './tratativa/acoes-criacao';
+import { delegarAcao } from './tratativa/acoes-delegacao';
 import { mudarStatus } from './tratativa/ciclo-de-vida';
 import { alterarCriticidade } from './tratativa/criticidade';
 import { editarTratativa } from './tratativa/edicao';
@@ -113,6 +114,22 @@ export default class TratativaService extends cds.ApplicationService {
       const { codigo } = req.params[0] as { codigo: string };
       const { participante } = req.data as { participante?: string };
       await removerParticipante(String(codigo).toLowerCase(), participante!, { id: req.user.id, tipo: 'Usuario' });
+    });
+    // 005 R8, R14, R29, R30: delegação de Ação com justificativa obrigatória.
+    this.on('delegarAcao', 'Tratativas', async (req) => {
+      const { codigo } = req.params[0] as { codigo: string };
+      const { acao, novoResponsavel, justificativa } = req.data as {
+        acao?: string;
+        novoResponsavel?: string;
+        justificativa?: string;
+      };
+      await delegarAcao(
+        String(codigo).toLowerCase(),
+        String(acao).toLowerCase(),
+        novoResponsavel!,
+        justificativa!,
+        { id: req.user.id, tipo: 'Usuario' },
+      );
     });
     return super.init();
   }

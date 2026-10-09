@@ -119,7 +119,7 @@ service TratativaService {
    * Parâmetros sem tamanho de propósito: o domínio valida tamanho depois de papel, existência e estado (R31).
    */
   @readonly
-  @restrict: [{ grant: ['mudarStatus', 'editar', 'mudarCriticidade', 'criarAcao', 'criarSubacao', 'mudarStatusAcao', 'editarAcao', 'atribuirResponsavelPrincipal', 'incluirParticipante', 'removerParticipante'], to: 'GestorTratativa' }]
+  @restrict: [{ grant: ['mudarStatus', 'editar', 'mudarCriticidade', 'criarAcao', 'criarSubacao', 'mudarStatusAcao', 'editarAcao', 'atribuirResponsavelPrincipal', 'incluirParticipante', 'removerParticipante', 'delegarAcao'], to: 'GestorTratativa' }]
   entity Tratativas as projection on m.Tratativas { key codigo } actions {
     /** R2/R4/R5: a operação é identificada pelo Status de destino. */
     action mudarStatus(status : String, justificativa : String);
@@ -148,5 +148,8 @@ service TratativaService {
 
     /** R9, R14 (005): remoção de participante da Tratativa. */
     action removerParticipante(participante : String);
+
+    /** R8, R14, R29, R30 (005): delegação de Ação com justificativa obrigatória e histórico dedicado. */
+    action delegarAcao(acao : UUID, novoResponsavel : String, justificativa : String);
   };
 }
