@@ -13,6 +13,7 @@ import { consultarTratativa, listarTratativas, type FiltrosListagem } from './tr
 import { atribuirResponsavelPrincipal, incluirParticipante, removerParticipante, consultarResponsaveis } from './tratativa/responsaveis-tratativa';
 import { minhasAcoes, minhasTratativas } from './tratativa/consultas-responsabilidade';
 import { anexarEvidencia, type DadosAnexoEvidencia } from './tratativa/evidencias-anexo';
+import { removerEvidencia, type DadosRemocaoEvidencia } from './tratativa/evidencias-remocao';
 
 /** Contrato dos usuários: só monta o Autor e delega ao domínio (decisões 6, 14 e 15). */
 export default class TratativaService extends cds.ApplicationService {
@@ -156,7 +157,15 @@ export default class TratativaService extends cds.ApplicationService {
     this.on('anexarEvidencia', 'Tratativas', (req) => {
       const { codigo } = req.params[0] as { codigo: string };
       return anexarEvidencia(req, String(codigo).toLowerCase(), req.data as DadosAnexoEvidencia, {
-        id: req.user.id,
+        id: obterMatriculaUsuario(req),
+        tipo: 'Usuario',
+      });
+    });
+    // 006 R1, R6, R7, R10, R12, R13: remove logicamente Evidência da Ação ou Subação.
+    this.on('removerEvidencia', 'Tratativas', async (req) => {
+      const { codigo } = req.params[0] as { codigo: string };
+      await removerEvidencia(req, String(codigo).toLowerCase(), req.data as DadosRemocaoEvidencia, {
+        id: obterMatriculaUsuario(req),
         tipo: 'Usuario',
       });
     });
