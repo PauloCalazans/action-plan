@@ -93,6 +93,36 @@ service TratativaService {
     subacoes              : many ItemSubacaoEstrutura;
   }
 
+  /** R18 (005): item de Ação retornado pela consulta Minhas Ações (sem campo responsavel). */
+  type ItemMinhasAcoes {
+    codigo               : UUID;
+    codigoTratativa      : UUID;
+    tituloTratativa      : String(200);
+    statusTratativa      : m.StatusTratativa;
+    descricao            : String(500);
+    prioridade           : m.PrioridadeAcao;
+    status               : m.StatusAcao;
+    prazo                : Date;
+    evidenciaObrigatoria : String(3);
+    dataConclusao        : Date;
+    acaoMae              : UUID;
+  }
+
+  /** R19 (005): item de Tratativa retornado pela consulta Minhas Tratativas (dez campos de ItemListagem + meuPapel). */
+  type ItemMinhasTratativas {
+    codigo                : UUID;
+    titulo                : String(200);
+    origem                : String(100);
+    idOrigem              : String(50);
+    criticidade           : m.Criticidade;
+    status                : m.StatusTratativa;
+    unidade               : String(100);
+    area                  : String(100);
+    dataCriacao           : Date;
+    dataPrevistaConclusao : Date;
+    meuPapel              : m.PapelUsuarioTratativa;
+  }
+
   action   criarTratativaAvulsa(titulo : String(200), criticidade : String(10), descricao : String(5000),
                                 unidade : String(100), area : String(100), solicitante : String(50)) returns ResultadoAbertura;
 
@@ -112,6 +142,12 @@ service TratativaService {
 
   /** R25 (004): consulta uma Ação ou Subação pelo Código dela e da Tratativa. */
   function consultarAcao(tratativa : UUID, codigo : UUID) returns DetalheAcao;
+
+  /** R18, R20 (005): lista Ações e Subações sob responsabilidade do colaborador. */
+  function minhasAcoes(status : String, matricula : String, tamanhoPagina : Integer, pagina : Integer) returns many ItemMinhasAcoes;
+
+  /** R19, R20 (005): lista Tratativas em que o colaborador é Responsável Principal ou Participante. */
+  function minhasTratativas(status : String, matricula : String, tamanhoPagina : Integer, pagina : Integer) returns many ItemMinhasTratativas;
 
   /**
    * Âncora das operações de ciclo de vida (R2, R12, R18). Só a chave é exposta; não há leitura,

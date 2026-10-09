@@ -10,6 +10,7 @@ import { alterarCriticidade } from './tratativa/criticidade';
 import { editarTratativa } from './tratativa/edicao';
 import { consultarTratativa, listarTratativas, type FiltrosListagem } from './tratativa/listagem';
 import { atribuirResponsavelPrincipal, incluirParticipante, removerParticipante, consultarResponsaveis } from './tratativa/responsaveis-tratativa';
+import { minhasAcoes, minhasTratativas } from './tratativa/consultas-responsabilidade';
 
 /** Contrato dos usuários: só monta o Autor e delega ao domínio (decisões 6, 14 e 15). */
 export default class TratativaService extends cds.ApplicationService {
@@ -112,6 +113,26 @@ export default class TratativaService extends cds.ApplicationService {
       const { codigo } = req.params[0] as { codigo: string };
       const { participante } = req.data as { participante?: string };
       await removerParticipante(String(codigo).toLowerCase(), participante!, { id: req.user.id, tipo: 'Usuario' });
+    });
+    // 005 R18, R20: consulta de Ações sob responsabilidade do colaborador.
+    this.on('minhasAcoes', (req) => {
+      const { status, matricula, tamanhoPagina, pagina } = req.data as {
+        status?: string;
+        matricula?: string;
+        tamanhoPagina?: number;
+        pagina?: number;
+      };
+      return minhasAcoes(req, status, matricula, tamanhoPagina, pagina);
+    });
+    // 005 R19, R20: consulta de Tratativas em que o colaborador é Responsável Principal ou Participante.
+    this.on('minhasTratativas', (req) => {
+      const { status, matricula, tamanhoPagina, pagina } = req.data as {
+        status?: string;
+        matricula?: string;
+        tamanhoPagina?: number;
+        pagina?: number;
+      };
+      return minhasTratativas(req, status, matricula, tamanhoPagina, pagina);
     });
     // 005 R8, R14, R29, R30: delegação de Ação com justificativa obrigatória.
     this.on('delegarAcao', 'Tratativas', async (req) => {
