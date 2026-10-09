@@ -3,7 +3,7 @@
 **Autor:** Paulo Calazans
 **Sponsor:** nenhum (projeto sem sponsor designado)
 **Data:** 2026-10-07
-**Status:** draft
+**Status:** aprovado
 **Origem:** ideia
 
 ## Problema

@@ -37,6 +37,31 @@ type TipoAutor : String(20) enum {
   Sistema;
 }
 
+/** R4 (spec plano-de-acao): prioridade da Ação (não afeta prazo da Tratativa). */
+type PrioridadeAcao : String(10) enum {
+  Baixa;
+  Media = 'Média';
+  Alta;
+}
+
+/** R6 (spec plano-de-acao): ciclo de vida da Ação; toda Ação nasce `Pendente`. */
+type StatusAcao : String(20) enum {
+  Pendente;
+  EmAndamento = 'Em andamento';
+  Concluida   = 'Concluída';
+  Cancelada;
+}
+
+/** R22 (spec plano-de-acao): eventos de histórico de Ações (intent 008 unifica). */
+type EventoHistoricoAcao : String(30) enum {
+  Criacao;
+  MudancaStatus;
+  Conclusao;
+  Reabertura;
+  Cancelamento;
+  Edicao;
+}
+
 /** R22: Código opaco (UUID v4 gerado pela plataforma). R1, R2, R7, R10, R13, R20, R23. */
 @PersonalData.EntitySemantics: 'Other'
 entity Tratativas {
@@ -58,6 +83,8 @@ entity Tratativas {
       dataCriacao           : Date not null;
       dataPrevistaConclusao : Date not null;
       criadoEm              : Timestamp not null;
+      /** R1 (spec plano-de-acao): composição hierárquica de Ações da Tratativa. */
+      acoes                 : Composition of many Acoes on acoes.tratativa = $self;
 }
 
 /**
@@ -102,4 +129,42 @@ entity CredenciaisAplicativo : managed {
   key usuarioTecnico : String(256);
       descricao      : String(200);
       ativa          : Boolean not null default true;
+}
+
+/** R1-R3, R14, R26 (spec plano-de-acao): tarefas e subtarefas da Tratativa. */
+@PersonalData.EntitySemantics: 'Other'
+entity Acoes {
+  key codigo                : UUID;
+      tratativa             : Association to one Tratativas not null;
+      acaoMae               : Association to one Acoes;
+      descricao             : String(500) not null;
+      @PersonalData.IsPotentiallyPersonal
+      responsavel           : String(50) not null;
+      prazo                 : Date not null;
+      prioridade            : PrioridadeAcao not null default 'Média';
+      status                : StatusAcao not null default 'Pendente';
+      evidenciaObrigatoria  : Boolean not null default false;
+      dataConclusao         : Date;
+      criadoEm              : Timestamp not null;
+      subacoes              : Composition of many Acoes on subacoes.acaoMae = $self;
+}
+
+/** R22, R23 (spec plano-de-acao): auditoria imutável de eventos das Ações. */
+@PersonalData.EntitySemantics: 'Other'
+entity HistoricoAcoes {
+  key ID            : UUID;
+      tratativa     : Association to one Tratativas not null;
+      acao          : Association to one Acoes not null;
+      evento        : EventoHistoricoAcao not null;
+      campo         : String(50);
+      @PersonalData.IsPotentiallyPersonal
+      valorAnterior : String(200);
+      @PersonalData.IsPotentiallyPersonal
+      valorNovo     : String(200);
+      @PersonalData.IsPotentiallyPersonal
+      justificativa : String(500);
+      @PersonalData.IsPotentiallyPersonal
+      autor         : String(256) not null;
+      tipoAutor     : TipoAutor not null;
+      quando        : Timestamp not null;
 }

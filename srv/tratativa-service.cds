@@ -13,6 +13,11 @@ service TratativaService {
     codigo : UUID;
   }
 
+  /** R1/R2 (004): resultado da criação de Ação ou Subação. */
+  type ResultadoCriacaoAcao {
+    codigo : UUID;
+  }
+
   /** R25: exatamente estes dez campos na listagem (sem Descrição e sem Solicitante). */
   type ItemListagem {
     codigo                : UUID;
@@ -43,6 +48,45 @@ service TratativaService {
     solicitante           : String(50);
   }
 
+  /** R2/R25 (004): item de Subação dentro da árvore (sem subações aninhadas). */
+  type ItemSubacaoEstrutura {
+    codigo                : UUID;
+    descricao             : String(500);
+    responsavel           : String(50);
+    prazo                 : Date;
+    prioridade            : m.PrioridadeAcao;
+    status                : m.StatusAcao;
+    evidenciaObrigatoria  : String(3);
+    dataConclusao         : Date;
+  }
+
+  /** R25 (004): item de Ação de primeiro nível na árvore, com coleção de Subações aninhadas. */
+  type ItemEstruturaAcao {
+    codigo                : UUID;
+    descricao             : String(500);
+    responsavel           : String(50);
+    prazo                 : Date;
+    prioridade            : m.PrioridadeAcao;
+    status                : m.StatusAcao;
+    evidenciaObrigatoria  : String(3);
+    dataConclusao         : Date;
+    subacoes              : many ItemSubacaoEstrutura;
+  }
+
+  /** R25 (004): detalhe completo de uma Ação ou Subação consultada por Código. */
+  type DetalheAcao {
+    codigo                : UUID;
+    descricao             : String(500);
+    responsavel           : String(50);
+    prazo                 : Date;
+    prioridade            : m.PrioridadeAcao;
+    status                : m.StatusAcao;
+    evidenciaObrigatoria  : String(3);
+    dataConclusao         : Date;
+    acaoMae               : UUID;
+    subacoes              : many ItemSubacaoEstrutura;
+  }
+
   action   criarTratativaAvulsa(titulo : String(200), criticidade : String(10), descricao : String(5000),
                                 unidade : String(100), area : String(100), solicitante : String(50)) returns ResultadoAbertura;
 
@@ -53,13 +97,19 @@ service TratativaService {
   /** R26: consulta pelo Código; inexistente → 404. */
   function consultarTratativa(codigo : UUID) returns DetalheTratativa;
 
+  /** R25 (004): consulta a estrutura hierárquica completa de Ações e Subações de uma Tratativa. */
+  function consultarEstruturaAcoes(tratativa : UUID) returns many ItemEstruturaAcao;
+
+  /** R25 (004): consulta uma Ação ou Subação pelo Código dela e da Tratativa. */
+  function consultarAcao(tratativa : UUID, codigo : UUID) returns DetalheAcao;
+
   /**
    * Âncora das operações de ciclo de vida (R2, R12, R18). Só a chave é exposta; não há leitura,
    * criação, alteração nem exclusão pelo entity set (R11; leitura pelas functions acima).
    * Parâmetros sem tamanho de propósito: o domínio valida tamanho depois de papel, existência e estado (R31).
    */
   @readonly
-  @restrict: [{ grant: ['mudarStatus', 'editar', 'mudarCriticidade'], to: 'GestorTratativa' }]
+  @restrict: [{ grant: ['mudarStatus', 'editar', 'mudarCriticidade', 'criarAcao', 'criarSubacao', 'mudarStatusAcao', 'editarAcao'], to: 'GestorTratativa' }]
   entity Tratativas as projection on m.Tratativas { key codigo } actions {
     /** R2/R4/R5: a operação é identificada pelo Status de destino. */
     action mudarStatus(status : String, justificativa : String);
@@ -67,5 +117,17 @@ service TratativaService {
     action editar(titulo : String, descricao : String, unidade : String, area : String, solicitante : String);
     /** R18/R19: reutiliza a regra interna do 002 com tipo de autor Usuario. */
     action mudarCriticidade(criticidade : String);
+
+    /** 004 R1/R3/R4/R5/R14/R18/R21: cria Ação de primeiro nível na Tratativa. */
+    action criarAcao(descricao : String, responsavel : String, prazo : String, prioridade : String, evidenciaObrigatoria : String) returns ResultadoCriacaoAcao;
+
+    /** 004 R2/R3/R4/R5/R12/R14/R18/R21: cria Subação sob uma Ação mãe na Tratativa. */
+    action criarSubacao(acaoMae : UUID, descricao : String, responsavel : String, prazo : String, prioridade : String, evidenciaObrigatoria : String) returns ResultadoCriacaoAcao;
+
+    /** 004 R6/R8/R9/R10/R11/R12/R18: muda o Status da Ação ou Subação. */
+    action mudarStatusAcao(acao : UUID, status : String, justificativa : String);
+
+    /** 004 R19/R20/R21: edita campos editáveis de Ação ou Subação Pendente ou Em andamento (responsavel não é editável, Ruling R-07). */
+    action editarAcao(acao : UUID, descricao : String, prazo : String, prioridade : String, evidenciaObrigatoria : String);
   };
 }

@@ -1,5 +1,9 @@
 import cds from '@sap/cds';
 import { abrirTratativa, type DadosAbertura } from './tratativa/abertura';
+import { consultarAcao, consultarEstruturaAcoes } from './tratativa/acoes-consulta';
+import { editarAcao, type CamposEdicaoAcao } from './tratativa/acoes-edicao';
+import { mudarStatusAcao } from './tratativa/acoes-ciclo-de-vida';
+import { criarAcao, criarSubacao, type DadosCriacaoAcao } from './tratativa/acoes-criacao';
 import { mudarStatus } from './tratativa/ciclo-de-vida';
 import { alterarCriticidade } from './tratativa/criticidade';
 import { editarTratativa } from './tratativa/edicao';
@@ -39,6 +43,46 @@ export default class TratativaService extends cds.ApplicationService {
     this.on('mudarCriticidade', 'Tratativas', async (req) => {
       const { codigo } = req.params[0] as { codigo: string };
       await alterarCriticidade(String(codigo).toLowerCase(), (req.data as { criticidade?: string }).criticidade, {
+        id: req.user.id,
+        tipo: 'Usuario',
+      });
+    });
+    // 004 R25: leitura da estrutura e do detalhe; `responsavel` só para o GestorTratativa (LGPD).
+    this.on('consultarEstruturaAcoes', (req) => {
+      const { tratativa } = req.data as { tratativa?: string };
+      return consultarEstruturaAcoes(tratativa, req.user.is('GestorTratativa'));
+    });
+    this.on('consultarAcao', (req) => {
+      const { tratativa, codigo } = req.data as { tratativa?: string; codigo?: string };
+      return consultarAcao(tratativa, codigo, req.user.is('GestorTratativa'));
+    });
+    // 004 R1/R2: `acaoMae` passa como texto (String) para que ausente ou null vire 'undefined'/'null' e seja recusado como Código inválido.
+    this.on('criarAcao', 'Tratativas', (req) => {
+      const { codigo } = req.params[0] as { codigo: string };
+      return criarAcao(String(codigo).toLowerCase(), req.data as DadosCriacaoAcao, { id: req.user.id, tipo: 'Usuario' });
+    });
+    // 004 R6-R12: `acao` passa como texto (String), pelo mesmo motivo de `acaoMae`: ausente ou null vira 'Código inválido.'.
+    this.on('mudarStatusAcao', 'Tratativas', async (req) => {
+      const { codigo } = req.params[0] as { codigo: string };
+      const { acao, status, justificativa } = req.data as { acao?: string; status?: string; justificativa?: string };
+      await mudarStatusAcao(String(codigo).toLowerCase(), String(acao).toLowerCase(), { status, justificativa }, {
+        id: req.user.id,
+        tipo: 'Usuario',
+      });
+    });
+    // 004 R19/R20 (Ruling R-07): `acao` é tirado dos campos; o runtime já recusou qualquer campo fora da assinatura.
+    this.on('editarAcao', 'Tratativas', async (req) => {
+      const { codigo } = req.params[0] as { codigo: string };
+      const { acao, ...campos } = req.data as { acao?: string } & CamposEdicaoAcao;
+      await editarAcao(String(codigo).toLowerCase(), String(acao).toLowerCase(), campos, {
+        id: req.user.id,
+        tipo: 'Usuario',
+      });
+    });
+    this.on('criarSubacao', 'Tratativas', (req) => {
+      const { codigo } = req.params[0] as { codigo: string };
+      const { acaoMae, ...dados } = req.data as DadosCriacaoAcao & { acaoMae?: string | null };
+      return criarSubacao(String(codigo).toLowerCase(), String(acaoMae).toLowerCase(), dados, {
         id: req.user.id,
         tipo: 'Usuario',
       });

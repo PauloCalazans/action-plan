@@ -68,11 +68,29 @@ Cada decisão vale para o projeto inteiro até ser revogada. Nunca apague uma de
 - **Data:** 2026-10-07
 
 ### D10 — Contrato de recusas dos serviços de usuário
-- **Decisão:** nos serviços consumidos por usuários (hoje, `TratativaService`), a recusa segue esta precedência e estes códigos: 401 autenticação, 403 papel (inclui identidade `AplicativoOrigem`), 400 forma do pedido recusada pelo runtime (campo fora da assinatura, valor de tipo errado), 404 Tratativa inexistente, **409 estado** (transição não permitida, Tratativa que não pode ser alterada), 400 campo inválido com `target` = parâmetro. Ressalva (R31): para o aplicativo de origem nas functions do serviço de usuários, o 400 de forma pode vir antes do 403 de papel, porque o runtime valida os parâmetros antes do `before('*')` que recusa o aplicativo (ex.: `tamanhoPagina='abc'` → 400).
-- **Por quê:** R31 da spec tratativa fixa a ordem papel → existência → estado → campos; 409 separa "o pedido é válido mas o estado atual não permite" de "o dado está errado" (400), e a forma do pedido é verificada pelo runtime CAP antes do handler.
-- **Consequência:** 004 e 005 reutilizam os códigos, as mensagens de estado do 003 e o `recusar(status, message, target)` de `srv/tratativa/recusa.ts`; validação de tamanho fica no domínio, depois do estado (parâmetros `String` sem tamanho nas actions).
-- **Verificado por:** CA73 (etapa 1), CA29 (etapa 3), CA30 (etapa 4) e os casos de R31 das etapas 1, 3 e 4 da task tratativa/001 (papel antes de estado, estado antes de campo); contrato de erros do design da spec tratativa
-- **Data:** 2026-10-07
+- **Decisão:** nos serviços consumidos por usuários (hoje, `TratativaService`), a recusa segue esta precedência e estes códigos HTTP:
+  1. **401 Autenticação:** usuário não autenticado.
+  2. **403 Papel:** falta do papel exigido no CDS (`@restrict`, ex.: `GestorTratativa`) e identidade técnica de integração (`AplicativoOrigem` via `before('*')` nas functions). Nas actions protegidas por `@restrict`, a tentativa de chamada por identidade sem o papel recebe 403 `Forbidden` diretamente do runtime CAP.
+  3. **400 Forma do pedido e formato de códigos:**
+     - Campos fora da assinatura OData (runtime, ex.: campos proibidos em criação/edição como `responsavel` em `editarAcao`).
+     - Valor de tipo JSON errado (runtime `ASSERT_DATA_TYPE`, ex.: booleano em campo String como `evidenciaObrigatoria: true`, ou texto em parâmetro Integer como `tamanhoPagina='abc'` do 003; fracionário chega ao domínio), recusado com 400 antes de existência ou estado (revisao-design-parecer-2.md I9, Ruling R-06 M-i).
+     - Parâmetros de Código estrutural malformados, ausentes ou nulos (`acao`, `acaoMae`, `codigo` nas actions ou functions, e parâmetro `tratativa` nas functions), validados no domínio antes de qualquer consulta ao banco com 400 `Código inválido.` e `target` com o nome do parâmetro (reaproveitando `codigoValido` de `srv/tratativa/consulta.ts`; `acao` e `acaoMae` ausentes ou `null` avaliados como `String(x)`; revisao-design-parecer.md I1, revisao-design-parecer-2.md M-a, Ruling R-06 M-j). Código malformado na CHAVE da entidade na URL (ex.: `Tratativas(xyz)/...`) é tratado na etapa 4 como inexistência (404 `Tratativa não encontrada.`), idêntico às actions de 003 (revisao-design-parecer-2.md I9).
+  4. **404 Existência:** recurso ou relação de pertencimento não encontrado (Tratativa inexistente ou com chave malformada na URL, Ação inexistente, Ação mãe inexistente, ou Ação não pertencente à Tratativa informada). A existência completa é verificada antes de qualquer avaliação de estado da Tratativa ou da Ação (409; revisao-design-parecer-2.md I9, I10, I12).
+  5. **409 Estado da Tratativa:** estado impede alteração (R17: Tratativa `Encerrada` ou `Cancelada`) ou impede encerramento (R16: Tratativa com Ações não finalizadas, avaliado após a transição da Tratativa R4 de 003 e antes da validação de tamanho da justificativa).
+  6. **409 Estado da Ação e Transição:**
+     - Em edição: Ação finalizada impede alteração (R19: `Concluída` ou `Cancelada`).
+     - Em transição de status:
+       * Exceção nomeada (R29 da spec): Status de destino ausente ou só com espaços recusa com 400 `O campo Status é obrigatório.`, `target: status` (sem destino não há par de transição a avaliar; revisao-design-parecer.md I3, revisao-design-parecer-2.md M-f). O estado da Tratativa precede o status ausente (CA106; Ruling R-06 I13).
+       * Transição não permitida ou para o mesmo status (R7, R8) recusa com 409 `Transição não permitida: de <Status atual> para <Status pedido>.`, `target: status`.
+  7. **Relação entre entidades:**
+     - **400 Relação estrutural inválida permanente:** pedido viola regra hierárquica imutável (R2: Subação de Subação).
+     - **409 Estado de entidades relacionadas:** estado da mãe impede alteração da filha (R12), ou filhas abertas impedem conclusão/cancelamento da mãe (R11).
+  8. **400 Campo inválido (domínio):** validação semântica com `target` = parâmetro (Justificativa ausente/longa; Descrição ausente/nula/longa; Responsável ausente/nulo/longo na criação; Prazo ausente/nulo/malformado/anterior a hoje; Prioridade nula/inválida; Evidência obrigatória nula/inválida; na criação, Prioridade e Evidência obrigatória omitidas ou `null` assumem valor padrão, enquanto `""` ou só espaços recusam com 400 citando o campo; na edição, campos obrigatórios com `null` ou só espaços em `descricao`, `prazo`, `prioridade`, `evidenciaObrigatoria` recusam com 400 `O campo <Nome> é obrigatório.`, pois nenhum campo é apagável e `responsavel` não é editável; revisao-design-parecer-2.md I11, M-e, Ruling R-07).
+  Ressalva: para o aplicativo de origem nas functions do serviço de usuários, o 400 de forma pode vir antes do 403 de papel devido à validação prévia de parâmetros pelo runtime CAP.
+- **Por quê:** consolida a hierarquia de checagens de negócio (R31 da spec tratativa e R29 da spec plano-de-acao). O código 409 separa conflito de estado de ciclo de vida de dados incorretos (400). Uma relação hierárquica fisicamente inválida (subação de subação em modelo de 2 níveis) é uma violação estrutural estática (400) que precede validações de estado volátil (409).
+- **Consequência:** intents 004 e 005 reutilizam esta ordem unificada, os códigos HTTP e a função `recusar(status, message, target)` de `srv/tratativa/recusa.ts`. Parâmetros de negócio livres são validados na etapa 8, garantindo que checagens de existência e estado precedam erros de campo.
+- **Verificado por:** testes das etapas de 003 (CA73) e 004 (CA90 a CA98, CA104, CA105, CA106); contrato de erros dos designs de tratativa e plano-de-acao.
+- **Data:** 2026-10-08
 
 ## Decisões revogadas
 
