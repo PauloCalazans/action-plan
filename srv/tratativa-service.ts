@@ -8,6 +8,7 @@ import { delegarAcao } from './tratativa/acoes-delegacao';
 import { mudarStatus } from './tratativa/ciclo-de-vida';
 import { alterarCriticidade } from './tratativa/criticidade';
 import { editarTratativa } from './tratativa/edicao';
+import { obterMatriculaUsuario } from './tratativa/identidade';
 import { consultarTratativa, listarTratativas, type FiltrosListagem } from './tratativa/listagem';
 import { atribuirResponsavelPrincipal, incluirParticipante, removerParticipante, consultarResponsaveis } from './tratativa/responsaveis-tratativa';
 import { minhasAcoes, minhasTratativas } from './tratativa/consultas-responsabilidade';
@@ -33,20 +34,20 @@ export default class TratativaService extends cds.ApplicationService {
       consultarTratativa((req.data as { codigo?: string }).codigo, req.user.is('GestorTratativa')),
     );
     this.on('criarTratativaAvulsa', (req) =>
-      abrirTratativa(req.data as DadosAbertura, { id: req.user.id, tipo: 'Usuario' }),
+      abrirTratativa(req.data as DadosAbertura, { id: obterMatriculaUsuario(req), tipo: 'Usuario' }),
     );
     this.on('mudarStatus', 'Tratativas', async (req) => {
       const { codigo } = req.params[0] as { codigo: string };
-      await mudarStatus(String(codigo).toLowerCase(), req.data, { id: req.user.id, tipo: 'Usuario' });
+      await mudarStatus(String(codigo).toLowerCase(), req.data, { id: obterMatriculaUsuario(req), tipo: 'Usuario' });
     });
     this.on('editar', 'Tratativas', async (req) => {
       const { codigo } = req.params[0] as { codigo: string };
-      await editarTratativa(String(codigo).toLowerCase(), req.data, { id: req.user.id, tipo: 'Usuario' });
+      await editarTratativa(String(codigo).toLowerCase(), req.data, { id: obterMatriculaUsuario(req), tipo: 'Usuario' });
     });
     this.on('mudarCriticidade', 'Tratativas', async (req) => {
       const { codigo } = req.params[0] as { codigo: string };
       await alterarCriticidade(String(codigo).toLowerCase(), (req.data as { criticidade?: string }).criticidade, {
-        id: req.user.id,
+        id: obterMatriculaUsuario(req),
         tipo: 'Usuario',
       });
     });
@@ -62,7 +63,7 @@ export default class TratativaService extends cds.ApplicationService {
     // 004 R1/R2: `acaoMae` passa como texto (String) para que ausente ou null vire 'undefined'/'null' e seja recusado como Código inválido.
     this.on('criarAcao', 'Tratativas', (req) => {
       const { codigo } = req.params[0] as { codigo: string };
-      return criarAcao(String(codigo).toLowerCase(), req.data as DadosCriacaoAcao, { id: req.user.id, tipo: 'Usuario' });
+      return criarAcao(String(codigo).toLowerCase(), req.data as DadosCriacaoAcao, { id: obterMatriculaUsuario(req), tipo: 'Usuario' });
     });
     // 004 R6-R12: `acao` passa como texto (String), pelo mesmo motivo de `acaoMae`: ausente ou null vira 'Código inválido.'.
     // 005 R11, R16, R28: autorização dinâmica implementada no domínio; passa Request completo.
@@ -76,7 +77,7 @@ export default class TratativaService extends cds.ApplicationService {
       const { codigo } = req.params[0] as { codigo: string };
       const { acao, ...campos } = req.data as { acao?: string } & CamposEdicaoAcao;
       await editarAcao(String(codigo).toLowerCase(), String(acao).toLowerCase(), campos, {
-        id: req.user.id,
+        id: obterMatriculaUsuario(req),
         tipo: 'Usuario',
       });
     });
@@ -84,7 +85,7 @@ export default class TratativaService extends cds.ApplicationService {
       const { codigo } = req.params[0] as { codigo: string };
       const { acaoMae, ...dados } = req.data as DadosCriacaoAcao & { acaoMae?: string | null };
       return criarSubacao(String(codigo).toLowerCase(), String(acaoMae).toLowerCase(), dados, {
-        id: req.user.id,
+        id: obterMatriculaUsuario(req),
         tipo: 'Usuario',
       });
     });
@@ -98,7 +99,7 @@ export default class TratativaService extends cds.ApplicationService {
       const { codigo } = req.params[0] as { codigo: string };
       const { responsavelPrincipal, justificativa } = req.data as { responsavelPrincipal?: string; justificativa?: string };
       await atribuirResponsavelPrincipal(String(codigo).toLowerCase(), responsavelPrincipal!, justificativa, {
-        id: req.user.id,
+        id: obterMatriculaUsuario(req),
         tipo: 'Usuario',
       });
     });
@@ -106,13 +107,13 @@ export default class TratativaService extends cds.ApplicationService {
     this.on('incluirParticipante', 'Tratativas', async (req) => {
       const { codigo } = req.params[0] as { codigo: string };
       const { participante } = req.data as { participante?: string };
-      await incluirParticipante(String(codigo).toLowerCase(), participante!, { id: req.user.id, tipo: 'Usuario' });
+      await incluirParticipante(String(codigo).toLowerCase(), participante!, { id: obterMatriculaUsuario(req), tipo: 'Usuario' });
     });
     // 005 R9, R14: remoção de participante.
     this.on('removerParticipante', 'Tratativas', async (req) => {
       const { codigo } = req.params[0] as { codigo: string };
       const { participante } = req.data as { participante?: string };
-      await removerParticipante(String(codigo).toLowerCase(), participante!, { id: req.user.id, tipo: 'Usuario' });
+      await removerParticipante(String(codigo).toLowerCase(), participante!, { id: obterMatriculaUsuario(req), tipo: 'Usuario' });
     });
     // 005 R18, R20: consulta de Ações sob responsabilidade do colaborador.
     this.on('minhasAcoes', (req) => {
@@ -147,7 +148,7 @@ export default class TratativaService extends cds.ApplicationService {
         String(acao).toLowerCase(),
         novoResponsavel!,
         justificativa!,
-        { id: req.user.id, tipo: 'Usuario' },
+        { id: obterMatriculaUsuario(req), tipo: 'Usuario' },
       );
     });
     return super.init();
