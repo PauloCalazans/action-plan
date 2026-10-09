@@ -335,7 +335,7 @@ describe('Etapa 2: Remoção Lógica e Auditoria de Evidências (removerEvidenci
     if (remocao) {
       expect(remocao.mimeType).toBe('application/pdf');
       expect(remocao.tamanho).toBeGreaterThan(0);
-      expect(remocao.autor).toBe('M2000'); // Gestor padrão
+      expect(remocao.autor).toBe('gestor'); // Quem removeu
       // Verifica que NÃO tem nomeArquivo
       expect((remocao as Record<string, unknown>).nomeArquivo).toBeUndefined();
     }
