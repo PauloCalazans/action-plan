@@ -1,7 +1,7 @@
 # Task 001: acoes-hierarquicas
 
 **Spec:** agentic/projeto/specs/plano-de-acao/spec.md  
-**Status:** em-andamento  
+**Status:** publicada  
 <!-- pendente | em-andamento | em-revisão | publicada (integrada não é escrito: deriva do git) -->  
 **Branch:** plano-de-acao/001-acoes-hierarquicas
 
