@@ -154,6 +154,33 @@ describe('Etapa 3: aplicação de template em Tratativa (R5-R11, R13, R15(a), R1
       const unicos = new Set(criadosEm);
       expect(unicos.size).toBe(criadosEm.length);
     });
+
+    it('vincula subação declarada antes da mãe e devolve a estrutura hierárquica correta', async () => {
+      const tratativa = await criarTratativaValida();
+      const itens = [
+        item(1, { ordemPai: 2, descricao: 'Subação antes da mãe' }),
+        item(2, { ordemPai: null, descricao: 'Mãe depois' }),
+      ];
+      const { id: template } = await criarTemplateValido(nomeUnico('Subacao antes da mae'), itens);
+
+      const aplicacao = await aplicarTemplate(enviar, tratativa, { template, responsavelPadrao: 'M1001' }, comoGestor);
+      expect(aplicacao.status).toBe(200);
+
+      const estrutura = await consultarEstruturaAcoes(consultar, tratativa, comoGestor);
+      expect(estrutura.status).toBe(200);
+      const raizes = estrutura.data.value as { codigo: string; descricao: string; subacoes: { codigo: string; descricao: string }[] }[];
+      expect(raizes).toHaveLength(1);
+      expect(raizes[0].descricao).toBe('Mãe depois');
+      expect(raizes[0].subacoes).toHaveLength(1);
+      expect(raizes[0].subacoes[0].descricao).toBe('Subação antes da mãe');
+
+      const acoes = await linhas('Acoes', { tratativa_codigo: tratativa });
+      const mae = acoes.find((acao) => acao.descricao === 'Mãe depois');
+      const subacao = acoes.find((acao) => acao.descricao === 'Subação antes da mãe');
+      expect(mae).toBeDefined();
+      expect(subacao).toBeDefined();
+      expect(subacao!.acaoMae_codigo).toBe(mae!.codigo);
+    });
   });
 
   describe('CA15 (R5): aplicação idêntica em Tratativa avulsa e com Origem', () => {
