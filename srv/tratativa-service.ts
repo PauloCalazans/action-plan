@@ -15,8 +15,8 @@ import { minhasAcoes, minhasTratativas } from './tratativa/consultas-responsabil
 import { anexarEvidencia, type DadosAnexoEvidencia } from './tratativa/evidencias-anexo';
 import { removerEvidencia, type DadosRemocaoEvidencia } from './tratativa/evidencias-remocao';
 import { listarPendenciasEvidenciasTratativa, listarEvidenciasAcao, listarEvidenciasTratativa, baixarEvidencia } from './tratativa/evidencias-consultas';
-import { comentarTratativa, type DadosComentarioTratativa } from './tratativa/comentarios-inclusao';
-import { listarComentariosTratativa } from './tratativa/comentarios-consulta';
+import { comentarTratativa, comentarAcao, type DadosComentarioTratativa, type DadosComentarioAcao } from './tratativa/comentarios-inclusao';
+import { listarComentariosTratativa, listarComentariosAcao } from './tratativa/comentarios-consulta';
 
 /** Contrato dos usuários: só monta o Autor e delega ao domínio (decisões 6, 14 e 15). */
 export default class TratativaService extends cds.ApplicationService {
@@ -205,6 +205,21 @@ export default class TratativaService extends cds.ApplicationService {
         pagina?: number;
       };
       return listarComentariosTratativa(req, String(tratativa).toLowerCase(), tamanhoPagina, pagina);
+    });
+    // comentarios R1, R5, R6, R7, R11, R13 (etapa 2): inclui comentário na Ação ou Subação.
+    this.on('comentarAcao', 'Tratativas', async (req) => {
+      const { codigo } = req.params[0] as { codigo: string };
+      return comentarAcao(req, String(codigo).toLowerCase(), req.data as DadosComentarioAcao);
+    });
+    // comentarios R1, R5, R7, R13 (etapa 2): lista comentários de uma Ação ou Subação.
+    this.on('listarComentariosAcao', (req) => {
+      const { tratativa, acao, tamanhoPagina, pagina } = req.data as {
+        tratativa?: string;
+        acao?: string;
+        tamanhoPagina?: number;
+        pagina?: number;
+      };
+      return listarComentariosAcao(req, String(tratativa).toLowerCase(), String(acao).toLowerCase(), tamanhoPagina, pagina);
     });
     return super.init();
   }
