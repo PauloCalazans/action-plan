@@ -17,6 +17,7 @@ Entregar o intent 006 inteiro numa branch empilhada sobre os intents 004 e 005, 
 - `srv/tratativa/armazenamento-evidencias.ts`
 - `srv/tratativa/evidencias-validacao.ts`
 - `srv/tratativa/evidencias-anexo.ts`
+- `srv/tratativa/evidencias-storage.ts`
 - `srv/tratativa/evidencias-remocao.ts`
 - `srv/tratativa/evidencias-consultas.ts`
 - `srv/tratativa/acoes-ciclo-de-vida.ts`
