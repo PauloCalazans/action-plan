@@ -12,6 +12,9 @@ import { obterMatriculaUsuario } from './tratativa/identidade';
 import { consultarTratativa, listarTratativas, type FiltrosListagem } from './tratativa/listagem';
 import { atribuirResponsavelPrincipal, incluirParticipante, removerParticipante, consultarResponsaveis } from './tratativa/responsaveis-tratativa';
 import { minhasAcoes, minhasTratativas } from './tratativa/consultas-responsabilidade';
+import { anexarEvidencia, type DadosAnexoEvidencia } from './tratativa/evidencias-anexo';
+import { removerEvidencia, type DadosRemocaoEvidencia } from './tratativa/evidencias-remocao';
+import { listarPendenciasEvidenciasTratativa, listarEvidenciasAcao, listarEvidenciasTratativa, baixarEvidencia } from './tratativa/evidencias-consultas';
 
 /** Contrato dos usuários: só monta o Autor e delega ao domínio (decisões 6, 14 e 15). */
 export default class TratativaService extends cds.ApplicationService {
@@ -150,6 +153,42 @@ export default class TratativaService extends cds.ApplicationService {
         justificativa!,
         { id: obterMatriculaUsuario(req), tipo: 'Usuario' },
       );
+    });
+    // 006 R1-R7, R12-R14: anexa arquivo de Evidência à Ação ou Subação.
+    this.on('anexarEvidencia', 'Tratativas', (req) => {
+      const { codigo } = req.params[0] as { codigo: string };
+      return anexarEvidencia(req, String(codigo).toLowerCase(), req.data as DadosAnexoEvidencia, {
+        id: obterMatriculaUsuario(req),
+        tipo: 'Usuario',
+      });
+    });
+    // 006 R1, R6, R7, R10, R12, R13: remove logicamente Evidência da Ação ou Subação.
+    this.on('removerEvidencia', 'Tratativas', async (req) => {
+      const { codigo } = req.params[0] as { codigo: string };
+      await removerEvidencia(req, String(codigo).toLowerCase(), req.data as DadosRemocaoEvidencia, {
+        id: obterMatriculaUsuario(req),
+        tipo: 'Usuario',
+      });
+    });
+    // 006 R9, R17 (etapa 3): lista Ações com evidência obrigatória sem Evidências ativas.
+    this.on('listarPendenciasEvidenciasTratativa', (req) => {
+      const { tratativa } = req.data as { tratativa?: string };
+      return listarPendenciasEvidenciasTratativa(req, String(tratativa).toLowerCase());
+    });
+    // 006 R11 (etapa 4): lista Evidências ativas de uma Ação ou Subação.
+    this.on('listarEvidenciasAcao', (req) => {
+      const { tratativa, acao } = req.data as { tratativa?: string; acao?: string };
+      return listarEvidenciasAcao(req, String(tratativa).toLowerCase(), String(acao).toLowerCase());
+    });
+    // 006 R11 (etapa 4): lista todas as Evidências ativas da Tratativa.
+    this.on('listarEvidenciasTratativa', (req) => {
+      const { tratativa } = req.data as { tratativa?: string };
+      return listarEvidenciasTratativa(req, String(tratativa).toLowerCase());
+    });
+    // 006 R11, R12 (etapa 4): baixa Evidência com conteúdo em Base64 e auditoria prévia.
+    this.on('baixarEvidencia', (req) => {
+      const { tratativa, acao, evidencia } = req.data as { tratativa?: string; acao?: string; evidencia?: string };
+      return baixarEvidencia(req, String(tratativa).toLowerCase(), String(acao).toLowerCase(), String(evidencia).toLowerCase());
     });
     return super.init();
   }

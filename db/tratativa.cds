@@ -71,6 +71,9 @@ type EventoHistoricoAcao : String(30) enum {
   Cancelamento;
   Edicao;
   Delegacao;
+  InclusaoEvidencia;
+  RemocaoEvidencia;
+  DownloadEvidencia;
 }
 
 /** R22: Código opaco (UUID v4 gerado pela plataforma). R1, R2, R7, R10, R13, R20, R23. */
@@ -174,6 +177,8 @@ entity Acoes {
       dataConclusao         : Date;
       criadoEm              : Timestamp not null;
       subacoes              : Composition of many Acoes on subacoes.acaoMae = $self;
+      /** R1 (spec evidencias): composição de Evidências da Ação. */
+      evidencias            : Composition of many Evidencias on evidencias.acao = $self;
 }
 
 /** R22, R23 (spec plano-de-acao): auditoria imutável de eventos das Ações. */
@@ -194,4 +199,29 @@ entity HistoricoAcoes {
       autor         : String(256) not null;
       tipoAutor     : TipoAutor not null;
       quando        : Timestamp not null;
+      /** R12 (spec evidencias): colunas aditivas para auditoria de Evidências. */
+      evidencia     : UUID;
+      mimeType      : String(100);
+      tamanho       : Integer;
+}
+
+/** R1, R2, R10 (spec evidencias): comprovação de execução de Ações/Subações. */
+@PersonalData.EntitySemantics: 'Other'
+entity Evidencias {
+  key codigo       : UUID;
+      tratativa    : Association to one Tratativas not null;
+      acao         : Association to one Acoes not null;
+      @PersonalData.IsPotentiallyPersonal
+      nomeArquivo  : String(255) not null;
+      mimeType     : String(100) not null;
+      tamanho      : Integer not null;
+      @PersonalData.IsPotentiallyPersonal
+      descricao    : String(500);
+      ativo        : Boolean not null default true;
+      criadoEm     : Timestamp not null;
+      @PersonalData.IsPotentiallyPersonal
+      autorAnexo   : String(50) not null;
+      removidoEm   : Timestamp;
+      @PersonalData.IsPotentiallyPersonal
+      autorRemocao : String(50);
 }

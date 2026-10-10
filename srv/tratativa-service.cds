@@ -123,6 +123,58 @@ service TratativaService {
     meuPapel              : m.PapelUsuarioTratativa;
   }
 
+  /** R1, R12 (006): detalhe da Evidência anexada. */
+  type DetalheEvidencia {
+    codigo      : UUID;
+    acao        : UUID;
+    nomeArquivo : String(255);
+    mimeType    : String(100);
+    tamanho     : Integer;
+    descricao   : String(500);
+    criadoEm    : Timestamp;
+    autorAnexo  : String(50);
+  }
+
+  /** R9, I8 (006): item de Ação com pendência de Evidência obrigatória. */
+  type ItemPendenciaEvidenciaTratativa {
+    acao        : UUID;
+    descricao   : String(500);
+    responsavel : String(50);
+    status      : String(20);
+  }
+
+  /** R11 (006): item de Evidência retornado pela listagem por Ação. */
+  type ItemEvidencia {
+    codigo      : UUID;
+    nomeArquivo : String(255);
+    mimeType    : String(100);
+    tamanho     : Integer;
+    descricao   : String(500);
+    criadoEm    : Timestamp;
+    autorAnexo  : String(50);
+  }
+
+  /** R11 (006): item de Evidência retornado pela listagem por Tratativa (com código da Ação). */
+  type ItemEvidenciaTratativa {
+    codigo      : UUID;
+    acao        : UUID;
+    nomeArquivo : String(255);
+    mimeType    : String(100);
+    tamanho     : Integer;
+    descricao   : String(500);
+    criadoEm    : Timestamp;
+    autorAnexo  : String(50);
+  }
+
+  /** R11, R12 (006): detalhe do download de Evidência com conteúdo em Base64. */
+  type DetalheDownloadEvidencia {
+    codigo      : UUID;
+    nomeArquivo : String(255);
+    mimeType    : String(100);
+    tamanho     : Integer;
+    conteudo    : String;
+  }
+
   action   criarTratativaAvulsa(titulo : String(200), criticidade : String(10), descricao : String(5000),
                                 unidade : String(100), area : String(100), solicitante : String(50)) returns ResultadoAbertura;
 
@@ -149,6 +201,18 @@ service TratativaService {
   /** R19, R20 (005): lista Tratativas em que o colaborador é Responsável Principal ou Participante. */
   function minhasTratativas(status : String, matricula : String, tamanhoPagina : Integer, pagina : Integer) returns many ItemMinhasTratativas;
 
+  /** R9, R17 (006): lista Ações com evidência obrigatória sem Evidências ativas. */
+  function listarPendenciasEvidenciasTratativa(tratativa : UUID) returns many ItemPendenciaEvidenciaTratativa;
+
+  /** R11 (006): lista Evidências ativas de uma Ação ou Subação. */
+  function listarEvidenciasAcao(tratativa : UUID, acao : UUID) returns many ItemEvidencia;
+
+  /** R11 (006): lista todas as Evidências ativas da Tratativa. */
+  function listarEvidenciasTratativa(tratativa : UUID) returns many ItemEvidenciaTratativa;
+
+  /** R11, R12 (006): baixa Evidência com conteúdo em Base64 e auditoria prévia. */
+  function baixarEvidencia(tratativa : UUID, acao : UUID, evidencia : UUID) returns DetalheDownloadEvidencia;
+
   /**
    * Âncora das operações de ciclo de vida (R2, R12, R18). Só a chave é exposta; não há leitura,
    * criação, alteração nem exclusão pelo entity set (R11; leitura pelas functions acima).
@@ -157,7 +221,8 @@ service TratativaService {
   @readonly
   @restrict: [
     { grant: ['mudarStatus', 'editar', 'mudarCriticidade', 'criarAcao', 'criarSubacao', 'editarAcao', 'atribuirResponsavelPrincipal', 'incluirParticipante', 'removerParticipante', 'delegarAcao'], to: 'GestorTratativa' },
-    { grant: ['mudarStatusAcao'], to: 'authenticated-user' }
+    { grant: ['mudarStatusAcao'], to: 'authenticated-user' },
+    { grant: ['anexarEvidencia', 'removerEvidencia'], to: 'authenticated-user' }
   ]
   entity Tratativas as projection on m.Tratativas { key codigo } actions {
     /** R2/R4/R5: a operação é identificada pelo Status de destino. */
@@ -190,5 +255,11 @@ service TratativaService {
 
     /** R8, R14, R29, R30 (005): delegação de Ação com justificativa obrigatória e histórico dedicado. */
     action delegarAcao(acao : UUID, novoResponsavel : String, justificativa : String);
+
+    /** R1-R7, R12-R14 (006): anexa arquivo de Evidência à Ação ou Subação. */
+    action anexarEvidencia(acao : UUID, nomeArquivo : String, mimeType : String, conteudo : String, descricao : String) returns TratativaService.DetalheEvidencia;
+
+    /** R1, R6, R7, R10, R12, R13 (006): remove logicamente Evidência da Ação ou Subação. */
+    action removerEvidencia(acao : UUID, evidencia : UUID);
   };
 }

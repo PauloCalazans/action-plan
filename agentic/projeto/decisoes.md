@@ -92,24 +92,14 @@ Cada decisão vale para o projeto inteiro até ser revogada. Nunca apague uma de
 - **Verificado por:** testes das etapas de 003 (CA73) e 004 (CA90 a CA98, CA104, CA105, CA106); contrato de erros dos designs de tratativa e plano-de-acao.
 - **Data:** 2026-10-08
 
-### D11 — Delegação do Gate 1 ao orquestrador e composição do time
-- **Decisão:** Paulo Calazans delega o **Gate 1** ao orquestrador (`agentic/auto-mode` passa a `enabled: true`). O orquestrador aprova intent, spec, design e os itens N3 previstos, cria branch e worktree e encadeia tasks e PRs sem pedir confirmação. O **Gate 2 (merge) continua exclusivamente humano**: o agente nunca faz merge. O orquestrador é a sessão Claude Code (Opus 5.5) no canvas Maestri. Composição dos papéis:
-
-  | Papel | Agente | Modelo |
-  |---|---|---|
-  | `dominio` (Lyra) | Antigravity | Gemini 3.8 Flash, esforço medium |
-  | `arquiteto` (Vigia) | Antigravity | Gemini 3.8 Flash, esforço medium |
-  | `testes` (Sonda) | Kiro CLI | Claude Sonnet 5 |
-  | `dev` (Forja) | Kiro CLI | Claude Sonnet 5 |
-  | `revisor` (Revisor) | Antigravity | Gemini 3.8 Flash, esforço high |
-
-  Os scripts determinísticos (`verify.sh`, `verifica-red.sh`, git) rodam no terminal Shell. `testes`, `dev` e `revisor` começam cada nova task com o contexto limpo.
-- **Por quê:** as primeiras tasks (002, 003) passaram pelo Gate 1 humano; Paulo acompanhou e optou por delegar o Gate 1 para acelerar o encadeamento, mantendo o controle no merge. A delegação existia só na memória da sessão e nos `progress.md`; esta decisão a torna persistente. A composição equilibra custo e qualidade por decisão do humano.
-- **Consequência:** o orquestrador registra uma Ruling no `progress.md` a cada decisão não prevista. Com o revisor num modelo Flash, o orquestrador trata veredito APROVADO com ceticismo e confere no Shell o que for determinístico (verify, escopo, RED) antes do Gate 1 e do PR. Reverter a delegação (`enabled: false`) ou mudar a composição é ação humana e gera nova decisão.
-- **Verificado por:** por revisão; estado em `agentic/auto-mode`, nos `progress.md` das frentes e no `maestri list` do canvas.
+### D10 (extensão pelo intent 006) — Extensão do contrato de recusas para arquivos e Evidências
+- **Decisão:** o contrato de recusas da D10 é estendido com os códigos HTTP 413 (Payload Too Large) e 415 (Unsupported Media Type):
+  1. No runtime (etapa 2 de forma do pedido): requisições HTTP cujo corpo exceda o limite configurado de 20 MB (correspondendo a arquivos acima de ~15 MB em Base64) são recusadas pelo framework com HTTP 413 antes de qualquer handler ou avaliação de papel (inclusive do Aplicativo de origem).
+  2. No domínio (etapa 10 de campos, após validação de existência, autorização dinâmica e estados): arquivo vazio (0 bytes) é recusado com HTTP 400 (`target: arquivo`); formato de arquivo não permitido, extensão e tipo MIME incompatíveis ou MIME superior a 100 caracteres são recusados com HTTP 415 (`target: arquivo`); arquivo com tamanho entre 10.485.761 bytes e ~14 MB (que passa pelo runtime de 20 MB mas excede o limite de domínio de 10 MB) é recusado com HTTP 413 (`target: arquivo`).
+- **Por quê:** alinha a plataforma à semântica padrão do protocolo HTTP (RFC 7231 / RFC 9110), onde 415 identifica tipos de mídia não suportados e 413 identifica cargas que excedem a capacidade aceita. Mantém a separação da D10 onde a validação de limites de tamanho do domínio ocorre na etapa de campos após o estado, prevenindo o processamento desnecessário de arquivos em ações ou tratativas em estados que já proíbem a alteração (409).
+- **Consequência:** o catálogo de erros passa a prever 413 e 415; `srv/tratativa/recusa.ts` suporta esses status codes; o runtime Express/CAP é configurado com limite de 20 MB (`cds.server.body_parser.limit = '20mb'`); testes de integração cobrem a precedência exata dessas recusas.
+- **Verificado por:** CA10c, CA13, CA13a, CA15, CA16, CA57b, CA58, CA59, CA59a na suíte de testes de evidências; medição do middleware de body-parser no runtime CAP.
 - **Data:** 2026-10-08
-- **Histórico:** entre ~22:40 e a retomada de 2026-10-08, a orquestração ficou temporariamente com uma sessão Kiro, que montou a fila de revisões (`agentic/.estado/execucao/2026-10-08-fila-despacho-revisoes.md`); a composição acima substitui a dessa transição.
-- **Ajuste (2026-10-09):** o papel `testes` passou por DeepSeek 3.2 → Claude Haiku 4.5 → Claude Sonnet 4.5, por retrabalho nos testes RED; por decisão do humano, `testes` e `dev` usam Claude Sonnet 5 no Kiro (mesmo custo do Sonnet 4.5). As armadilhas medidas ficaram em `test/CONVENCOES.md`.
 
 ## Decisões revogadas
 
