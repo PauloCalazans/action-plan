@@ -24,6 +24,17 @@ service IntegracaoPessoasService {
     situacao        : String(20);
   }
 
+  type ItemAreaEstrutura {
+    codigoArea : String(100);
+    nomeArea   : String(100);
+  }
+
+  type ItemUnidadeEstrutura {
+    codigoUnidade : String(100);
+    nomeUnidade   : String(100);
+    areas         : many ItemAreaEstrutura;
+  }
+
   function consultarColaborador(matricula : String) returns DetalheColaborador;
 
   function buscarColaboradores(
@@ -34,4 +45,6 @@ service IntegracaoPessoasService {
     tamanhoPagina : Integer,
     pagina        : Integer
   ) returns many ItemColaborador;
+
+  function listarEstruturaOrganizacional() returns many ItemUnidadeEstrutura;
 }

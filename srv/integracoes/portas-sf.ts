@@ -26,6 +26,7 @@ export interface DadosAreaSF {
 export interface DadosUnidadeSF {
   codigoUnidade: string;
   nomeUnidade: string;
+  ativa?: boolean;
   areas: DadosAreaSF[];
 }
 

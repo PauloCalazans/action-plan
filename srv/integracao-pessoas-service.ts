@@ -5,10 +5,24 @@ import {
 } from './integracoes/cache-pessoas';
 import type {
   DadosColaboradorSF,
+  DadosUnidadeSF,
   FiltroColaboradoresSF,
 } from './integracoes/portas-sf';
+import { consultarParametrosIntegracaoSF } from './integracoes/parametros-sf';
 
 const ERRO_INTEGRACAO = 'Serviço de pessoas temporariamente indisponível. Tente novamente mais tarde.';
+const TIMEOUT_ADAPTADOR_MS = 5_000;
+
+function comTimeout<T>(operacao: () => Promise<T>): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error('Timeout do provedor SuccessFactors.')), TIMEOUT_ADAPTADOR_MS);
+  });
+  return Promise.race([Promise.resolve().then(operacao), timeout])
+    .finally(() => {
+      if (timer) clearTimeout(timer);
+    });
+}
 
 function dadosMinimos(colaborador: DadosColaboradorSF): DadosColaboradorSF {
   return {
@@ -24,6 +38,23 @@ function dadosMinimos(colaborador: DadosColaboradorSF): DadosColaboradorSF {
 
 function compararTexto(a: string, b: string): number {
   return a.localeCompare(b, 'pt-BR', { sensitivity: 'base' });
+}
+
+function mapearEstrutura(estrutura: DadosUnidadeSF[]) {
+  return estrutura
+    .filter((unidade) => unidade.ativa !== false)
+    .sort((a, b) => (
+      compararTexto(a.nomeUnidade, b.nomeUnidade)
+      || a.codigoUnidade.localeCompare(b.codigoUnidade)
+    ))
+    .map((unidade) => ({
+      codigoUnidade: unidade.codigoUnidade,
+      nomeUnidade: unidade.nomeUnidade,
+      areas: unidade.areas
+        .filter((area) => area.ativa)
+        .sort((a, b) => compararTexto(a.nomeArea, b.nomeArea) || a.codigoArea.localeCompare(b.codigoArea))
+        .map(({ codigoArea, nomeArea }) => ({ codigoArea, nomeArea })),
+    }));
 }
 
 export default class IntegracaoPessoasService extends cds.ApplicationService {
@@ -50,8 +81,10 @@ export default class IntegracaoPessoasService extends cds.ApplicationService {
       const emCache = obterColaboradorEmCache(matricula);
       let colaborador: DadosColaboradorSF | null;
       try {
-        const provedor = await cds.connect.to('ProvedorPessoasAdapter');
-        colaborador = await provedor.send('obterColaborador', { matricula }) as DadosColaboradorSF | null;
+        colaborador = await comTimeout(async () => {
+          const provedor = await cds.connect.to('ProvedorPessoasAdapter');
+          return await provedor.send('obterColaborador', { matricula }) as DadosColaboradorSF | null;
+        });
       } catch {
         if (emCache) return dadosMinimos(emCache);
         return req.reject(503, ERRO_INTEGRACAO, 'integracao');
@@ -95,8 +128,10 @@ export default class IntegracaoPessoasService extends cds.ApplicationService {
         apenasAtivos,
       };
       try {
-        const provedor = await cds.connect.to('ProvedorPessoasAdapter');
-        const colaboradores = await provedor.send('buscarColaboradores', filtro) as DadosColaboradorSF[];
+        const colaboradores = await comTimeout(async () => {
+          const provedor = await cds.connect.to('ProvedorPessoasAdapter');
+          return await provedor.send('buscarColaboradores', filtro) as DadosColaboradorSF[];
+        });
         const busca = termo?.toLocaleLowerCase('pt-BR');
         return colaboradores
           .filter((colaborador) => (
@@ -110,6 +145,22 @@ export default class IntegracaoPessoasService extends cds.ApplicationService {
           .sort((a, b) => compararTexto(a.nome, b.nome) || compararTexto(a.matricula, b.matricula))
           .slice((pagina - 1) * tamanhoPagina, pagina * tamanhoPagina)
           .map(dadosMinimos);
+      } catch {
+        return req.reject(503, ERRO_INTEGRACAO, 'integracao');
+      }
+    });
+
+    this.on('listarEstruturaOrganizacional', async (req) => {
+      const parametros = await consultarParametrosIntegracaoSF();
+      try {
+        const estrutura = await comTimeout(async () => {
+          const provedor = await cds.connect.to('ProvedorEstruturaAdapter');
+          return await provedor.send('listarEstrutura', {
+            nivelUnidade: parametros.nivelUnidadeSF,
+            nivelArea: parametros.nivelAreaSF,
+          }) as DadosUnidadeSF[];
+        });
+        return mapearEstrutura(estrutura);
       } catch {
         return req.reject(503, ERRO_INTEGRACAO, 'integracao');
       }
