@@ -5,6 +5,7 @@ import {
   ativarTemplate,
   desativarTemplate,
   consultarTemplateAdmin,
+  listarTemplatesAdmin,
   aplicarTemplate,
   type Consulta,
 } from './apoio/templates';
@@ -420,6 +421,24 @@ describe('Etapa 1: gestão cadastral de templates (R1-R4, R14, R15(b))', () => {
       const r = await ativarTemplate(enviar, id, comoAdmin);
       expect(r.status).toBe(200);
       expect(r.data.ativo).toBe(true);
+    });
+  });
+
+  describe('CA26a (R12): listarTemplates no AdministracaoService inclui inativos para o Administrador', () => {
+    it('Administrador listando com ativo=todos recebe também os templates inativos', async () => {
+      const nomeAtivo = nomeUnico('Admin lista ativo');
+      const nomeInativo = nomeUnico('Admin lista inativo');
+      await criarTemplateValido(nomeAtivo);
+      const { id: idInativo } = await criarTemplateValido(nomeInativo);
+      const desativacao = await desativarTemplate(enviar, idInativo, comoAdmin);
+      if (desativacao.status !== 200) throw new Error(`preparo desativarTemplate falhou: ${desativacao.status}`);
+
+      const r = await listarTemplatesAdmin(consultar, { ativo: 'todos' }, comoAdmin);
+
+      expect(r.status).toBe(200);
+      const nomes = (r.data as { nome: string }[]).map((t) => t.nome);
+      expect(nomes).toContain(nomeAtivo);
+      expect(nomes).toContain(nomeInativo);
     });
   });
 

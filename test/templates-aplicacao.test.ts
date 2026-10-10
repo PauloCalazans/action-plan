@@ -1,5 +1,5 @@
 import cds from '@sap/cds';
-import { criarTemplate, aplicarTemplate, type Consulta } from './apoio/templates';
+import { criarTemplate, editarTemplate, aplicarTemplate, type Consulta } from './apoio/templates';
 import { comoAdmin, comoGestor, comoUsuario, comoApp, comoM1001, semAuth } from './apoio/usuarios';
 import { criarAvulsa, abrirPorApp, mudarStatus, sufixoUnico, type Envia } from './apoio/tratativas';
 import { consultarEstruturaAcoes, mudarStatusAcao } from './apoio/acoes';
@@ -10,8 +10,9 @@ import { registrarCredenciais } from './apoio/credenciais';
 
 // Etapa 3 (RED): aplicação atômica de template a Tratativa com serialização D9, cálculo de
 // prazos e auditoria (R5-R11, R13, R15(a), R16).
-// CAs: CA12, CA13, CA14, CA14a, CA15, CA16, CA16a, CA16b, CA17, CA18, CA19, CA19b (aplicação),
-//      CA20, CA21a, CA22 (aplicação), CA23 (aplicação), CA24, CA25, CA25a, CA28, CA29, CA31, CA32.
+// CAs: CA10 (não retroatividade sobre Ações já geradas), CA12, CA13, CA14, CA14a, CA15, CA16,
+//      CA16a, CA16b, CA17, CA18, CA19, CA19b (aplicação), CA20, CA21a, CA22 (aplicação),
+//      CA23 (aplicação), CA24, CA25, CA25a, CA28, CA29, CA31, CA32.
 
 const { GET, POST } = cds.test(__dirname + '/..');
 const enviar = POST as unknown as Envia;
@@ -149,7 +150,7 @@ describe('Etapa 3: aplicação de template em Tratativa (R5-R11, R13, R15(a), R1
 
       const criadosEm = (await linhas('Acoes', { tratativa_codigo: tratativa })).map((a) => String(a.criadoEm));
       const ordenados = [...criadosEm].sort();
-      expect(criadosEm).not.toEqual(ordenados.slice().reverse());
+      expect(criadosEm).toEqual(ordenados);
       const unicos = new Set(criadosEm);
       expect(unicos.size).toBe(criadosEm.length);
     });
@@ -380,6 +381,48 @@ describe('Etapa 3: aplicação de template em Tratativa (R5-R11, R13, R15(a), R1
     });
   });
 
+  describe('CA10 (R3, R8): editarTemplate não retroage sobre Ações já geradas por aplicação anterior', () => {
+    it('Ações geradas antes da edição permanecem idênticas; nova aplicação usa os itens novos', async () => {
+      const nomeOriginal = nomeUnico('Template retroatividade');
+      const itensOriginais = [item(1, { descricao: 'Descrição original', prioridade: 'Alta', evidenciaObrigatoria: true, prazoRelativoDias: 3 })];
+      const { id: template } = await criarTemplateValido(nomeOriginal, itensOriginais);
+
+      const tratativa = await criarTratativaValida();
+      const aplicacaoAntes = await aplicarTemplate(enviar, tratativa, { template, responsavelPadrao: 'M1001' }, comoGestor);
+      expect(aplicacaoAntes.status).toBe(200);
+
+      const antes = await linhas('Acoes', { tratativa_codigo: tratativa });
+      expect(antes).toHaveLength(1);
+      const acaoAntes = {
+        descricao: antes[0].descricao,
+        prioridade: antes[0].prioridade,
+        prazo: antes[0].prazo,
+        evidenciaObrigatoria: antes[0].evidenciaObrigatoria,
+      };
+
+      const itensNovos = [item(1, { descricao: 'Descrição nova', prioridade: 'Baixa', evidenciaObrigatoria: false, prazoRelativoDias: 10 })];
+      const edicao = await editarTemplate(enviar, { id: template, nome: nomeOriginal, itens: itensNovos }, comoAdmin);
+      expect(edicao.status).toBe(200);
+
+      const depois = await linhas('Acoes', { tratativa_codigo: tratativa });
+      expect(depois).toHaveLength(1);
+      expect(depois[0].descricao).toBe(acaoAntes.descricao);
+      expect(depois[0].prioridade).toBe(acaoAntes.prioridade);
+      expect(depois[0].prazo).toBe(acaoAntes.prazo);
+      expect(depois[0].evidenciaObrigatoria).toBe(acaoAntes.evidenciaObrigatoria);
+
+      const outraTratativa = await criarTratativaValida();
+      const aplicacaoDepois = await aplicarTemplate(enviar, outraTratativa, { template, responsavelPadrao: 'M1001' }, comoGestor);
+      expect(aplicacaoDepois.status).toBe(200);
+
+      const acoesNovaAplicacao = await linhas('Acoes', { tratativa_codigo: outraTratativa });
+      expect(acoesNovaAplicacao).toHaveLength(1);
+      expect(acoesNovaAplicacao[0].descricao).toBe('Descrição nova');
+      expect(acoesNovaAplicacao[0].prioridade).toBe('Baixa');
+      expect(acoesNovaAplicacao[0].evidenciaObrigatoria).toBe(false);
+    });
+  });
+
   describe('CA21a (R5, R15): usuário sem papel de Gestor recusa na etapa 2 com 403', () => {
     it('usuário comum tentando aplicar template recebe 403 Acesso negado. antes de checar existência', async () => {
       const r = await aplicarTemplate(
@@ -437,7 +480,7 @@ describe('Etapa 3: aplicação de template em Tratativa (R5-R11, R13, R15(a), R1
       expect(historico).toHaveLength(4);
       for (const h of historico) {
         expect(h.evento).toBe('Criacao');
-        expect(h.autor).toBe('M1001');
+        expect(h.autor).toBe('gestor');
         expect(h.tipoAutor).toBe('Usuario');
         expect(h.template_id).toBe(template);
         expect(h.templateNome).toBe(nomeTemplate);
