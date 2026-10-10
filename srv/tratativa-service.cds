@@ -294,4 +294,39 @@ service TratativaService {
     /** R1, R5, R6, R7, R11, R13 (comentarios): inclui comentário na Ação ou Subação. */
     action comentarAcao(acao : String, texto : String, mencoes : many String) returns ResultadoComentario;
   };
+
+  /** R1, R8 (spec historico-e-auditoria): detalhe estruturado do evento de histórico. */
+  type DetalheEventoHistorico {
+    campo         : String(50);
+    valorAnterior : String(200);
+    valorNovo     : String(200);
+    justificativa : String(500);
+    evidencia     : UUID;
+    mimeType      : String(100);
+    tamanho       : Integer;
+  }
+
+  /** R1, R2, R6 (spec historico-e-auditoria): item unificado da trilha de auditoria. */
+  type ItemHistorico {
+    id              : UUID;
+    codigoTratativa : UUID;
+    codigoAcao      : UUID;
+    origem          : String(20);
+    tipoEvento      : String(50);
+    detalhe         : DetalheEventoHistorico;
+    dataHora        : Timestamp;
+    autor           : String(256);
+    tipoAutor       : m.TipoAutor;
+  }
+
+  /** R1, R4, R6, R7, R12 (spec historico-e-auditoria): consulta unificada de histórico da Tratativa. */
+  function consultarHistoricoTratativa(
+    tratativa     : UUID,
+    tipoEvento    : String,
+    codigoAcao    : UUID,
+    periodoInicio : String,
+    periodoFim    : String,
+    tamanhoPagina : Integer,
+    pagina        : Integer
+  ) returns many ItemHistorico;
 }
