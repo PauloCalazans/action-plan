@@ -28,7 +28,11 @@ export interface DetalheEventoHistorico {
   tamanho: number | null;
 }
 
-/** R1, R2, R6 (spec historico-e-auditoria): item unificado da trilha de auditoria, antes de autorização/mascaramento. */
+/**
+ * R1, R2, R6 (spec historico-e-auditoria): item unificado da trilha de auditoria. `autor` é `string`
+ * na leitura direta do banco e passa a admitir `null` depois do mascaramento LGPD (R5c, N3-3) aplicado
+ * por `srv/tratativa/historico-autorizacao.ts` para não-Gestores.
+ */
 export interface ItemHistoricoBruto {
   id: string;
   codigoTratativa: string;
@@ -37,7 +41,7 @@ export interface ItemHistoricoBruto {
   tipoEvento: string;
   detalhe: DetalheEventoHistorico;
   dataHora: string;
-  autor: string;
+  autor: string | null;
   tipoAutor: string;
 }
 
