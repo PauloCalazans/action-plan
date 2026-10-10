@@ -137,9 +137,7 @@ export async function aplicarTemplateTratativa(
   const codigoPorOrdem = new Map<number, string>();
   const linhasAcao: Record<string, unknown>[] = [];
 
-  function montarLinhaAcao(item: ItemTemplatePersistido, acaoMaeCodigo: string | null): string {
-    const codigo = cds.utils.uuid();
-    codigoPorOrdem.set(item.ordem, codigo);
+  function montarLinhaAcao(item: ItemTemplatePersistido, codigo: string, acaoMaeCodigo: string | null): void {
     const instanteItem = new Date(baseInstante.getTime() + item.ordem * 1000);
     linhasAcao.push({
       codigo,
@@ -154,12 +152,14 @@ export async function aplicarTemplateTratativa(
       dataConclusao: null,
       criadoEm: instanteItem.toISOString(),
     });
-    return codigo;
   }
 
+  for (const item of itens) codigoPorOrdem.set(item.ordem, cds.utils.uuid());
+
   for (const item of itens) {
+    const codigo = codigoPorOrdem.get(item.ordem) as string;
     const codigoMae = item.ordemPai === null ? null : codigoPorOrdem.get(item.ordemPai) as string;
-    montarLinhaAcao(item, codigoMae);
+    montarLinhaAcao(item, codigo, codigoMae);
   }
 
   await cds.db.run(INSERT.into(`${NS}.Acoes`).entries(linhasAcao));
