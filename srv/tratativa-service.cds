@@ -175,6 +175,20 @@ service TratativaService {
     conteudo    : String;
   }
 
+  /** R2, R15 (comentarios): item retornado pelas listagens de comentários (mencoes null sob LGPD para não-Gestor). */
+  type ItemComentario {
+    codigo   : UUID;
+    texto    : String(2000);
+    autor    : String(50);
+    criadoEm : Timestamp;
+    mencoes  : many String;
+  }
+
+  /** R1 (comentarios): resultado da inclusão de comentário na Tratativa ou Ação. */
+  type ResultadoComentario {
+    codigo : UUID;
+  }
+
   action   criarTratativaAvulsa(titulo : String(200), criticidade : String(10), descricao : String(5000),
                                 unidade : String(100), area : String(100), solicitante : String(50)) returns ResultadoAbertura;
 
@@ -213,6 +227,17 @@ service TratativaService {
   /** R11, R12 (006): baixa Evidência com conteúdo em Base64 e auditoria prévia. */
   function baixarEvidencia(tratativa : UUID, acao : UUID, evidencia : UUID) returns DetalheDownloadEvidencia;
 
+  /** R7, R8, R13 (comentarios): lista comentários diretos da Tratativa, paginados e ordenados cronologicamente. */
+  function listarComentariosTratativa(tratativa : UUID, tamanhoPagina : Integer, pagina : Integer) returns many ItemComentario;
+
+  /** R1, R5, R7, R13 (comentarios): lista comentários de Ação ou Subação, paginados e ordenados cronologicamente. */
+  function listarComentariosAcao(tratativa : UUID, acao : UUID, tamanhoPagina : Integer, pagina : Integer) returns many ItemComentario;
+
+  /** R3, R7 (comentarios): projeção somente leitura; escrita direta recusa com 405, leitura por não-Gestor recusa com 403. */
+  @readonly
+  @restrict: [{ grant: ['READ'], to: 'GestorTratativa' }]
+  entity Comentarios as projection on m.Comentarios;
+
   /**
    * Âncora das operações de ciclo de vida (R2, R12, R18). Só a chave é exposta; não há leitura,
    * criação, alteração nem exclusão pelo entity set (R11; leitura pelas functions acima).
@@ -222,7 +247,8 @@ service TratativaService {
   @restrict: [
     { grant: ['mudarStatus', 'editar', 'mudarCriticidade', 'criarAcao', 'criarSubacao', 'editarAcao', 'atribuirResponsavelPrincipal', 'incluirParticipante', 'removerParticipante', 'delegarAcao'], to: 'GestorTratativa' },
     { grant: ['mudarStatusAcao'], to: 'authenticated-user' },
-    { grant: ['anexarEvidencia', 'removerEvidencia'], to: 'authenticated-user' }
+    { grant: ['anexarEvidencia', 'removerEvidencia'], to: 'authenticated-user' },
+    { grant: ['comentarTratativa', 'comentarAcao'], to: 'authenticated-user' }
   ]
   entity Tratativas as projection on m.Tratativas { key codigo } actions {
     /** R2/R4/R5: a operação é identificada pelo Status de destino. */
@@ -261,5 +287,11 @@ service TratativaService {
 
     /** R1, R6, R7, R10, R12, R13 (006): remove logicamente Evidência da Ação ou Subação. */
     action removerEvidencia(acao : UUID, evidencia : UUID);
+
+    /** R1-R4, R7, R8, R13 (comentarios): inclui comentário direto na Tratativa. */
+    action comentarTratativa(texto : String, mencoes : many String) returns ResultadoComentario;
+
+    /** R1, R5, R6, R7, R11, R13 (comentarios): inclui comentário na Ação ou Subação. */
+    action comentarAcao(acao : String, texto : String, mencoes : many String) returns ResultadoComentario;
   };
 }
