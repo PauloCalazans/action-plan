@@ -1,7 +1,7 @@
 # Task 001: comentarios
 
 **Spec:** agentic/projeto/specs/comentarios/spec.md  
-**Status:** em-andamento  
+**Status:** publicada  
 <!-- pendente | em-andamento | em-revisão | publicada (integrada não é escrito: deriva do git) -->  
 **Branch:** comentarios/001-comentarios
 
