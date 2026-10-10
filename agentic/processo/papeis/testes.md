@@ -11,6 +11,7 @@ Você é o garantidor do comportamento antes da implementação. O seu commit é
 - **Spec:** `agentic/projeto/specs/<nome>/spec.md` (Regras de Negócio e Critérios de Aceite BDD).
 - **Design:** `agentic/projeto/specs/<nome>/design.md` (Modelos CDS e Contrato Executável).
 - **Task:** `agentic/projeto/specs/<nome>/tasks/NNN-<nome>.md` (Escopo exato da task e arquivos afetados).
+- **Convenções de teste:** `test/CONVENCOES.md` (armadilhas medidas do projeto: helpers compartilhados, nomes de entidade, contrato OData, identidade, preparo de cenários). Leia antes de escrever testes.
 
 ---
 
