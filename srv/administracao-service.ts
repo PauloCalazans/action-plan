@@ -13,6 +13,7 @@ import {
   consultarParametrosAlertas,
   type DadosParametrosAlertas,
 } from './alertas/parametros';
+import { listarAlertasEmitidos, type FiltrosListagemAlertas } from './alertas/consulta-alertas';
 import { processarAlertas } from './alertas/processamento';
 
 /**
@@ -31,7 +32,10 @@ export default class AdministracaoService extends cds.ApplicationService {
     this.before('*', (req) => {
       if (req.user.is('AplicativoOrigem')) req.reject(403, 'Acesso negado.');
       if (req.user.is('Administrador')) return;
-      if (req.user.is('GestorTratativa') && req.event === 'consultarParametrosAlertas') return;
+      if (
+        req.user.is('GestorTratativa')
+        && ['consultarParametrosAlertas', 'listarAlertasEmitidos'].includes(req.event)
+      ) return;
       req.reject(403, 'Acesso negado.');
     });
     this.on('criarTemplate', (req) => criarTemplate(req.data as DadosTemplate));
@@ -85,6 +89,7 @@ export default class AdministracaoService extends cds.ApplicationService {
       return atualizarParametrosAlertas(parametros);
     });
     this.on('executarProcessamentoAlertas', async () => processarAlertas(new Date(), { modoManual: true }));
+    this.on('listarAlertasEmitidos', (req) => listarAlertasEmitidos(req.data as FiltrosListagemAlertas));
     return super.init();
   }
 }

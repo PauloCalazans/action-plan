@@ -119,6 +119,20 @@ service AdministracaoService {
     falhas               : Integer;
   }
 
+  type ItemAlertaEmitido {
+    id           : UUID;
+    tipo         : m.TipoAlerta;
+    entidade     : m.EntidadeAlerta;
+    tratativa    : UUID;
+    acao         : UUID;
+    destinatario : String(50);
+    canal        : m.CanalNotificacao;
+    enviadoEm    : Timestamp;
+    statusEnvio  : m.StatusEnvioAlerta;
+    motivoFalha  : String(255);
+    dadosAlerta  : String(1000);
+  }
+
   /** R3: consulta os parâmetros vigentes por Administrador ou Gestor de Tratativa. */
   @restrict: [{ grant: '*', to: ['Administrador', 'GestorTratativa'] }]
   function consultarParametrosAlertas() returns DetalheParametrosAlertas;
@@ -136,4 +150,15 @@ service AdministracaoService {
   /** R12: execução sob demanda do processamento dos alertas, exclusiva do Administrador. */
   @restrict: [{ grant: '*', to: 'Administrador' }]
   action executarProcessamentoAlertas() returns RelatorioProcessamentoAlertas;
+
+  /** R11: consulta paginada de alertas emitidos para Administrador e Gestor de Tratativa. */
+  @restrict: [{ grant: '*', to: ['Administrador', 'GestorTratativa'] }]
+  function listarAlertasEmitidos(
+    tratativa     : UUID,
+    tipo          : String,
+    destinatario  : String,
+    statusEnvio   : String,
+    tamanhoPagina : Integer,
+    pagina        : Integer
+  ) returns many ItemAlertaEmitido;
 }
