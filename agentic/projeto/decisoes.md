@@ -99,8 +99,8 @@ Cada decisão vale para o projeto inteiro até ser revogada. Nunca apague uma de
   |---|---|---|
   | `dominio` (Lyra) | Antigravity | Gemini 3.8 Flash, esforço medium |
   | `arquiteto` (Vigia) | Antigravity | Gemini 3.8 Flash, esforço medium |
-  | `testes` (Sonda) | Kiro CLI | DeepSeek 3.2 |
-  | `dev` (Forja) | Kiro CLI | Claude Sonnet 4.5 |
+  | `testes` (Sonda) | Kiro CLI | Claude Sonnet 5 |
+  | `dev` (Forja) | Kiro CLI | Claude Sonnet 5 |
   | `revisor` (Revisor) | Antigravity | Gemini 3.8 Flash, esforço high |
 
   Os scripts determinísticos (`verify.sh`, `verifica-red.sh`, git) rodam no terminal Shell. `testes`, `dev` e `revisor` começam cada nova task com o contexto limpo.
@@ -109,6 +109,7 @@ Cada decisão vale para o projeto inteiro até ser revogada. Nunca apague uma de
 - **Verificado por:** por revisão; estado em `agentic/auto-mode`, nos `progress.md` das frentes e no `maestri list` do canvas.
 - **Data:** 2026-10-08
 - **Histórico:** entre ~22:40 e a retomada de 2026-10-08, a orquestração ficou temporariamente com uma sessão Kiro, que montou a fila de revisões (`agentic/.estado/execucao/2026-10-08-fila-despacho-revisoes.md`); a composição acima substitui a dessa transição.
+- **Ajuste (2026-10-09):** o papel `testes` passou por DeepSeek 3.2 → Claude Haiku 4.5 → Claude Sonnet 4.5, por retrabalho nos testes RED; por decisão do humano, `testes` e `dev` usam Claude Sonnet 5 no Kiro (mesmo custo do Sonnet 4.5). As armadilhas medidas ficaram em `test/CONVENCOES.md`.
 
 ## Decisões revogadas
 
