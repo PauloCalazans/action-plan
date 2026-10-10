@@ -205,6 +205,9 @@ entity HistoricoAcoes {
       evidencia     : UUID;
       mimeType      : String(100);
       tamanho       : Integer;
+      /** R11 (spec templates-de-acoes): metadado aditivo do template gerador da Ação, sem cópia de Descrição (LGPD). */
+      template      : Association to one Templates;
+      templateNome  : String(100);
 }
 
 /** R1, R2, R10 (spec evidencias): comprovação de execução de Ações/Subações. */

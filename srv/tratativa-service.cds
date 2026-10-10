@@ -220,6 +220,17 @@ service TratativaService {
     itens     : many DetalheItemTemplate;
   }
 
+  /** R6 (spec templates-de-acoes): atribuição personalizada de responsável a um item do template, por ordem. */
+  type AtribuicaoItemTemplate {
+    ordem       : Integer;
+    responsavel : String(50);
+  }
+
+  /** R5, R7 (spec templates-de-acoes): resultado da aplicação de template na Tratativa. */
+  type ResultadoAplicacaoTemplate {
+    totalAcoesCriadas : Integer;
+  }
+
   action   criarTratativaAvulsa(titulo : String(200), criticidade : String(10), descricao : String(5000),
                                 unidade : String(100), area : String(100), solicitante : String(50)) returns ResultadoAbertura;
 
@@ -285,7 +296,13 @@ service TratativaService {
     { grant: ['mudarStatus', 'editar', 'mudarCriticidade', 'criarAcao', 'criarSubacao', 'editarAcao', 'atribuirResponsavelPrincipal', 'incluirParticipante', 'removerParticipante', 'delegarAcao'], to: 'GestorTratativa' },
     { grant: ['mudarStatusAcao'], to: 'authenticated-user' },
     { grant: ['anexarEvidencia', 'removerEvidencia'], to: 'authenticated-user' },
-    { grant: ['comentarTratativa', 'comentarAcao'], to: 'authenticated-user' }
+    { grant: ['comentarTratativa', 'comentarAcao'], to: 'authenticated-user' },
+    // R5, R15(a) (spec templates-de-acoes); Ruling (desvio de N3-2/R-02): grant em 'authenticated-user'
+    // em vez de somado a GestorTratativa porque o enforcement estático de @restrict do runtime CAP
+    // rejeita com a mensagem fixa "Forbidden" (não customizável), incompatível com "Acesso negado."
+    // exigido pelo contrato D10 (CA21a); a restrição ao papel GestorTratativa é feita em código
+    // (srv/tratativa-service.ts, before('aplicarTemplateTratativa')), mesmo padrão de mudarStatusAcao/delegarAcao.
+    { grant: ['aplicarTemplateTratativa'], to: 'authenticated-user' }
   ]
   entity Tratativas as projection on m.Tratativas { key codigo } actions {
     /** R2/R4/R5: a operação é identificada pelo Status de destino. */
@@ -330,6 +347,9 @@ service TratativaService {
 
     /** R1, R5, R6, R7, R11, R13 (comentarios): inclui comentário na Ação ou Subação. */
     action comentarAcao(acao : String, texto : String, mencoes : many String) returns ResultadoComentario;
+
+    /** R5-R11, R13, R15(a), R16 (spec templates-de-acoes): aplica Template de Ações na Tratativa (D9, UTC). */
+    action aplicarTemplateTratativa(template : UUID, responsavelPadrao : String, atribuicoes : many AtribuicaoItemTemplate) returns ResultadoAplicacaoTemplate;
   };
 
   /** R1, R8 (spec historico-e-auditoria): detalhe estruturado do evento de histórico. */

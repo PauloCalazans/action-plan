@@ -20,6 +20,7 @@ import { listarComentariosTratativa, listarComentariosAcao } from './tratativa/c
 import { consultarHistoricoUnificado, paginar } from './tratativa/historico-consulta';
 import { filtrarPorAutorizacao, mascarar } from './tratativa/historico-autorizacao';
 import { listarTemplates, consultarTemplate, type FiltrosListagemTemplates } from './templates/templates-consulta';
+import { aplicarTemplateTratativa, type DadosAplicacaoTemplate } from './templates/templates-aplicacao';
 
 /** Contrato dos usuários: só monta o Autor e delega ao domínio (decisões 6, 14 e 15). */
 export default class TratativaService extends cds.ApplicationService {
@@ -28,9 +29,11 @@ export default class TratativaService extends cds.ApplicationService {
     // Registrado antes de qualquer outro handler.
     // CA22 (consulta) (spec templates-de-acoes R13, R15(c)): listarTemplates/consultarTemplate usam a
     // mensagem padronizada "Acesso negado." em vez do texto genérico deste serviço.
+    // CA22/CA32 (aplicação) (spec templates-de-acoes R13, R15(a)): aplicarTemplateTratativa idem,
+    // mesmo com a chave da Tratativa malformada na URL (este before(*) roda antes do parse do recurso).
     this.before('*', (req) => {
       if (!req.user.is('AplicativoOrigem')) return;
-      if (req.event === 'listarTemplates' || req.event === 'consultarTemplate') {
+      if (req.event === 'listarTemplates' || req.event === 'consultarTemplate' || req.event === 'aplicarTemplateTratativa') {
         req.reject(403, 'Acesso negado.');
       }
       req.reject(
@@ -39,6 +42,15 @@ export default class TratativaService extends cds.ApplicationService {
           ? 'Aplicativo de origem não cria Tratativa avulsa.'
           : 'Aplicativo de origem não usa este serviço.',
       );
+    });
+    // CA21a (R5, R15) (spec templates-de-acoes): só GestorTratativa aplica Template; recusa na etapa 2,
+    // antes de checar formato de parâmetros ou existência de recursos. Verificado em código (e não via
+    // @restrict somado ao grant estático de GestorTratativa) porque o enforcement genérico de @restrict
+    // do runtime CAP rejeita com a mensagem fixa "Forbidden" (não customizável por anotação), incompatível
+    // com a mensagem exata "Acesso negado." exigida pelo contrato de erros D10; grant no CDS fica em
+    // 'authenticated-user', com a restrição de papel aplicada aqui (mesmo padrão de mudarStatusAcao/delegarAcao).
+    this.before('aplicarTemplateTratativa', 'Tratativas', (req) => {
+      if (!req.user.is('GestorTratativa')) req.reject(403, 'Acesso negado.');
     });
     // Decisão 2: o entity set é só âncora das actions; leitura é pelas functions.
     this.before('READ', 'Tratativas', (req) => req.reject(405, 'Use as functions listarTratativas e consultarTratativa.'));
@@ -259,6 +271,11 @@ export default class TratativaService extends cds.ApplicationService {
     this.on('consultarTemplate', (req) => {
       const podeVerInativos = req.user.is('Administrador') || req.user.is('GestorTratativa');
       return consultarTemplate((req.data as { template?: string }).template, podeVerInativos);
+    });
+    // R5-R11, R13, R15(a), R16 (spec templates-de-acoes, etapa 3): aplicação atômica de Template na Tratativa.
+    this.on('aplicarTemplateTratativa', 'Tratativas', (req) => {
+      const { codigo } = req.params[0] as { codigo: string };
+      return aplicarTemplateTratativa(String(codigo).toLowerCase(), req.data as DadosAplicacaoTemplate);
     });
     return super.init();
   }
