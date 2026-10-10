@@ -5,8 +5,13 @@ import { comoGestor, comoUsuario, comoApp, semAuth, comoM1001, comoM2002, comoM9
 import { comentarTratativa, listarComentariosTratativa } from './apoio/comentarios';
 import { atribuirResponsavelPrincipal, incluirParticipante, consultarTratativa } from './apoio/responsaveis';
 import { criarAcao } from './apoio/acoes';
+import { registrarCredenciais } from './apoio/credenciais';
 
 const { GET, POST } = cds.test(__dirname + '/..');
+
+beforeAll(async () => {
+  await registrarCredenciais();
+});
 
 describe('Etapa 1: comentários na Tratativa (R1-R4, R7, R8, R13)', () => {
 
@@ -200,7 +205,7 @@ describe('Etapa 1: comentários na Tratativa (R1-R4, R7, R8, R13)', () => {
   // CA16: Responsável Principal da Tratativa (sem papel de Gestor) inclui comentário com sucesso
   test('CA16: Responsável Principal comenta na Tratativa com sucesso', async () => {
     const t = await criarAvulsa(POST, { titulo: `CA16-${sufixoUnico()}` });
-    await atribuirResponsavelPrincipal(POST, t.data.codigo, { responsavel: 'M1001' }, comoGestor);
+    await atribuirResponsavelPrincipal(POST, t.data.codigo, { responsavelPrincipal: 'M1001' }, comoGestor);
 
     const r = await comentarTratativa(POST, t.data.codigo, { texto: 'Comentário do RP' }, comoM1001);
 
@@ -220,7 +225,7 @@ describe('Etapa 1: comentários na Tratativa (R1-R4, R7, R8, R13)', () => {
   // CA20: Responsável de Ação (sem papel de Gestor nem na Tratativa) tentando comentarTratativa recusa com 403
   test('CA20: Responsável de Ação sem vínculo na Tratativa recebe 403', async () => {
     const t = await criarAvulsa(POST, { titulo: `CA20-${sufixoUnico()}` });
-    await criarAcao(POST, t.data.codigo, { titulo: 'Ação teste', responsavel: 'M1001' }, comoGestor);
+    await criarAcao(POST, t.data.codigo, { descricao: 'Ação teste', responsavel: 'M1001', prazo: '2026-12-31' }, comoGestor);
 
     const r = await comentarTratativa(POST, t.data.codigo, { texto: 'Tentativa indevida' }, comoM1001);
 
@@ -248,7 +253,7 @@ describe('Etapa 1: comentários na Tratativa (R1-R4, R7, R8, R13)', () => {
   // CA26: Tratativa Encerrada recusa com 409 'Tratativa Encerrada não pode ser alterada.'
   test('CA26: comentário em Tratativa Encerrada recusa com 409', async () => {
     const t = await criarAvulsa(POST, { titulo: `CA26-${sufixoUnico()}` });
-    await mudarStatus(POST, t.data.codigo, { novoStatus: 'Encerrada', justificativa: 'Concluída' }, comoGestor);
+    await mudarStatus(POST, t.data.codigo, { status: 'Encerrada', justificativa: 'Concluída' }, comoGestor);
 
     const r = await comentarTratativa(POST, t.data.codigo, { texto: 'teste' }, comoGestor);
 
@@ -260,7 +265,7 @@ describe('Etapa 1: comentários na Tratativa (R1-R4, R7, R8, R13)', () => {
   // CA27: Tratativa Cancelada recusa com 409 'Tratativa Cancelada não pode ser alterada.'
   test('CA27: comentário em Tratativa Cancelada recusa com 409', async () => {
     const t = await criarAvulsa(POST, { titulo: `CA27-${sufixoUnico()}` });
-    await mudarStatus(POST, t.data.codigo, { novoStatus: 'Cancelada', justificativa: 'Não aplicável' }, comoGestor);
+    await mudarStatus(POST, t.data.codigo, { status: 'Cancelada', justificativa: 'Não aplicável' }, comoGestor);
 
     const r = await comentarTratativa(POST, t.data.codigo, { texto: 'teste' }, comoGestor);
 
@@ -288,10 +293,10 @@ describe('Etapa 1: comentários na Tratativa (R1-R4, R7, R8, R13)', () => {
     expect(comentario.mencoes).toHaveLength(2);
   });
 
-  // CA32: Responsável Principal e Participantes recebem texto, criadoEm, codigo, autor mas mencoes como null
-  test('CA32: Responsável Principal recebe mencoes como null', async () => {
+  // CA32: Responsável Principal e Participantes recebem texto, criadoEm, codigo, autor mas mencoes como lista vazia (coleção OData não aceita null)
+  test('CA32: Responsável Principal recebe mencoes como lista vazia', async () => {
     const t = await criarAvulsa(POST, { titulo: `CA32-${sufixoUnico()}` });
-    await atribuirResponsavelPrincipal(POST, t.data.codigo, { responsavel: 'M1001' }, comoGestor);
+    await atribuirResponsavelPrincipal(POST, t.data.codigo, { responsavelPrincipal: 'M1001' }, comoGestor);
     await comentarTratativa(POST, t.data.codigo, { texto: 'Comentário 1', mencoes: ['M2002'] }, comoGestor);
 
     const r = await listarComentariosTratativa(GET, { tratativa: t.data.codigo }, comoM1001);
@@ -300,10 +305,10 @@ describe('Etapa 1: comentários na Tratativa (R1-R4, R7, R8, R13)', () => {
     const comentario = r.data[0];
     expect(comentario.texto).toBe('Comentário 1');
     expect(comentario.autor).toBeDefined();
-    expect(comentario.mencoes).toBeNull();
+    expect(comentario.mencoes).toEqual([]);
   });
 
-  test('CA32: Participante recebe mencoes como null', async () => {
+  test('CA32: Participante recebe mencoes como lista vazia', async () => {
     const t = await criarAvulsa(POST, { titulo: `CA32-${sufixoUnico()}` });
     await incluirParticipante(POST, t.data.codigo, { participante: 'M2002' }, comoGestor);
     await comentarTratativa(POST, t.data.codigo, { texto: 'Comentário 1', mencoes: ['M1001'] }, comoGestor);
@@ -312,13 +317,13 @@ describe('Etapa 1: comentários na Tratativa (R1-R4, R7, R8, R13)', () => {
 
     expect(r.status).toBe(200);
     const comentario = r.data[0];
-    expect(comentario.mencoes).toBeNull();
+    expect(comentario.mencoes).toEqual([]);
   });
 
   // CA33: Responsável de Ação e terceiros recebem lista vazia []
   test('CA33: Responsável de Ação sem vínculo na Tratativa recebe lista vazia', async () => {
     const t = await criarAvulsa(POST, { titulo: `CA33-${sufixoUnico()}` });
-    await criarAcao(POST, t.data.codigo, { titulo: 'Ação', responsavel: 'M1001' }, comoGestor);
+    await criarAcao(POST, t.data.codigo, { descricao: 'Ação', responsavel: 'M1001', prazo: '2026-12-31' }, comoGestor);
     await comentarTratativa(POST, t.data.codigo, { texto: 'Comentário' }, comoGestor);
 
     const r = await listarComentariosTratativa(GET, { tratativa: t.data.codigo }, comoM1001);
@@ -347,23 +352,23 @@ describe('Etapa 1: comentários na Tratativa (R1-R4, R7, R8, R13)', () => {
     expect(r.data).toEqual([]);
   });
 
-  // CA35a: qualquer não-Gestor recebe mencoes como null
-  test('CA35a: não-Gestor recebe mencoes como null', async () => {
+  // CA35a: qualquer não-Gestor recebe mencoes como lista vazia (coleção OData não aceita null)
+  test('CA35a: não-Gestor recebe mencoes como lista vazia', async () => {
     const t = await criarAvulsa(POST, { titulo: `CA35a-${sufixoUnico()}` });
-    await atribuirResponsavelPrincipal(POST, t.data.codigo, { responsavel: 'M1001' }, comoGestor);
+    await atribuirResponsavelPrincipal(POST, t.data.codigo, { responsavelPrincipal: 'M1001' }, comoGestor);
     await comentarTratativa(POST, t.data.codigo, { texto: 'teste', mencoes: ['M2002'] }, comoGestor);
 
     const r = await listarComentariosTratativa(GET, { tratativa: t.data.codigo }, comoM1001);
 
     expect(r.status).toBe(200);
-    expect(r.data[0].mencoes).toBeNull();
+    expect(r.data[0].mencoes).toEqual([]);
   });
 
   // CA38 (tratativa): consulta permitida em Tratativa Encerrada ou Cancelada
   test('CA38: consulta permitida em Tratativa Encerrada', async () => {
     const t = await criarAvulsa(POST, { titulo: `CA38-${sufixoUnico()}` });
     await comentarTratativa(POST, t.data.codigo, { texto: 'Comentário antes' }, comoGestor);
-    await mudarStatus(POST, t.data.codigo, { novoStatus: 'Encerrada', justificativa: 'OK' }, comoGestor);
+    await mudarStatus(POST, t.data.codigo, { status: 'Encerrada', justificativa: 'OK' }, comoGestor);
 
     const r = await listarComentariosTratativa(GET, { tratativa: t.data.codigo }, comoGestor);
 
@@ -503,7 +508,7 @@ describe('Etapa 1: comentários na Tratativa (R1-R4, R7, R8, R13)', () => {
   // CA50: visibilidade uniforme entre autorizados
   test('CA50: comentários visíveis uniformemente para autorizados', async () => {
     const t = await criarAvulsa(POST, { titulo: `CA50-${sufixoUnico()}` });
-    await atribuirResponsavelPrincipal(POST, t.data.codigo, { responsavel: 'M1001' }, comoGestor);
+    await atribuirResponsavelPrincipal(POST, t.data.codigo, { responsavelPrincipal: 'M1001' }, comoGestor);
     await incluirParticipante(POST, t.data.codigo, { participante: 'M2002' }, comoGestor);
     await comentarTratativa(POST, t.data.codigo, { texto: 'Comentário público' }, comoGestor);
 
@@ -539,7 +544,7 @@ describe('Etapa 1: comentários na Tratativa (R1-R4, R7, R8, R13)', () => {
 
   // CA56: Aplicativo com código malformado recebe 403 (etapa 3 precede etapa 4)
   test('CA56: Aplicativo com código malformado recebe 403', async () => {
-    const r = await comentarTratativa(POST, 'invalido!', { texto: 'teste' }, comoApp);
+    const r = await comentarTratativa(POST, 'xyz', { texto: 'teste' }, comoApp);
 
     expect(r.status).toBe(403);
   });
@@ -573,7 +578,7 @@ describe('Etapa 1: comentários na Tratativa (R1-R4, R7, R8, R13)', () => {
     const r = await consultarTratativa(GET, t.data.codigo, comoGestor);
 
     expect(r.status).toBe(200);
-    const chaves = Object.keys(r.data);
+    const chaves = Object.keys(r.data).filter((k) => !k.startsWith('@odata'));
     expect(chaves).toHaveLength(12);
     expect(chaves).toContain('codigo');
     expect(chaves).toContain('titulo');
@@ -583,7 +588,7 @@ describe('Etapa 1: comentários na Tratativa (R1-R4, R7, R8, R13)', () => {
 
   // CA67 (tratativa): parâmetro tratativa malformado na consulta recusa com 400 'Código inválido.', target: tratativa
   test('CA67: parâmetro tratativa malformado na consulta recusa com 400', async () => {
-    const r = await listarComentariosTratativa(GET, { tratativa: 'malformado!' }, comoGestor);
+    const r = await listarComentariosTratativa(GET, { tratativa: 'xyz' }, comoGestor);
 
     expect(r.status).toBe(400);
     const erro = (r.data as { error?: { message?: string; target?: string } }).error;
