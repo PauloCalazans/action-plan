@@ -7,7 +7,7 @@ import { atribuirResponsavelPrincipal, incluirParticipante, consultarTratativa }
 import { criarAcao } from './apoio/acoes';
 import { registrarCredenciais } from './apoio/credenciais';
 
-const { GET, POST } = cds.test(__dirname + '/..');
+const { GET, POST, PUT, PATCH, DELETE } = cds.test(__dirname + '/..');
 
 beforeAll(async () => {
   await registrarCredenciais();
@@ -111,10 +111,14 @@ describe('Etapa 1: comentários na Tratativa (R1-R4, R7, R8, R13)', () => {
     const t = await criarAvulsa(POST, { titulo: `CA9-${sufixoUnico()}` });
     const c = await comentarTratativa(POST, t.data.codigo, { texto: 'teste' }, comoGestor);
 
-    const rPut = await POST(`/api/tratativa/v1/Comentarios(${c.data.codigo})`, { texto: 'alterado' }, comoGestor);
+    const rPut = await PUT(`/api/tratativa/v1/Comentarios(${c.data.codigo})`, { texto: 'alterado' }, comoGestor);
     expect(rPut.status).toBe(405);
 
-    // PATCH e DELETE são verificados como 405 também (imutabilidade)
+    const rPatch = await PATCH(`/api/tratativa/v1/Comentarios(${c.data.codigo})`, { texto: 'alterado' }, comoGestor);
+    expect(rPatch.status).toBe(405);
+
+    const rDelete = await DELETE(`/api/tratativa/v1/Comentarios(${c.data.codigo})`, comoGestor);
+    expect(rDelete.status).toBe(405);
   });
 
   test('CA9: GET direto em Comentarios por não-Gestor recusa com 403', async () => {
