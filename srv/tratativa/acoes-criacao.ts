@@ -6,6 +6,7 @@ import { bloquearTratativa, exigirAlteravel } from './bloqueio';
 import { codigoValido } from './consulta';
 import { registrarHistorico, validarAutor } from './historico';
 import { recusar } from './recusa';
+import { validarMatricula } from './validacao-matricula';
 
 const NS = 'br.com.calazanstec';
 
@@ -51,6 +52,11 @@ async function criar(codigoTratativa: string, acaoMae: string | null, dados: Dad
     prioridade: validarPrioridade(dados.prioridade),
     evidenciaObrigatoria: validarEvidenciaObrigatoria(dados.evidenciaObrigatoria),
   };
+
+  // R27 (005): validação de formato de matrícula após validação semântica básica do 004
+  // Preserva as mensagens semânticas do 004 para ausente/vazio e comprimento > 50
+  // A mensagem de matrícula inválida aplica-se quando houver espaços no meio ou @
+  validarMatricula(campos.responsavel, 'responsavel');
 
   const codigo = cds.utils.uuid();
   const instante = agora();

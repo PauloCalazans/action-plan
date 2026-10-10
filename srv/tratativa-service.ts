@@ -4,10 +4,14 @@ import { consultarAcao, consultarEstruturaAcoes } from './tratativa/acoes-consul
 import { editarAcao, type CamposEdicaoAcao } from './tratativa/acoes-edicao';
 import { mudarStatusAcao } from './tratativa/acoes-ciclo-de-vida';
 import { criarAcao, criarSubacao, type DadosCriacaoAcao } from './tratativa/acoes-criacao';
+import { delegarAcao } from './tratativa/acoes-delegacao';
 import { mudarStatus } from './tratativa/ciclo-de-vida';
 import { alterarCriticidade } from './tratativa/criticidade';
 import { editarTratativa } from './tratativa/edicao';
+import { obterMatriculaUsuario } from './tratativa/identidade';
 import { consultarTratativa, listarTratativas, type FiltrosListagem } from './tratativa/listagem';
+import { atribuirResponsavelPrincipal, incluirParticipante, removerParticipante, consultarResponsaveis } from './tratativa/responsaveis-tratativa';
+import { minhasAcoes, minhasTratativas } from './tratativa/consultas-responsabilidade';
 
 /** Contrato dos usuários: só monta o Autor e delega ao domínio (decisões 6, 14 e 15). */
 export default class TratativaService extends cds.ApplicationService {
@@ -30,20 +34,20 @@ export default class TratativaService extends cds.ApplicationService {
       consultarTratativa((req.data as { codigo?: string }).codigo, req.user.is('GestorTratativa')),
     );
     this.on('criarTratativaAvulsa', (req) =>
-      abrirTratativa(req.data as DadosAbertura, { id: req.user.id, tipo: 'Usuario' }),
+      abrirTratativa(req.data as DadosAbertura, { id: obterMatriculaUsuario(req), tipo: 'Usuario' }),
     );
     this.on('mudarStatus', 'Tratativas', async (req) => {
       const { codigo } = req.params[0] as { codigo: string };
-      await mudarStatus(String(codigo).toLowerCase(), req.data, { id: req.user.id, tipo: 'Usuario' });
+      await mudarStatus(String(codigo).toLowerCase(), req.data, { id: obterMatriculaUsuario(req), tipo: 'Usuario' });
     });
     this.on('editar', 'Tratativas', async (req) => {
       const { codigo } = req.params[0] as { codigo: string };
-      await editarTratativa(String(codigo).toLowerCase(), req.data, { id: req.user.id, tipo: 'Usuario' });
+      await editarTratativa(String(codigo).toLowerCase(), req.data, { id: obterMatriculaUsuario(req), tipo: 'Usuario' });
     });
     this.on('mudarCriticidade', 'Tratativas', async (req) => {
       const { codigo } = req.params[0] as { codigo: string };
       await alterarCriticidade(String(codigo).toLowerCase(), (req.data as { criticidade?: string }).criticidade, {
-        id: req.user.id,
+        id: obterMatriculaUsuario(req),
         tipo: 'Usuario',
       });
     });
@@ -59,23 +63,21 @@ export default class TratativaService extends cds.ApplicationService {
     // 004 R1/R2: `acaoMae` passa como texto (String) para que ausente ou null vire 'undefined'/'null' e seja recusado como Código inválido.
     this.on('criarAcao', 'Tratativas', (req) => {
       const { codigo } = req.params[0] as { codigo: string };
-      return criarAcao(String(codigo).toLowerCase(), req.data as DadosCriacaoAcao, { id: req.user.id, tipo: 'Usuario' });
+      return criarAcao(String(codigo).toLowerCase(), req.data as DadosCriacaoAcao, { id: obterMatriculaUsuario(req), tipo: 'Usuario' });
     });
     // 004 R6-R12: `acao` passa como texto (String), pelo mesmo motivo de `acaoMae`: ausente ou null vira 'Código inválido.'.
+    // 005 R11, R16, R28: autorização dinâmica implementada no domínio; passa Request completo.
     this.on('mudarStatusAcao', 'Tratativas', async (req) => {
       const { codigo } = req.params[0] as { codigo: string };
       const { acao, status, justificativa } = req.data as { acao?: string; status?: string; justificativa?: string };
-      await mudarStatusAcao(String(codigo).toLowerCase(), String(acao).toLowerCase(), { status, justificativa }, {
-        id: req.user.id,
-        tipo: 'Usuario',
-      });
+      await mudarStatusAcao(req, String(codigo).toLowerCase(), String(acao).toLowerCase(), { status, justificativa });
     });
     // 004 R19/R20 (Ruling R-07): `acao` é tirado dos campos; o runtime já recusou qualquer campo fora da assinatura.
     this.on('editarAcao', 'Tratativas', async (req) => {
       const { codigo } = req.params[0] as { codigo: string };
       const { acao, ...campos } = req.data as { acao?: string } & CamposEdicaoAcao;
       await editarAcao(String(codigo).toLowerCase(), String(acao).toLowerCase(), campos, {
-        id: req.user.id,
+        id: obterMatriculaUsuario(req),
         tipo: 'Usuario',
       });
     });
@@ -83,9 +85,71 @@ export default class TratativaService extends cds.ApplicationService {
       const { codigo } = req.params[0] as { codigo: string };
       const { acaoMae, ...dados } = req.data as DadosCriacaoAcao & { acaoMae?: string | null };
       return criarSubacao(String(codigo).toLowerCase(), String(acaoMae).toLowerCase(), dados, {
-        id: req.user.id,
+        id: obterMatriculaUsuario(req),
         tipo: 'Usuario',
       });
+    });
+    // 005 R17, R26 (Ruling R-02): consulta de responsáveis exclusiva para o Gestor (403 estático do runtime para não-gestores).
+    this.on('consultarResponsaveis', (req) => {
+      const { tratativa } = req.data as { tratativa?: string };
+      return consultarResponsaveis(String(tratativa).toLowerCase());
+    });
+    // 005 R7, R14: atribuição ou reatribuição de Responsável Principal.
+    this.on('atribuirResponsavelPrincipal', 'Tratativas', async (req) => {
+      const { codigo } = req.params[0] as { codigo: string };
+      const { responsavelPrincipal, justificativa } = req.data as { responsavelPrincipal?: string; justificativa?: string };
+      await atribuirResponsavelPrincipal(String(codigo).toLowerCase(), responsavelPrincipal!, justificativa, {
+        id: obterMatriculaUsuario(req),
+        tipo: 'Usuario',
+      });
+    });
+    // 005 R9, R14: inclusão de participante.
+    this.on('incluirParticipante', 'Tratativas', async (req) => {
+      const { codigo } = req.params[0] as { codigo: string };
+      const { participante } = req.data as { participante?: string };
+      await incluirParticipante(String(codigo).toLowerCase(), participante!, { id: obterMatriculaUsuario(req), tipo: 'Usuario' });
+    });
+    // 005 R9, R14: remoção de participante.
+    this.on('removerParticipante', 'Tratativas', async (req) => {
+      const { codigo } = req.params[0] as { codigo: string };
+      const { participante } = req.data as { participante?: string };
+      await removerParticipante(String(codigo).toLowerCase(), participante!, { id: obterMatriculaUsuario(req), tipo: 'Usuario' });
+    });
+    // 005 R18, R20: consulta de Ações sob responsabilidade do colaborador.
+    this.on('minhasAcoes', (req) => {
+      const { status, matricula, tamanhoPagina, pagina } = req.data as {
+        status?: string;
+        matricula?: string;
+        tamanhoPagina?: number;
+        pagina?: number;
+      };
+      return minhasAcoes(req, status, matricula, tamanhoPagina, pagina);
+    });
+    // 005 R19, R20: consulta de Tratativas em que o colaborador é Responsável Principal ou Participante.
+    this.on('minhasTratativas', (req) => {
+      const { status, matricula, tamanhoPagina, pagina } = req.data as {
+        status?: string;
+        matricula?: string;
+        tamanhoPagina?: number;
+        pagina?: number;
+      };
+      return minhasTratativas(req, status, matricula, tamanhoPagina, pagina);
+    });
+    // 005 R8, R14, R29, R30: delegação de Ação com justificativa obrigatória.
+    this.on('delegarAcao', 'Tratativas', async (req) => {
+      const { codigo } = req.params[0] as { codigo: string };
+      const { acao, novoResponsavel, justificativa } = req.data as {
+        acao?: string;
+        novoResponsavel?: string;
+        justificativa?: string;
+      };
+      await delegarAcao(
+        String(codigo).toLowerCase(),
+        String(acao).toLowerCase(),
+        novoResponsavel!,
+        justificativa!,
+        { id: obterMatriculaUsuario(req), tipo: 'Usuario' },
+      );
     });
     return super.init();
   }

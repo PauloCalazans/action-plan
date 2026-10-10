@@ -29,12 +29,22 @@ type EventoHistorico : String(30) enum {
   Reabertura;
   Cancelamento;
   Edicao;
+  Atribuicao;
+  Reatribuicao;
+  InclusaoParticipante;
+  RemocaoParticipante;
 }
 
 type TipoAutor : String(20) enum {
   Aplicativo;
   Usuario;
   Sistema;
+}
+
+/** R19 (spec responsaveis-e-participantes): papel do usuário na Tratativa para a consulta Minhas Tratativas. */
+type PapelUsuarioTratativa : String(30) enum {
+  ResponsavelPrincipal = 'Responsável Principal';
+  Participante         = 'Participante';
 }
 
 /** R4 (spec plano-de-acao): prioridade da Ação (não afeta prazo da Tratativa). */
@@ -60,6 +70,7 @@ type EventoHistoricoAcao : String(30) enum {
   Reabertura;
   Cancelamento;
   Edicao;
+  Delegacao;
 }
 
 /** R22: Código opaco (UUID v4 gerado pela plataforma). R1, R2, R7, R10, R13, R20, R23. */
@@ -85,6 +96,22 @@ entity Tratativas {
       criadoEm              : Timestamp not null;
       /** R1 (spec plano-de-acao): composição hierárquica de Ações da Tratativa. */
       acoes                 : Composition of many Acoes on acoes.tratativa = $self;
+      /** R1, R3, R17 (spec responsaveis-e-participantes): Responsável Principal da Tratativa. */
+      @PersonalData.IsPotentiallyPersonal
+      responsavelPrincipal : String(50);
+      /** R1, R6 (spec responsaveis-e-participantes): lista de até 20 Participantes da Tratativa. */
+      participantes         : Composition of many ParticipantesTratativa on participantes.tratativa = $self;
+}
+
+/** R1, R6, R17 (spec responsaveis-e-participantes): participante colaborador da Tratativa. */
+@PersonalData.EntitySemantics: 'Other'
+entity ParticipantesTratativa {
+  key ID        : UUID;
+      tratativa : Association to one Tratativas not null;
+      @PersonalData.IsPotentiallyPersonal
+      matricula : String(50) not null;
+      sequencia : Integer not null;
+      criadoEm  : Timestamp not null;
 }
 
 /**

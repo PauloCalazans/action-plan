@@ -48,6 +48,12 @@ service TratativaService {
     solicitante           : String(50);
   }
 
+  /** R17, R26 (005; Ruling R-02): estrutura de responsáveis e participantes para o Gestor. */
+  type DetalheResponsaveis {
+    responsavelPrincipal : String(50);
+    participantes        : many String;
+  }
+
   /** R2/R25 (004): item de Subação dentro da árvore (sem subações aninhadas). */
   type ItemSubacaoEstrutura {
     codigo                : UUID;
@@ -87,6 +93,36 @@ service TratativaService {
     subacoes              : many ItemSubacaoEstrutura;
   }
 
+  /** R18 (005): item de Ação retornado pela consulta Minhas Ações (sem campo responsavel). */
+  type ItemMinhasAcoes {
+    codigo               : UUID;
+    codigoTratativa      : UUID;
+    tituloTratativa      : String(200);
+    statusTratativa      : m.StatusTratativa;
+    descricao            : String(500);
+    prioridade           : m.PrioridadeAcao;
+    status               : m.StatusAcao;
+    prazo                : Date;
+    evidenciaObrigatoria : String(3);
+    dataConclusao        : Date;
+    acaoMae              : UUID;
+  }
+
+  /** R19 (005): item de Tratativa retornado pela consulta Minhas Tratativas (dez campos de ItemListagem + meuPapel). */
+  type ItemMinhasTratativas {
+    codigo                : UUID;
+    titulo                : String(200);
+    origem                : String(100);
+    idOrigem              : String(50);
+    criticidade           : m.Criticidade;
+    status                : m.StatusTratativa;
+    unidade               : String(100);
+    area                  : String(100);
+    dataCriacao           : Date;
+    dataPrevistaConclusao : Date;
+    meuPapel              : m.PapelUsuarioTratativa;
+  }
+
   action   criarTratativaAvulsa(titulo : String(200), criticidade : String(10), descricao : String(5000),
                                 unidade : String(100), area : String(100), solicitante : String(50)) returns ResultadoAbertura;
 
@@ -97,11 +133,21 @@ service TratativaService {
   /** R26: consulta pelo Código; inexistente → 404. */
   function consultarTratativa(codigo : UUID) returns DetalheTratativa;
 
+  /** R17, R26 (005; Ruling R-02): consulta de responsáveis exclusiva para o Gestor. */
+  @restrict: [{ grant: '*', to: 'GestorTratativa' }]
+  function consultarResponsaveis(tratativa : UUID) returns DetalheResponsaveis;
+
   /** R25 (004): consulta a estrutura hierárquica completa de Ações e Subações de uma Tratativa. */
   function consultarEstruturaAcoes(tratativa : UUID) returns many ItemEstruturaAcao;
 
   /** R25 (004): consulta uma Ação ou Subação pelo Código dela e da Tratativa. */
   function consultarAcao(tratativa : UUID, codigo : UUID) returns DetalheAcao;
+
+  /** R18, R20 (005): lista Ações e Subações sob responsabilidade do colaborador. */
+  function minhasAcoes(status : String, matricula : String, tamanhoPagina : Integer, pagina : Integer) returns many ItemMinhasAcoes;
+
+  /** R19, R20 (005): lista Tratativas em que o colaborador é Responsável Principal ou Participante. */
+  function minhasTratativas(status : String, matricula : String, tamanhoPagina : Integer, pagina : Integer) returns many ItemMinhasTratativas;
 
   /**
    * Âncora das operações de ciclo de vida (R2, R12, R18). Só a chave é exposta; não há leitura,
@@ -109,7 +155,10 @@ service TratativaService {
    * Parâmetros sem tamanho de propósito: o domínio valida tamanho depois de papel, existência e estado (R31).
    */
   @readonly
-  @restrict: [{ grant: ['mudarStatus', 'editar', 'mudarCriticidade', 'criarAcao', 'criarSubacao', 'mudarStatusAcao', 'editarAcao'], to: 'GestorTratativa' }]
+  @restrict: [
+    { grant: ['mudarStatus', 'editar', 'mudarCriticidade', 'criarAcao', 'criarSubacao', 'editarAcao', 'atribuirResponsavelPrincipal', 'incluirParticipante', 'removerParticipante', 'delegarAcao'], to: 'GestorTratativa' },
+    { grant: ['mudarStatusAcao'], to: 'authenticated-user' }
+  ]
   entity Tratativas as projection on m.Tratativas { key codigo } actions {
     /** R2/R4/R5: a operação é identificada pelo Status de destino. */
     action mudarStatus(status : String, justificativa : String);
@@ -129,5 +178,17 @@ service TratativaService {
 
     /** 004 R19/R20/R21: edita campos editáveis de Ação ou Subação Pendente ou Em andamento (responsavel não é editável, Ruling R-07). */
     action editarAcao(acao : UUID, descricao : String, prazo : String, prioridade : String, evidenciaObrigatoria : String);
+
+    /** R7, R14 (005): primeira atribuição ou reatribuição de Responsável Principal da Tratativa. */
+    action atribuirResponsavelPrincipal(responsavelPrincipal : String, justificativa : String);
+
+    /** R9, R14 (005): inclusão de participante na Tratativa (até 20). */
+    action incluirParticipante(participante : String);
+
+    /** R9, R14 (005): remoção de participante da Tratativa. */
+    action removerParticipante(participante : String);
+
+    /** R8, R14, R29, R30 (005): delegação de Ação com justificativa obrigatória e histórico dedicado. */
+    action delegarAcao(acao : UUID, novoResponsavel : String, justificativa : String);
   };
 }

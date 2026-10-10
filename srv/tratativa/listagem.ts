@@ -23,6 +23,25 @@ const COLUNAS_ITEM = ['codigo', 'titulo', 'origem', 'idOrigem', 'criticidade', '
 /** Filtro ausente, vazio ou só espaços não filtra (decisão 12). */
 const informado = (v?: string | null): v is string => typeof v === 'string' && v.trim() !== '';
 
+/**
+ * R20 (spec responsaveis-e-participantes): função pura de cálculo de paginação, extraída para reutilização
+ * nas consultas minhasAcoes e minhasTratativas. Preserva 100% o comportamento estabelecido no intent 003.
+ * @param tamanhoPagina - Tamanho da página solicitado (opcional, padrão 50)
+ * @param pagina - Número da página solicitado (opcional, padrão 1)
+ * @returns Objeto com tamanho e offset validados
+ */
+export function extrairPaginacao(tamanhoPagina?: number | null, pagina?: number | null): { tamanho: number; offset: number } {
+  const tamanho = tamanhoPagina ?? PADRAO_TAMANHO;
+  if (!Number.isInteger(tamanho) || tamanho < 1 || tamanho > MAX_TAMANHO) {
+    recusar(400, 'O campo Tamanho da página aceita de 1 a 200.', 'tamanhoPagina');
+  }
+  const pag = pagina ?? 1;
+  if (!Number.isInteger(pag) || pag < 1) {
+    recusar(400, 'O campo Página deve ser 1 ou maior.', 'pagina');
+  }
+  return { tamanho, offset: (pag - 1) * tamanho };
+}
+
 /** R24/R25: filtros combinados, ordem fixa e página; só os dez campos de ItemListagem. */
 export async function listarTratativas(filtros: FiltrosListagem): Promise<ItemListagem[]> {
   const { origem, idOrigem, criticidade, status, unidade, area } = filtros;
@@ -32,12 +51,7 @@ export async function listarTratativas(filtros: FiltrosListagem): Promise<ItemLi
   if (informado(status) && !statusValidos().includes(status)) {
     recusar(400, 'Status inválido: use Aberta, Em andamento, Encerrada ou Cancelada.', 'status');
   }
-  const tamanho = filtros.tamanhoPagina ?? PADRAO_TAMANHO;
-  if (!Number.isInteger(tamanho) || tamanho < 1 || tamanho > MAX_TAMANHO) {
-    recusar(400, 'O campo Tamanho da página aceita de 1 a 200.', 'tamanhoPagina');
-  }
-  const pagina = filtros.pagina ?? 1;
-  if (!Number.isInteger(pagina) || pagina < 1) recusar(400, 'O campo Página deve ser 1 ou maior.', 'pagina');
+  const { tamanho, offset } = extrairPaginacao(filtros.tamanhoPagina, filtros.pagina);
 
   const onde: Record<string, string> = {};
   if (informado(origem)) onde.origemNormalizada = normalizarTexto(origem) as string;
@@ -52,7 +66,7 @@ export async function listarTratativas(filtros: FiltrosListagem): Promise<ItemLi
       .columns(...COLUNAS_ITEM)
       .where(onde)
       .orderBy('dataPrevistaConclusao', 'dataCriacao', 'codigo')
-      .limit(tamanho, (pagina - 1) * tamanho),
+      .limit(tamanho, offset),
   )) as ItemListagem[];
 }
 
