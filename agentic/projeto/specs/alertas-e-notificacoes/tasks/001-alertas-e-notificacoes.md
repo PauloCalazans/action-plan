@@ -1,7 +1,7 @@
 # Task 001: alertas-e-notificacoes
 
 **Spec:** agentic/projeto/specs/alertas-e-notificacoes/spec.md  
-**Status:** em-andamento  
+**Status:** publicada  
 <!-- pendente | em-andamento | em-revisão | publicada (integrada não é escrito: deriva do git) -->  
 **Branch:** alertas-e-notificacoes/001-alertas-e-notificacoes
 
