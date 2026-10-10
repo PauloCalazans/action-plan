@@ -33,6 +33,7 @@ type EventoHistorico : String(30) enum {
   Reatribuicao;
   InclusaoParticipante;
   RemocaoParticipante;
+  InclusaoComentario;
 }
 
 type TipoAutor : String(20) enum {
@@ -74,6 +75,7 @@ type EventoHistoricoAcao : String(30) enum {
   InclusaoEvidencia;
   RemocaoEvidencia;
   DownloadEvidencia;
+  InclusaoComentario;
 }
 
 /** R22: Código opaco (UUID v4 gerado pela plataforma). R1, R2, R7, R10, R13, R20, R23. */
@@ -224,4 +226,27 @@ entity Evidencias {
       removidoEm   : Timestamp;
       @PersonalData.IsPotentiallyPersonal
       autorRemocao : String(50);
+}
+
+/** R1, R2 (spec comentarios): comunicação colaborativa vinculada à Tratativa ou Ação. */
+@PersonalData.EntitySemantics: 'Other'
+entity Comentarios {
+  key codigo    : UUID;
+      tratativa : Association to one Tratativas not null;
+      acao      : Association to one Acoes;
+      @PersonalData.IsPotentiallyPersonal
+      texto     : String(2000) not null;
+      @PersonalData.IsPotentiallyPersonal
+      autor     : String(50) not null;
+      criadoEm  : Timestamp not null;
+      mencoes   : Composition of many MencoesComentario on mencoes.comentario = $self;
+}
+
+/** R2, R4 (spec comentarios): matrículas mencionadas no comentário. */
+@PersonalData.EntitySemantics: 'Other'
+entity MencoesComentario {
+  key ID         : UUID;
+      comentario : Association to one Comentarios not null;
+      @PersonalData.IsPotentiallyPersonal
+      matricula  : String(50) not null;
 }
