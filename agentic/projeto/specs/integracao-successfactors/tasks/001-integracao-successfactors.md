@@ -36,6 +36,10 @@ Entregar o intent 011 implementando a integração corporativa em modo estritame
 - `test/sf-diretorio-alertas-cache.test.ts`
 - `test/sf-consulta-colaboradores.test.ts`
 - `test/sf-estrutura-resiliencia-d10.test.ts`
+- `test/alertas-parametros-governanca.test.ts` (010; Ruling R-04: CA37/CA39 com o diretório real)
+- `test/alertas-motor-regras.test.ts` (010; Ruling R-04: setup das pessoas no provedor)
+- `test/alertas-despacho-idempotencia.test.ts` (010; Ruling R-04: setup das pessoas no provedor)
+- `test/alertas-consulta-auditoria.test.ts` (010; Ruling R-04: setup das pessoas no provedor)
 
 ---
 
