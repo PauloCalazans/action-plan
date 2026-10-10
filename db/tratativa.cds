@@ -228,6 +228,27 @@ entity Evidencias {
       autorRemocao : String(50);
 }
 
+/** R1, R2 (spec templates-de-acoes): Cabeçalho do template de ações. */
+entity Templates {
+  key id        : UUID;
+      nome      : String(100) not null;
+      descricao : String(500);
+      ativo     : Boolean not null default true;
+      itens     : Composition of many ItensTemplate on itens.template = $self;
+}
+
+/** R1, R2 (spec templates-de-acoes): Itens ordenados do template de ações. */
+entity ItensTemplate {
+  key id                   : UUID;
+      template             : Association to one Templates not null;
+      ordem                : Integer not null;
+      descricao            : String(500) not null;
+      prioridade           : PrioridadeAcao not null default 'Média';
+      evidenciaObrigatoria : Boolean not null default false;
+      prazoRelativoDias    : Integer not null;
+      ordemPai             : Integer;
+}
+
 /** R1, R2 (spec comentarios): comunicação colaborativa vinculada à Tratativa ou Ação. */
 @PersonalData.EntitySemantics: 'Other'
 entity Comentarios {
