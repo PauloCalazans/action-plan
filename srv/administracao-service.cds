@@ -53,6 +53,14 @@ service AdministracaoService {
     itens     : many DetalheItemTemplate;
   }
 
+  type ItemListagemTemplate {
+    id              : UUID;
+    nome            : String(100);
+    descricao       : String(500);
+    ativo           : Boolean;
+    quantidadeItens : Integer;
+  }
+
   /** Resultado vazio para ações sem retorno de domínio, garantindo HTTP 200 (não 204). */
   type ResultadoVazio {
     ok : Boolean;
@@ -82,6 +90,13 @@ service AdministracaoService {
   action desativarTemplate(
     id : UUID
   ) returns ResultadoAtivacaoTemplate;
+
+  /** R12 (spec templates-de-acoes): lista templates administrativos, incluindo inativos, com paginação. */
+  function listarTemplates(
+    ativo         : String,
+    tamanhoPagina : Integer,
+    pagina        : Integer
+  ) returns many ItemListagemTemplate;
 
   /** R12 (spec templates-de-acoes): consulta de detalhe do template com itens ordenados por ordem. */
   function consultarTemplate(

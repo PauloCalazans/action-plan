@@ -275,7 +275,10 @@ export default class TratativaService extends cds.ApplicationService {
     // R5-R11, R13, R15(a), R16 (spec templates-de-acoes, etapa 3): aplicação atômica de Template na Tratativa.
     this.on('aplicarTemplateTratativa', 'Tratativas', (req) => {
       const { codigo } = req.params[0] as { codigo: string };
-      return aplicarTemplateTratativa(String(codigo).toLowerCase(), req.data as DadosAplicacaoTemplate);
+      return aplicarTemplateTratativa(String(codigo).toLowerCase(), req.data as DadosAplicacaoTemplate, {
+        id: obterMatriculaUsuario(req),
+        tipo: 'Usuario',
+      });
     });
     return super.init();
   }

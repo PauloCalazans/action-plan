@@ -7,6 +7,7 @@ import {
   consultarTemplateAdministrativo,
   type DadosTemplate,
 } from './templates/templates-cadastro';
+import { listarTemplates, type FiltrosListagemTemplates } from './templates/templates-consulta';
 
 /**
  * Administração da plataforma (R11, R18, e spec templates-de-acoes R1-R4, R14, R15(b)).
@@ -30,6 +31,7 @@ export default class AdministracaoService extends cds.ApplicationService {
     });
     this.on('ativarTemplate', (req) => ativarTemplate((req.data as { id?: string }).id));
     this.on('desativarTemplate', (req) => desativarTemplate((req.data as { id?: string }).id));
+    this.on('listarTemplates', (req) => listarTemplates(req.data as FiltrosListagemTemplates, true));
     this.on('consultarTemplate', (req) => consultarTemplateAdministrativo((req.data as { template?: string }).template));
     return super.init();
   }

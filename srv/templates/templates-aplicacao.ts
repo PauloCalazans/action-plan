@@ -96,12 +96,13 @@ function resolverResponsaveis(
 /**
  * R5-R11, R13, R15(a), R16 (spec templates-de-acoes): aplica Template de Ações na Tratativa.
  * Ordem: bloqueio D9 (404 Tratativa), existência do Template (404), estado da Tratativa (409),
- * estado do Template (409), responsáveis (400), persistência prioritária das Ações mãe antes das
- * Subações, histórico `Criacao` por Ação (sem Descrição, com metadado do template), tudo atômico.
+ * estado do Template (409), responsáveis (400), persistência pela ordem do Template e histórico
+ * `Criacao` por Ação (sem Descrição, com metadado do template), tudo atômico.
  */
 export async function aplicarTemplateTratativa(
   codigoTratativa: string,
   dados: DadosAplicacaoTemplate,
+  autor: Autor,
 ): Promise<{ totalAcoesCriadas: number }> {
   if (typeof dados.template !== 'string' || !idValido(dados.template)) {
     recusar(400, 'Código inválido.', 'template');
@@ -132,11 +133,7 @@ export async function aplicarTemplateTratativa(
   // R7(f): data base da aplicação em UTC; cada item recebe prazo estritamente posterior a hoje.
   const baseInstante = agora();
 
-  // R7(h), I5: Ações mãe (ordemPai null) antes das Subações; carimbos criadoEm distintos e crescentes
-  // na ordem do template, preservando a sequência na consulta analítica (004 R25).
-  const maes = itens.filter((i) => i.ordemPai === null);
-  const filhas = itens.filter((i) => i.ordemPai !== null);
-
+  // R7(h), I5: itens ordenados pelo Template recebem carimbos distintos e crescentes.
   const codigoPorOrdem = new Map<number, string>();
   const linhasAcao: Record<string, unknown>[] = [];
 
@@ -160,24 +157,20 @@ export async function aplicarTemplateTratativa(
     return codigo;
   }
 
-  for (const mae of maes) montarLinhaAcao(mae, null);
-  for (const filha of filhas) {
-    const codigoMae = codigoPorOrdem.get(filha.ordemPai as number) as string;
-    montarLinhaAcao(filha, codigoMae);
+  for (const item of itens) {
+    const codigoMae = item.ordemPai === null ? null : codigoPorOrdem.get(item.ordemPai) as string;
+    montarLinhaAcao(item, codigoMae);
   }
 
   await cds.db.run(INSERT.into(`${NS}.Acoes`).entries(linhasAcao));
 
   // R11, LGPD (004 R23): histórico Criacao por Ação gerada, com metadado do template e sem Descrição.
-  // Autor da Criacao é a matrícula do Responsável atribuído à própria Ação (impessoalidade do Template,
-  // R6; cada Ação pode ter responsável distinto via atribuicoes), com tipoAutor Usuario.
   for (const linha of linhasAcao) {
     const codigoAcao = linha.codigo as string;
     const quando = new Date(linha.criadoEm as string);
-    const autorAcao: Autor = { id: linha.responsavel as string, tipo: 'Usuario' };
     await registrarHistorico(
       codigoTratativa,
-      autorAcao,
+      autor,
       [{ evento: 'Criacao', template: template.id, templateNome: template.nome }],
       quando,
       codigoAcao,
