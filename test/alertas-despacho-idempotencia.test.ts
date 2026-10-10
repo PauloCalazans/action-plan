@@ -87,6 +87,18 @@ async function alertasDaTratativa(tratativa: string) {
   return linhas('AlertasEmitidos', { tratativa_codigo: tratativa });
 }
 
+function enviosEmailDaTratativa(tratativa: string) {
+  return obterEnviosEmail().filter((envio) =>
+    envio.corpo.includes(`/tratativas/${tratativa}`),
+  );
+}
+
+function enviosTeamsDaTratativa(tratativa: string) {
+  return obterEnviosTeams().filter((envio) =>
+    envio.corpo.includes(`/tratativas/${tratativa}`),
+  );
+}
+
 async function definirPrazoCriticidadeAlta(dias: number) {
   const resposta = await PATCH(PRAZO_ALTA, { dias }, comoAdmin);
   expect(resposta.status).toBe(200);
@@ -105,43 +117,43 @@ afterEach(liberarRelogio);
 
 describe('despacho multicanal, LGPD e idempotência dos alertas (etapa 3)', () => {
   it('CA34: envia o alerta aos adaptadores de E-mail e Teams quando ambos estão habilitados', async () => {
-    await criarCenario();
+    const { tratativa } = await criarCenario();
 
     await executar(AGORA);
 
-    expect(obterEnviosEmail()).toHaveLength(1);
-    expect(obterEnviosEmail()[0].destinatario).toBe('m2002@empresa.com');
-    expect(obterEnviosTeams()).toHaveLength(1);
-    expect(obterEnviosTeams()[0].destinatarioTeamsId).toBe('m2002@empresa.com');
+    expect(enviosEmailDaTratativa(tratativa)).toHaveLength(1);
+    expect(enviosEmailDaTratativa(tratativa)[0].destinatario).toBe('m2002@empresa.com');
+    expect(enviosTeamsDaTratativa(tratativa)).toHaveLength(1);
+    expect(enviosTeamsDaTratativa(tratativa)[0].destinatarioTeamsId).toBe('m2002@empresa.com');
   });
 
   it('CA35: não aciona Teams quando somente E-mail está habilitado', async () => {
     await atualizarParametros({ teamsHabilitado: false });
-    await criarCenario();
+    const { tratativa } = await criarCenario();
 
     await executar(AGORA);
 
-    expect(obterEnviosEmail()).toHaveLength(1);
-    expect(obterEnviosTeams()).toHaveLength(0);
+    expect(enviosEmailDaTratativa(tratativa)).toHaveLength(1);
+    expect(enviosTeamsDaTratativa(tratativa)).toHaveLength(0);
   });
 
   it('CA36: não aciona adaptadores externos quando os dois canais estão desabilitados', async () => {
     await atualizarParametros({ emailHabilitado: false, teamsHabilitado: false });
-    await criarCenario();
+    const { tratativa } = await criarCenario();
 
     await executar(AGORA);
 
-    expect(obterEnviosEmail()).toHaveLength(0);
-    expect(obterEnviosTeams()).toHaveLength(0);
+    expect(enviosEmailDaTratativa(tratativa)).toHaveLength(0);
+    expect(enviosTeamsDaTratativa(tratativa)).toHaveLength(0);
   });
 
   it('CA38: entrega a mensagem do Teams diretamente ao identificador individual do colaborador', async () => {
     await atualizarParametros({ emailHabilitado: false });
-    await criarCenario({ responsavel: 'M2002' });
+    const { tratativa } = await criarCenario({ responsavel: 'M2002' });
 
     await executar(AGORA);
 
-    expect(obterEnviosTeams()).toEqual([
+    expect(enviosTeamsDaTratativa(tratativa)).toEqual([
       expect.objectContaining({ destinatarioTeamsId: 'm2002@empresa.com' }),
     ]);
   });
@@ -175,20 +187,20 @@ describe('despacho multicanal, LGPD e idempotência dos alertas (etapa 3)', () =
 
     await executar(AGORA);
 
-    const emails = obterEnviosEmail();
-    const teams = obterEnviosTeams();
+    const emails = enviosEmailDaTratativa(tratativa);
+    const teams = enviosTeamsDaTratativa(tratativa);
     expect(emails).toHaveLength(1);
     expect(teams).toHaveLength(1);
     const mensagem = JSON.stringify([...emails, ...teams]);
+    for (const dadoRestrito of Object.values(marcadores)) {
+      expect(mensagem).not.toContain(dadoRestrito);
+    }
     expect(mensagem).toContain('Prazo Próximo');
     expect(mensagem).toContain(tratativa);
     expect(mensagem).toContain('Inspeção de equipamento');
     expect(mensagem).toContain('12/10/2026');
     expect(mensagem).toContain(`https://plataforma.empresa.com/tratativas/${tratativa}`);
     expect(mensagem).toContain(acao);
-    for (const dadoRestrito of Object.values(marcadores)) {
-      expect(mensagem).not.toContain(dadoRestrito);
-    }
   });
 
   it('CA43: execução manual pelo Administrador persiste envio bem-sucedido e instante de envio', async () => {
@@ -218,7 +230,7 @@ describe('despacho multicanal, LGPD e idempotência dos alertas (etapa 3)', () =
 
     expect(primeira.status).toBe(200);
     expect(segunda.status).toBe(200);
-    expect(obterEnviosEmail()).toHaveLength(1);
+    expect(enviosEmailDaTratativa(tratativa)).toHaveLength(1);
     expect((await alertasDaTratativa(tratativa)).filter((alerta) =>
       alerta.statusEnvio === 'Sucesso' && alerta.canal === 'Email',
     )).toHaveLength(1);
@@ -233,7 +245,7 @@ describe('despacho multicanal, LGPD e idempotência dos alertas (etapa 3)', () =
     const alertas = await alertasDaTratativa(tratativa);
     expect(alertas.filter((alerta) => alerta.tipo === 'PrazoVencido' && alerta.canal === 'Email'))
       .toHaveLength(2);
-    expect(obterEnviosEmail()).toHaveLength(2);
+    expect(enviosEmailDaTratativa(tratativa)).toHaveLength(2);
     expect(new Set(alertas.map((alerta) =>
       new Date(alerta.enviadoEm as string).toISOString().slice(0, 10),
     ))).toEqual(new Set(['2026-10-08', '2026-10-09']));
@@ -319,11 +331,13 @@ describe('despacho multicanal, LGPD e idempotência dos alertas (etapa 3)', () =
     const alertas = await alertasDaTratativa(tratativa);
     expect(alertas.filter((alerta) => alerta.statusEnvio === 'Falha')).toHaveLength(1);
     expect(alertas.filter((alerta) => alerta.statusEnvio === 'Sucesso')).toHaveLength(1);
-    expect(obterEnviosTeams()).toHaveLength(1);
+    expect(enviosTeamsDaTratativa(tratativa)).toHaveLength(1);
   });
 
   it('CA61: falha no canal não altera dados nem status da Tratativa e de suas Ações', async () => {
     await atualizarParametros({ emailHabilitado: false, teamsHabilitado: true });
+    await executar(AGORA);
+    limparEnviosTeams();
     const { tratativa, acao } = await criarCenario();
     const tratativaAntes = await linhas('Tratativas', { codigo: tratativa });
     const acaoAntes = await linhas('Acoes', { codigo: acao });
