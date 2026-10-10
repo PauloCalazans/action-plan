@@ -1,10 +1,10 @@
 import cds from '@sap/cds';
-import { criarAcao } from './apoio/acoes';
+import { criarAcao, mudarStatusAcao } from './apoio/acoes';
 import { linhas } from './apoio/banco';
 import { registrarCredenciais } from './apoio/credenciais';
 import { instalarEspiao, type Espiao } from './apoio/banco-espiao';
 import { fixarInstante, liberarRelogio } from './apoio/relogio';
-import { criarAvulsa, sufixoUnico, type Envia } from './apoio/tratativas';
+import { criarAvulsa, sufixoUnico, mudarStatus, type Envia } from './apoio/tratativas';
 import { comoApp, comoGestor, comoM2002 } from './apoio/usuarios';
 import {
   anexarEvidencia,
@@ -272,8 +272,12 @@ describe('Etapa 1: Complemento de Testes de Inclusão e Armazenamento de Evidên
 
   // ===== CA59: Arquivo inválido + Tratativa Encerrada → 409 (estado precede campos) =====
   it('CA59: Arquivo com formato inválido em Tratativa Encerrada → 409 (estado precede campos)', async () => {
-    const t = await nova('Encerrada');
+    const t = await nova();
     const a = await novaAcao(t);
+    const rConcluir = await mudarStatusAcao(enviar, t, { acao: a, status: 'Concluída' }, comoGestor);
+    expect(rConcluir.status).toBe(204);
+    const rEncerrar = await mudarStatus(enviar, t, { status: 'Encerrada' }, comoGestor);
+    expect(rEncerrar.status).toBe(204);
     const r = await anexarEvidencia(
       enviar,
       t,
@@ -331,8 +335,12 @@ describe('Etapa 1: Complemento de Testes de Inclusão e Armazenamento de Evidên
 
   // ===== CA63: Gestor + descrição inválida + Tratativa Encerrada → 409 (estado precede campos) =====
   it('CA63: Gestor + descrição > 500 + Tratativa Encerrada → 409 (estado precede campos)', async () => {
-    const t = await nova('Encerrada');
+    const t = await nova();
     const a = await novaAcao(t);
+    const rConcluir = await mudarStatusAcao(enviar, t, { acao: a, status: 'Concluída' }, comoGestor);
+    expect(rConcluir.status).toBe(204);
+    const rEncerrar = await mudarStatus(enviar, t, { status: 'Encerrada' }, comoGestor);
+    expect(rEncerrar.status).toBe(204);
     const r = await anexarEvidencia(
       enviar,
       t,

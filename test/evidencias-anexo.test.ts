@@ -1,10 +1,10 @@
 import cds from '@sap/cds';
-import { criarAcao } from './apoio/acoes';
+import { criarAcao, mudarStatusAcao } from './apoio/acoes';
 import { linhas } from './apoio/banco';
 import { registrarCredenciais } from './apoio/credenciais';
 import { instalarEspiao, type Espiao } from './apoio/banco-espiao';
 import { fixarInstante, liberarRelogio } from './apoio/relogio';
-import { criarAvulsa, sufixoUnico, type Envia } from './apoio/tratativas';
+import { criarAvulsa, sufixoUnico, mudarStatus, type Envia } from './apoio/tratativas';
 import { comoApp, comoGestor, comoM1001, comoM2002 } from './apoio/usuarios';
 import {
   anexarEvidencia,
@@ -20,7 +20,6 @@ import { limparArmazenamento, contemArquivo } from './apoio/armazenamento-espiao
 const { POST } = cds.test(__dirname + '/..');
 const enviar = POST as unknown as Envia;
 const TRATATIVAS = 'br.com.calazanstec.Tratativas';
-const ACOES = 'br.com.calazanstec.Acoes';
 const EVIDENCIAS = 'Evidencias';
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const HOJE = '2026-10-08';
@@ -279,8 +278,12 @@ describe('Etapa 1: Inclusão e Armazenamento de Evidências (anexarEvidencia - R
 
   // ===== CA25-CA28: Estado =====
   it('CA25: Tratativa Encerrada não permite anexo → 409', async () => {
-    const t = await nova('Encerrada');
+    const t = await nova();
     const a = await novaAcao(t);
+    const rConcluir = await mudarStatusAcao(enviar, t, { acao: a, status: 'Concluída' }, comoGestor);
+    expect(rConcluir.status).toBe(204);
+    const rEncerrar = await mudarStatus(enviar, t, { status: 'Encerrada' }, comoGestor);
+    expect(rEncerrar.status).toBe(204);
     const r = await anexarEvidencia(enviar, t, { acao: a, ...evidenciaValida() }, comoGestor);
     expect(r.status).toBe(409);
   });
@@ -288,7 +291,8 @@ describe('Etapa 1: Inclusão e Armazenamento de Evidências (anexarEvidencia - R
   it('CA26: Ação Concluída não permite anexo → 409', async () => {
     const t = await nova();
     const a = await novaAcao(t);
-    await cds.db.run(UPDATE.entity(ACOES).set({ status: 'Concluída' }).where({ codigo: a }));
+    const rConcluir = await mudarStatusAcao(enviar, t, { acao: a, status: 'Concluída' }, comoGestor);
+    expect(rConcluir.status).toBe(204);
     const r = await anexarEvidencia(enviar, t, { acao: a, ...evidenciaValida() }, comoGestor);
     expect(r.status).toBe(409);
   });

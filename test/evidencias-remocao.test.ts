@@ -1,10 +1,10 @@
 import cds from '@sap/cds';
-import { criarAcao } from './apoio/acoes';
+import { criarAcao, mudarStatusAcao } from './apoio/acoes';
 import { linhas } from './apoio/banco';
 import { registrarCredenciais } from './apoio/credenciais';
 import { instalarEspiao, type Espiao } from './apoio/banco-espiao';
 import { fixarInstante, liberarRelogio } from './apoio/relogio';
-import { criarAvulsa, sufixoUnico, type Envia } from './apoio/tratativas';
+import { criarAvulsa, sufixoUnico, mudarStatus, type Envia } from './apoio/tratativas';
 import { comoApp, comoGestor, comoM1001, comoM2002, comoM9999 } from './apoio/usuarios';
 import {
   anexarEvidencia,
@@ -239,9 +239,14 @@ describe('Etapa 2: Remoção Lógica e Auditoria de Evidências (removerEvidenci
 
   // ===== CA25-CA27 (remoção): Estados da Tratativa e Ação =====
   it('CA25: Remoção em Tratativa Encerrada retorna 409 com mensagem de estado', async () => {
-    const t = await nova('Encerrada');
+    const t = await nova();
     const a = await novaAcao(t);
     const evId = await anexarValidoEm(t, a);
+
+    const rConcluir = await mudarStatusAcao(enviar, t, { acao: a, status: 'Concluída' }, comoGestor);
+    expect(rConcluir.status).toBe(204);
+    const rEncerrar = await mudarStatus(enviar, t, { status: 'Encerrada' }, comoGestor);
+    expect(rEncerrar.status).toBe(204);
 
     const r = await removerEvidencia(enviar, t, { acao: a, evidencia: evId }, comoGestor);
     expect(r.status).toBe(409);
@@ -396,14 +401,14 @@ describe('Etapa 2: Remoção Lógica e Auditoria de Evidências (removerEvidenci
     expect(r.status).toBe(403); // Aplicativo (etapa 3) recusado ANTES de validação de Código (etapa 4)
   });
 
-  it('CA57a (remoção com xyz): Responsável sem acesso (etapa 6) recusado antes de Código malformado', async () => {
+  it('CA57a (remoção com xyz): Aplicativo de origem (etapa 3) recusado antes de Código malformado', async () => {
     const t = await nova();
     const a = await novaAcao(t, 'M1001');
     const evId = await anexarValidoEm(t, a);
 
-    // M2002 tenta remover com Código de ação "xyz"
-    const r = await removerEvidencia(enviar, t, { acao: 'xyz', evidencia: evId }, comoM2002);
-    expect(r.status).toBe(403); // Autorização dinâmica (etapa 6) recusada antes de Código inválido (etapa 4)
+    // Aplicativo de origem tenta remover com Código de ação "xyz"
+    const r = await removerEvidencia(enviar, t, { acao: 'xyz', evidencia: evId }, comoApp);
+    expect(r.status).toBe(403); // Aplicativo (etapa 3) recusado antes de Código inválido (etapa 4)
   });
 
   it('CA61: Remoção informando Código de outra Ação (evidência não pertence) retorna 404', async () => {
