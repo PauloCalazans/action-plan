@@ -1,7 +1,7 @@
 # Task 001: evidencias
 
 **Spec:** agentic/projeto/specs/evidencias/spec.md  
-**Status:** em-andamento  
+**Status:** publicada  
 <!-- pendente | em-andamento | em-revisão | publicada (integrada não é escrito: deriva do git) -->  
 **Branch:** evidencias/001-evidencias
 
