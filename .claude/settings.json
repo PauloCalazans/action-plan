@@ -63,7 +63,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "sh \"$CLAUDE_PROJECT_DIR/agentic/mecanismos/scripts/status-projeto.sh\""
+            "command": "sh \"$(git rev-parse --show-toplevel)/agentic/mecanismos/scripts/status-projeto.sh\""
           }
         ]
       }
@@ -74,7 +74,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "sh \"$CLAUDE_PROJECT_DIR/.claude/hooks/pre-tool-use.sh\""
+            "command": "sh \"$(git rev-parse --show-toplevel)/.claude/hooks/pre-tool-use.sh\""
           }
         ]
       }
