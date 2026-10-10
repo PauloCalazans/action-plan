@@ -342,7 +342,7 @@ Mapeamento completo dos 35 Critérios de Aceite (CA1 a CA34, incluindo CA32a) na
   - CA11: `RankingAreas` retorna áreas ordenadas decrescentemente por total de tratativas ativas, agrupando nulos sob `'Sem Área'`.
   - CA12: Tratativas canceladas não contam como prazo cumprido nem computam atraso perpétuo.
   - CA20: Consulta com filtros temporais válidos retorna dados filtrados pelo período.
-  - CA21: Período sem ocorrências finalizadas retorna 0.00% em cumprimento de prazo e 0.0 em tempo médio.
+  - Período sem ocorrências finalizadas retorna 100.00% em cumprimento de prazo (spec R3(c), CA10) e 0.0 em tempo médio (spec R3(d)). Nota (Ruling R-05): a numeração e o comportamento dos CAs seguem a spec; esta lista é um resumo por etapa.
   - CA22: Normalização de origens: variações como "advertência", " Advertência " e "ADVERTÊNCIA" são consolidadas sob a mesma chave.
 
 - **Etapa 3 (Views executivas, índice de resolução e evidências pendentes):**
