@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { comoAdmin, comoApp, comoGestor, comoUsuario } from './apoio/usuarios';
 import { linhas } from './apoio/banco';
+import { definirColaboradores, limparProvedor } from './apoio/pessoas-espiao';
 
 const { GET, POST } = cds.test(__dirname + '/..');
 const ADMIN = '/api/administracao/v1';
@@ -30,6 +31,19 @@ const PADRAO: Parametros = {
 };
 
 const erroDe = (resposta: { data: unknown }) => (resposta.data as RespostaErro).error;
+
+beforeEach(() => {
+  limparProvedor();
+  definirColaboradores([{
+    matricula: 'M1001',
+    nome: 'Colaborador M1001',
+    email: 'm1001@empresa.com',
+    codigoUnidade: 'SP',
+    codigoArea: 'SESMT',
+    matriculaGestor: null,
+    situacao: 'Ativo',
+  }]);
+});
 
 describe('parâmetros de alertas e governança administrativa', () => {
   it('CA1: Administrador recebe a parametrização inicial padrão', async () => {
@@ -176,10 +190,10 @@ describe('parâmetros de alertas e governança administrativa', () => {
 
     expect(requires.EmailAdapter?.['[test]']?.impl).toBe('test/apoio/email-espiao');
     expect(requires.TeamsAdapter?.['[test]']?.impl).toBe('test/apoio/teams-espiao');
-    expect(requires.DiretorioPessoasAdapter?.['[test]']?.impl).toBe('test/apoio/diretorio-espiao');
+    expect(requires.DiretorioPessoasAdapter?.['[test]']?.impl).toBe('srv/alertas/diretorio-pessoas-adapter');
   });
 
-  it('CA39: o diretório de teste resolve matrícula em e-mail determinístico', async () => {
+  it('CA39: o adaptador de teste resolve o e-mail do colaborador ativo no provedor', async () => {
     const configuracao = JSON.parse(
       readFileSync(join(__dirname, '..', 'package.json'), 'utf8'),
     ) as {
@@ -189,12 +203,15 @@ describe('parâmetros de alertas e governança administrativa', () => {
     };
 
     expect(configuracao.cds?.requires?.DiretorioPessoasAdapter?.['[test]']?.impl)
-      .toBe('test/apoio/diretorio-espiao');
+      .toBe('srv/alertas/diretorio-pessoas-adapter');
 
     const diretorio = await cds.connect.to('DiretorioPessoasAdapter');
     const pessoa = await diretorio.send('resolverPessoa', { matricula: 'M1001' });
 
-    expect(pessoa).toMatchObject({ email: 'm1001@empresa.com' });
+    expect(pessoa).toEqual({
+      email: 'm1001@empresa.com',
+      teamsId: 'm1001@empresa.com',
+    });
   });
 
 });
