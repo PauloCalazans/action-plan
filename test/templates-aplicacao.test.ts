@@ -141,7 +141,7 @@ describe('Etapa 3: aplicação de template em Tratativa (R5-R11, R13, R15(a), R1
 
       const estrutura = await consultarEstruturaAcoes(consultar, tratativa, comoGestor);
       expect(estrutura.status).toBe(200);
-      const raizes = estrutura.data as { descricao: string; subacoes: { descricao: string }[] }[];
+      const raizes = estrutura.data.value as { descricao: string; subacoes: { descricao: string }[] }[];
       expect(raizes).toHaveLength(2);
       expect(raizes[0].descricao).toBe('Descrição do item 1');
       expect(raizes[0].subacoes.map((s) => s.descricao)).toEqual(['Descrição do item 2', 'Descrição do item 3']);
@@ -455,7 +455,7 @@ describe('Etapa 3: aplicação de template em Tratativa (R5-R11, R13, R15(a), R1
       expect(aplicacao.status).toBe(200);
 
       const estrutura = await consultarEstruturaAcoes(consultar, tratativa, comoGestor);
-      const acao = (estrutura.data as { codigo: string }[])[0];
+      const acao = (estrutura.data.value as { codigo: string }[])[0];
 
       const edicao = await enviar(
         `/api/tratativa/v1/Tratativas(${tratativa})/editarAcao`,
@@ -479,7 +479,7 @@ describe('Etapa 3: aplicação de template em Tratativa (R5-R11, R13, R15(a), R1
       expect(aplicacao.status).toBe(200);
 
       const estrutura = await consultarEstruturaAcoes(consultar, tratativa, comoGestor);
-      const acao = (estrutura.data as { codigo: string; evidenciaObrigatoria: string }[])[0];
+      const acao = (estrutura.data.value as { codigo: string; evidenciaObrigatoria: string }[])[0];
       expect(acao.evidenciaObrigatoria).toBe('sim');
 
       const conclusao = await mudarStatusAcao(enviar, tratativa, { acao: acao.codigo, status: 'Concluída' }, comoGestor);
@@ -521,7 +521,7 @@ describe('Etapa 3: aplicação de template em Tratativa (R5-R11, R13, R15(a), R1
 
       const estrutura = await consultarEstruturaAcoes(consultar, tratativa, comoUsuario);
       expect(estrutura.status).toBe(200);
-      const acoes = estrutura.data as { responsavel: string | null }[];
+      const acoes = estrutura.data.value as { responsavel: string | null }[];
       expect(acoes).toHaveLength(1);
       expect(acoes[0].responsavel).toBeNull();
     });
