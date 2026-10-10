@@ -138,17 +138,31 @@ async function alertasDa(tratativa: string): Promise<Alerta[]> {
   return linhas('AlertasEmitidos', { tratativa_codigo: tratativa });
 }
 
+function alertasDistintos(alertas: Alerta[]): Alerta[] {
+  const distintos = new Map<string, Alerta>();
+  for (const alerta of alertas) {
+    const chave = JSON.stringify([
+      alerta.tipo,
+      alerta.entidade,
+      alerta.tratativa_codigo,
+      alerta.acao_codigo ?? null,
+      alerta.destinatario,
+    ]);
+    distintos.set(chave, alerta);
+  }
+  return [...distintos.values()];
+}
+
 function tipoDestinatario(alertas: Alerta[], tipo?: string): string[] {
-  return alertas
+  return alertasDistintos(alertas)
     .filter((alerta) => tipo === undefined || alerta.tipo === tipo)
     .map((alerta) => String(alerta.destinatario))
     .sort();
 }
 
 function alertasDaAcao(alertas: Alerta[], acao: string, tipo?: string): Alerta[] {
-  return alertas.filter((alerta) =>
-    alerta.acao_codigo === acao && (tipo === undefined || alerta.tipo === tipo),
-  );
+  return alertasDistintos(alertas).filter((alerta) =>
+    alerta.acao_codigo === acao && (tipo === undefined || alerta.tipo === tipo));
 }
 
 beforeAll(registrarCredenciais);
@@ -198,7 +212,7 @@ describe('motor de regras dos alertas (etapa 2)', () => {
 
     await executarAvaliacao();
     const alertas = await alertasDa(tratativa);
-    expect(alertas.filter((alerta) => alerta.tipo === 'PrazoProximo' && alerta.entidade === 'Tratativa')
+    expect(alertasDistintos(alertas).filter((alerta) => alerta.tipo === 'PrazoProximo' && alerta.entidade === 'Tratativa')
       .map((alerta) => alerta.destinatario)).toEqual(['M1001']);
   });
 
@@ -245,13 +259,17 @@ describe('motor de regras dos alertas (etapa 2)', () => {
       .toEqual(['M2002']);
   });
 
-  it('CA19: mesma matrícula como responsável da Ação e principal não duplica destinatário do PrazoVencido', async () => {
+  it('CA19: mesma matrícula recebe no máximo uma notificação por canal no dia para PrazoVencido', async () => {
     const tratativa = await novaTratativa({ responsavelPrincipal: 'M1001' });
     const acao = await novaAcao(tratativa, '2026-10-09', 'M1001');
 
     await executarAvaliacao();
-    expect(tipoDestinatario(alertasDaAcao(await alertasDa(tratativa), acao, 'PrazoVencido')))
+    const alertas = alertasDaAcao(await alertasDa(tratativa), acao, 'PrazoVencido');
+    expect(tipoDestinatario(alertas))
       .toEqual(['M1001']);
+    for (const canal of ['Email', 'Teams']) {
+      expect(alertas.filter((alerta) => alerta.canal === canal).length).toBeLessThanOrEqual(1);
+    }
   });
 
   it('CA20: conclusão vencida da Tratativa gera PrazoVencido ao Responsável Principal', async () => {
@@ -262,7 +280,8 @@ describe('motor de regras dos alertas (etapa 2)', () => {
     });
 
     await executarAvaliacao();
-    expect(tipoDestinatario((await alertasDa(tratativa)).filter((alerta) => alerta.entidade === 'Tratativa'), 'PrazoVencido'))
+    expect(tipoDestinatario(alertasDistintos(await alertasDa(tratativa))
+      .filter((alerta) => alerta.entidade === 'Tratativa'), 'PrazoVencido'))
       .toEqual(['M1001']);
   });
 
@@ -276,7 +295,8 @@ describe('motor de regras dos alertas (etapa 2)', () => {
     fixarInstante(AGORA);
 
     await executarAvaliacao();
-    expect(tipoDestinatario((await alertasDa(tratativa)).filter((alerta) => alerta.entidade === 'Tratativa'), 'Inatividade'))
+    expect(tipoDestinatario(alertasDistintos(await alertasDa(tratativa))
+      .filter((alerta) => alerta.entidade === 'Tratativa'), 'Inatividade'))
       .toEqual(['M1001']);
   });
 
@@ -291,7 +311,8 @@ describe('motor de regras dos alertas (etapa 2)', () => {
     fixarInstante(AGORA);
 
     await executarAvaliacao();
-    expect(tipoDestinatario((await alertasDa(tratativa)).filter((alerta) => alerta.entidade === 'Tratativa'), 'Inatividade'))
+    expect(tipoDestinatario(alertasDistintos(await alertasDa(tratativa))
+      .filter((alerta) => alerta.entidade === 'Tratativa'), 'Inatividade'))
       .toEqual(['M2001', 'M2002']);
   });
 
@@ -467,7 +488,8 @@ describe('motor de regras dos alertas (etapa 2)', () => {
         .toEqual(['M1001', 'M2002']);
       expect(tipoDestinatario(alertasDaAcao(alertas, acoesComEvidenciaPendente[indice], 'EvidenciaPendente')))
         .toEqual(['M2002']);
-      expect(tipoDestinatario(alertas.filter((alerta) => alerta.entidade === 'Tratativa'), 'Inatividade'))
+      expect(tipoDestinatario(alertasDistintos(alertas)
+        .filter((alerta) => alerta.entidade === 'Tratativa'), 'Inatividade'))
         .toEqual(['M1001']);
     }
     esperarOcorrenciasAvaliadas(relatorio);
