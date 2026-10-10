@@ -223,10 +223,20 @@ export default class TratativaService extends cds.ApplicationService {
       };
       return listarComentariosAcao(req, String(tratativa).toLowerCase(), String(acao).toLowerCase(), tamanhoPagina, pagina);
     });
-    // historico-e-auditoria R1, R4, R6 (etapa 1): consulta unificada de histórico, somente leitura.
+    // historico-e-auditoria R1, R4, R6, R7 (etapas 1-2): consulta unificada de histórico, somente leitura.
     this.on('consultarHistoricoTratativa', async (req) => {
-      const { tratativa, tamanhoPagina, pagina } = req.data as { tratativa?: string; tamanhoPagina?: number; pagina?: number };
-      const itens = await consultarHistoricoUnificado(tratativa, tamanhoPagina, pagina);
+      const { tratativa, tipoEvento, codigoAcao, periodoInicio, periodoFim, tamanhoPagina, pagina } = req.data as {
+        tratativa?: string;
+        tipoEvento?: string;
+        codigoAcao?: string;
+        periodoInicio?: string;
+        periodoFim?: string;
+        tamanhoPagina?: number;
+        pagina?: number;
+      };
+      const itens = await consultarHistoricoUnificado(tratativa, {
+        tipoEvento, codigoAcao, periodoInicio, periodoFim, tamanhoPagina, pagina,
+      });
       const autorizados = await filtrarPorAutorizacao(req, itens);
       return autorizados.map((item) => mascarar(req, item));
     });
