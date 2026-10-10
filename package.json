@@ -106,10 +106,10 @@
       "DiretorioPessoasAdapter": {
         "impl": "srv/alertas/diretorio-pessoas-adapter",
         "[development]": {
-          "impl": "test/apoio/diretorio-espiao"
+          "impl": "srv/alertas/diretorio-pessoas-adapter"
         },
         "[test]": {
-          "impl": "test/apoio/diretorio-espiao"
+          "impl": "srv/alertas/diretorio-pessoas-adapter"
         }
       }
     }
