@@ -189,8 +189,45 @@ service TratativaService {
     codigo : UUID;
   }
 
+  // --- Templates de Ações (spec templates-de-acoes, etapa 2: consultas e visibilidade) ---
+
+  /** R12 (spec templates-de-acoes): item da listagem pública de templates. */
+  type ItemListagemTemplate {
+    id              : UUID;
+    nome            : String(100);
+    descricao       : String(500);
+    ativo           : Boolean;
+    quantidadeItens : Integer;
+  }
+
+  /** R1, R2, R12 (spec templates-de-acoes): item de detalhe de template, ordenado por ordem. */
+  type DetalheItemTemplate {
+    id                   : UUID;
+    ordem                : Integer;
+    descricao            : String(500);
+    prioridade           : m.PrioridadeAcao;
+    evidenciaObrigatoria : Boolean;
+    prazoRelativoDias    : Integer;
+    ordemPai             : Integer;
+  }
+
+  /** R12 (spec templates-de-acoes): detalhe de template com cabeçalho e itens ordenados por ordem. */
+  type DetalheTemplate {
+    id        : UUID;
+    nome      : String(100);
+    descricao : String(500);
+    ativo     : Boolean;
+    itens     : many DetalheItemTemplate;
+  }
+
   action   criarTratativaAvulsa(titulo : String(200), criticidade : String(10), descricao : String(5000),
                                 unidade : String(100), area : String(100), solicitante : String(50)) returns ResultadoAbertura;
+
+  /** R12 (spec templates-de-acoes): lista templates ordenados por nome; visibilidade de inativos por papel. */
+  function listarTemplates(ativo : String, tamanhoPagina : Integer, pagina : Integer) returns many ItemListagemTemplate;
+
+  /** R12 (spec templates-de-acoes): consulta de detalhe do template com itens ordenados por ordem. */
+  function consultarTemplate(template : UUID) returns DetalheTemplate;
 
   /** R24/R25: filtros combinados; página padrão 50, máximo 200; pagina começa em 1. */
   function listarTratativas(origem : String, idOrigem : String, criticidade : String, status : String,

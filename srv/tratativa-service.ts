@@ -19,14 +19,20 @@ import { comentarTratativa, comentarAcao, type DadosComentarioTratativa, type Da
 import { listarComentariosTratativa, listarComentariosAcao } from './tratativa/comentarios-consulta';
 import { consultarHistoricoUnificado, paginar } from './tratativa/historico-consulta';
 import { filtrarPorAutorizacao, mascarar } from './tratativa/historico-autorizacao';
+import { listarTemplates, consultarTemplate, type FiltrosListagemTemplates } from './templates/templates-consulta';
 
 /** Contrato dos usuários: só monta o Autor e delega ao domínio (decisões 6, 14 e 15). */
 export default class TratativaService extends cds.ApplicationService {
   async init() {
     // Decisão 3 (design tratativa): aplicativo de origem é recusado em todo o serviço, antes de qualquer gravação.
     // Registrado antes de qualquer outro handler.
+    // CA22 (consulta) (spec templates-de-acoes R13, R15(c)): listarTemplates/consultarTemplate usam a
+    // mensagem padronizada "Acesso negado." em vez do texto genérico deste serviço.
     this.before('*', (req) => {
       if (!req.user.is('AplicativoOrigem')) return;
+      if (req.event === 'listarTemplates' || req.event === 'consultarTemplate') {
+        req.reject(403, 'Acesso negado.');
+      }
       req.reject(
         403,
         req.event === 'criarTratativaAvulsa'
@@ -244,6 +250,15 @@ export default class TratativaService extends cds.ApplicationService {
       const autorizados = await filtrarPorAutorizacao(req, itens);
       const pagina_ = paginar(autorizados, tamanhoPagina, pagina);
       return pagina_.map((item) => mascarar(req, item));
+    });
+    // spec templates-de-acoes R12, R15(c) (etapa 2): consultas públicas de templates, com visibilidade por papel.
+    this.on('listarTemplates', (req) => {
+      const podeVerInativos = req.user.is('Administrador') || req.user.is('GestorTratativa');
+      return listarTemplates(req.data as FiltrosListagemTemplates, podeVerInativos);
+    });
+    this.on('consultarTemplate', (req) => {
+      const podeVerInativos = req.user.is('Administrador') || req.user.is('GestorTratativa');
+      return consultarTemplate((req.data as { template?: string }).template, podeVerInativos);
     });
     return super.init();
   }
