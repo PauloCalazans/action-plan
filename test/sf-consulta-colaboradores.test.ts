@@ -152,7 +152,7 @@ describe('integração SuccessFactors – consulta e busca de colaboradores (eta
     [
       `${BASE}/buscarColaboradores(termo='${'A'.repeat(101)}',codigoUnidade='SP',codigoArea='SESMT',apenasAtivos=true,tamanhoPagina=50,pagina=1)`,
       400,
-      'O campo Termo aceita até 100 caracteres.',
+      'O campo Termo aceita no máximo 100 caracteres.',
       'termo',
     ],
     [
@@ -166,6 +166,12 @@ describe('integração SuccessFactors – consulta e busca de colaboradores (eta
       400,
       'O campo Página deve ser 1 ou maior.',
       'pagina',
+    ],
+    [
+      `${BASE}/buscarColaboradores(termo='ana',codigoUnidade='SP',codigoArea='SESMT',apenasAtivos=true,tamanhoPagina=0,pagina=0)`,
+      400,
+      'O campo Tamanho da página aceita de 1 a 200.',
+      'tamanhoPagina',
     ],
   ])('CA24: valida %s', async (url, status, mensagem, target) => {
     const resposta = await GET(url, comoGestor);

@@ -69,21 +69,21 @@ describe('integração SuccessFactors – parametrização e governança (etapa 
     expect(restauracao.status).toBe(200);
   });
 
-  it('CA10: gestor consulta os parâmetros vigentes do SF', async () => {
+  it('CA9: gestor consulta os parâmetros vigentes do SF', async () => {
     const resposta = await GET(`${TRATATIVA}/consultarParametrosIntegracaoSF()`, comoGestor);
 
     expect(resposta.status).toBe(200);
     expect(resposta.data).toMatchObject(PARAMETROS_PADRAO);
   });
 
-  it('CA11: usuário comum recebe 403 ao consultar parâmetros do SF', async () => {
+  it('CA11a: usuário comum recebe 403 ao consultar parâmetros do SF', async () => {
     const resposta = await GET(`${TRATATIVA}/consultarParametrosIntegracaoSF()`, comoUsuario);
 
     expect(resposta.status).toBe(403);
     expect(erroDe(resposta)?.message).toBe('Acesso negado.');
   });
 
-  it('CA11a: gestor não atualiza os parâmetros do SF', async () => {
+  it('CA11: gestor não atualiza os parâmetros do SF', async () => {
     const resposta = await POST(
       `${ADMIN}/atualizarParametrosIntegracaoSF`,
       { ...PARAMETROS_PADRAO, nivelUnidadeSF: 'Division' },
@@ -121,10 +121,10 @@ describe('integração SuccessFactors – parametrização e governança (etapa 
   });
 
   it.each([
-    ['nivelUnidadeSF', '   ', 'O campo Nível da Unidade do SF é obrigatório.'],
-    ['nivelAreaSF', '   ', 'O campo Nível da Área do SF é obrigatório.'],
-    ['nivelUnidadeSF', 'A'.repeat(101), 'O campo Nível da Unidade do SF aceita até 100 caracteres.'],
-    ['nivelAreaSF', 'A'.repeat(101), 'O campo Nível da Área do SF aceita até 100 caracteres.'],
+    ['nivelUnidadeSF', '   ', 'O campo Nível de unidade é obrigatório.'],
+    ['nivelAreaSF', '   ', 'O campo Nível de área é obrigatório.'],
+    ['nivelUnidadeSF', 'A'.repeat(101), 'O campo Nível de unidade aceita no máximo 100 caracteres.'],
+    ['nivelAreaSF', 'A'.repeat(101), 'O campo Nível de área aceita no máximo 100 caracteres.'],
   ] as const)('CA24a: rejeita valor inválido em %s (%s)', async (campo, valor, mensagem) => {
     const resposta = await POST(
       `${ADMIN}/atualizarParametrosIntegracaoSF`,
