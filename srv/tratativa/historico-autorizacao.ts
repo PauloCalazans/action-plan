@@ -16,9 +16,11 @@ const NS = 'br.com.calazanstec';
 /**
  * Campos de `detalhe` que contêm matrícula de colaborador (R8e, N3-3): mascarados para não-Gestor.
  * Valores exatos gravados por `srv/tratativa/edicao.ts` (`solicitante`), `responsaveis-tratativa.ts`
- * (`responsavelPrincipal`, `participante`) e `acoes-delegacao.ts` (`responsavel`).
+ * (`responsavelPrincipal`, `participante`) e `acoes-delegacao.ts` (`responsavel`). A comparação em
+ * `mascararDetalhe` ignora caixa (revisão do diff, Achado 2) para cobrir nomes nominais eventualmente
+ * gravados com inicial maiúscula (spec.md:21), sem exigir normalização na gravação.
  */
-const CAMPOS_MATRICULA = new Set(['solicitante', 'responsavelPrincipal', 'participante', 'responsavel']);
+const CAMPOS_MATRICULA = new Set(['solicitante', 'responsavelprincipal', 'participante', 'responsavel']);
 
 interface VinculoTratativa {
   responsavelPrincipal: string | null;
@@ -84,7 +86,7 @@ export async function filtrarPorAutorizacao(req: Request, itens: ItemHistoricoBr
 
 /** Mascara `valorAnterior`/`valorNovo` como `null` quando o campo alterado é matrícula de colaborador (R8e). */
 function mascararDetalhe(detalhe: DetalheEventoHistorico): DetalheEventoHistorico {
-  const campoEhMatricula = typeof detalhe.campo === 'string' && CAMPOS_MATRICULA.has(detalhe.campo);
+  const campoEhMatricula = typeof detalhe.campo === 'string' && CAMPOS_MATRICULA.has(detalhe.campo.toLowerCase());
   return {
     ...detalhe,
     valorAnterior: campoEhMatricula ? null : detalhe.valorAnterior,

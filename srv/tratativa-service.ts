@@ -17,7 +17,7 @@ import { removerEvidencia, type DadosRemocaoEvidencia } from './tratativa/eviden
 import { listarPendenciasEvidenciasTratativa, listarEvidenciasAcao, listarEvidenciasTratativa, baixarEvidencia } from './tratativa/evidencias-consultas';
 import { comentarTratativa, comentarAcao, type DadosComentarioTratativa, type DadosComentarioAcao } from './tratativa/comentarios-inclusao';
 import { listarComentariosTratativa, listarComentariosAcao } from './tratativa/comentarios-consulta';
-import { consultarHistoricoUnificado } from './tratativa/historico-consulta';
+import { consultarHistoricoUnificado, paginar } from './tratativa/historico-consulta';
 import { filtrarPorAutorizacao, mascarar } from './tratativa/historico-autorizacao';
 
 /** Contrato dos usuários: só monta o Autor e delega ao domínio (decisões 6, 14 e 15). */
@@ -234,11 +234,16 @@ export default class TratativaService extends cds.ApplicationService {
         tamanhoPagina?: number;
         pagina?: number;
       };
+      // Achado 1 (revisão do diff): a lista unificada é filtrada, validada e ordenada, mas não
+      // paginada, aqui — tamanhoPagina/pagina seguem validados (etapa 6, D10) para recusar valores
+      // fora da faixa antes de qualquer leitura ser paginada. A paginação por fatia só ocorre depois
+      // do filtro de autorização (design.md:298), nunca antes.
       const itens = await consultarHistoricoUnificado(tratativa, {
         tipoEvento, codigoAcao, periodoInicio, periodoFim, tamanhoPagina, pagina,
       });
       const autorizados = await filtrarPorAutorizacao(req, itens);
-      return autorizados.map((item) => mascarar(req, item));
+      const pagina_ = paginar(autorizados, tamanhoPagina, pagina);
+      return pagina_.map((item) => mascarar(req, item));
     });
     return super.init();
   }

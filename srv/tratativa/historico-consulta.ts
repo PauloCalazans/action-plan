@@ -224,10 +224,12 @@ function aplicarFiltros(
 }
 
 /**
- * Orquestra a consulta unificada: valida a forma e a existência da Tratativa e da Ação (quando filtrada),
+ * Orquestra a leitura unificada: valida a forma e a existência da Tratativa e da Ação (quando filtrada),
  * valida os filtros semânticos e a paginação, lê HistoricoTratativa e HistoricoAcoes filtrados por
- * `tratativa_codigo`, normaliza para o item unificado, aplica os filtros combinados, ordena de forma
- * determinística e pagina por fatia (R1, R4, R6, R7; etapas 1 e 2).
+ * `tratativa_codigo`, normaliza para o item unificado, aplica os filtros combinados e ordena de forma
+ * determinística (R1, R4, R6, R7; etapas 1 e 2). Não pagina: a paginação por fatia só pode ocorrer depois
+ * do filtro de autorização dinâmica (design.md:298; revisão do diff, Achado 1), por isso é responsabilidade
+ * de `paginar`, chamada pelo service depois de `filtrarPorAutorizacao`.
  */
 export async function consultarHistoricoUnificado(
   tratativa: string | null | undefined,
@@ -272,11 +274,18 @@ export async function consultarHistoricoUnificado(
     ) as Promise<LinhaHistoricoAcoes[]>,
   ]);
 
-  const itens = aplicarFiltros(
+  return aplicarFiltros(
     [...linhasTratativa.map(normalizarLinhaTratativa), ...linhasAcoes.map(normalizarLinhaAcao)],
     { tipoEvento, codigoAcao, periodoInicio: inicio, periodoFim: fim },
   ).sort(compararItens);
+}
 
+/**
+ * Pagina por fatia a coleção já autorizada (revisão do diff, Achado 1; design.md:298): deve ser chamada
+ * depois de `filtrarPorAutorizacao`, nunca antes, para que a navegação por página reflita apenas os
+ * eventos que o usuário chamador pode ver.
+ */
+export function paginar<T>(itens: T[], tamanhoPagina?: number | null, pagina?: number | null): T[] {
   const tamanho = tamanhoPagina ?? PADRAO_TAMANHO;
   const pag = pagina ?? 1;
   const offset = (pag - 1) * tamanho;
