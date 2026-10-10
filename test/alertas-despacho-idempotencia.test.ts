@@ -211,14 +211,37 @@ describe('despacho multicanal, LGPD e idempotência dos alertas (etapa 3)', () =
 
     expect(resposta.status).toBe(200);
     const alertas = await alertasDaTratativa(tratativa);
-    expect(alertas).toHaveLength(1);
-    expect(alertas[0]).toMatchObject({
+    const alertaEmail = alertas.find((alerta) => alerta.canal === 'Email');
+    expect(alertaEmail).toMatchObject({
       tipo: 'PrazoProximo',
       destinatario: 'M2002',
       canal: 'Email',
       statusEnvio: 'Sucesso',
     });
-    expect(alertas[0].enviadoEm).toBeTruthy();
+    expect(alertaEmail?.enviadoEm).toBeTruthy();
+  });
+
+  it('R5(c)/(d), R9(c): execução manual despacha por todos os canais habilitados', async () => {
+    const { tratativa } = await criarCenario({ prazo: '2026-10-10' });
+    fixarInstante('2026-10-08T12:00:00.000Z');
+
+    const resposta = await executarManualmente();
+
+    expect(resposta.status).toBe(200);
+    const alertas = await alertasDaTratativa(tratativa);
+    expect(alertas).toHaveLength(2);
+    expect(alertas).toContainEqual(expect.objectContaining({
+      canal: 'Email',
+      statusEnvio: 'Sucesso',
+      enviadoEm: expect.anything(),
+    }));
+    expect(alertas).toContainEqual(expect.objectContaining({
+      canal: 'Teams',
+      statusEnvio: 'Sucesso',
+      enviadoEm: expect.anything(),
+    }));
+    expect(enviosEmailDaTratativa(tratativa)).toHaveLength(1);
+    expect(enviosTeamsDaTratativa(tratativa)).toHaveLength(1);
   });
 
   it('CA44: não reenvia no mesmo dia UTC uma notificação já enviada com sucesso', async () => {

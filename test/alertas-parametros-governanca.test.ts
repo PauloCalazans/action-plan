@@ -1,7 +1,7 @@
 import cds from '@sap/cds';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { comoAdmin, comoApp, comoGestor } from './apoio/usuarios';
+import { comoAdmin, comoApp, comoGestor, comoUsuario } from './apoio/usuarios';
 import { linhas } from './apoio/banco';
 
 const { GET, POST } = cds.test(__dirname + '/..');
@@ -44,6 +44,13 @@ describe('parâmetros de alertas e governança administrativa', () => {
 
     expect(resposta.status).toBe(200);
     expect(resposta.data).toMatchObject(PADRAO);
+  });
+
+  it('CA3: usuário sem papel de Administrador nem Gestor recebe acesso negado', async () => {
+    const resposta = await GET(CONSULTAR, comoUsuario);
+
+    expect(resposta.status).toBe(403);
+    expect(erroDe(resposta)?.message).toBe('Acesso negado.');
   });
 
   it('CA4: Administrador atualiza e relê os parâmetros persistidos', async () => {
@@ -120,6 +127,24 @@ describe('parâmetros de alertas e governança administrativa', () => {
       expect(resposta.status).toBe(400);
       expect(erroDe(resposta)?.message).toBe('O campo Hora de execução aceita de 0 a 23.');
       expect(erroDe(resposta)?.target).toBe('horaExecucaoUtc');
+    },
+  );
+
+  it.each([
+    ['diasAntecedenciaPrazoProximo', 'O campo Dias de antecedência aceita de 1 a 30.'],
+    ['diasInatividade', 'O campo Dias de inatividade aceita de 1 a 90.'],
+    ['horaExecucaoUtc', 'O campo Hora de execução aceita de 0 a 23.'],
+  ])(
+    'D10: rejeita atualização sem o campo numérico %s',
+    async (campo, mensagem) => {
+      const parametros: Record<string, unknown> = { ...PADRAO };
+      delete parametros[campo];
+
+      const resposta = await POST(ATUALIZAR, parametros, comoAdmin);
+
+      expect(resposta.status).toBe(400);
+      expect(erroDe(resposta)?.message).toBe(mensagem);
+      expect(erroDe(resposta)?.target).toBe(campo);
     },
   );
 
