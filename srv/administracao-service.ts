@@ -70,14 +70,14 @@ export default class AdministracaoService extends cds.ApplicationService {
         {
           campo: 'nivelUnidadeSF',
           valor: parametros.nivelUnidadeSF,
-          mensagemObrigatorio: 'O campo Nível da Unidade do SF é obrigatório.',
-          mensagemLimite: 'O campo Nível da Unidade do SF aceita até 100 caracteres.',
+          mensagemObrigatorio: 'O campo Nível de unidade é obrigatório.',
+          mensagemLimite: 'O campo Nível de unidade aceita no máximo 100 caracteres.',
         },
         {
           campo: 'nivelAreaSF',
           valor: parametros.nivelAreaSF,
-          mensagemObrigatorio: 'O campo Nível da Área do SF é obrigatório.',
-          mensagemLimite: 'O campo Nível da Área do SF aceita até 100 caracteres.',
+          mensagemObrigatorio: 'O campo Nível de área é obrigatório.',
+          mensagemLimite: 'O campo Nível de área aceita no máximo 100 caracteres.',
         },
       ];
       let invalido = false;

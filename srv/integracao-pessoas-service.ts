@@ -112,7 +112,7 @@ export default class IntegracaoPessoasService extends cds.ApplicationService {
       };
 
       if (termo && termo.length > 100) {
-        return req.reject(400, 'O campo Termo aceita até 100 caracteres.', 'termo');
+        return req.reject(400, 'O campo Termo aceita no máximo 100 caracteres.', 'termo');
       }
       if (tamanhoPagina < 1 || tamanhoPagina > 200) {
         return req.reject(400, 'O campo Tamanho da página aceita de 1 a 200.', 'tamanhoPagina');
