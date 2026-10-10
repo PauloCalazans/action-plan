@@ -312,6 +312,14 @@ entity ParametrosAlertas : managed {
       horaExecucaoUtc              : Integer not null default 8;
 }
 
+/** R6 (spec integracao-successfactors): governança do mapeamento de níveis organizacionais do SF. */
+@PersonalData.EntitySemantics: 'Other'
+entity ParametrosIntegracaoSF : managed {
+  key chave          : String(10);
+      nivelUnidadeSF : String(100) not null default 'BusinessUnit';
+      nivelAreaSF    : String(100) not null default 'Department';
+}
+
 /** R10 (spec alertas-e-notificacoes): auditoria de notificações independente do histórico executivo. */
 @PersonalData.EntitySemantics: 'Other'
 entity AlertasEmitidos {

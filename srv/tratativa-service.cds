@@ -48,6 +48,19 @@ service TratativaService {
     solicitante           : String(50);
   }
 
+  type DetalheParametrosIntegracaoSF {
+    nivelUnidadeSF : String(100);
+    nivelAreaSF    : String(100);
+  }
+
+  /**
+   * R6 (spec integracao-successfactors): leitura restrita ao Gestor e Administrador.
+   * O grant authenticated-user permite ao handler devolver "Acesso negado." em vez do
+   * "Forbidden" fixo do @restrict, seguindo o padrão de aplicarTemplateTratativa.
+   */
+  @restrict: [{ grant: '*', to: 'authenticated-user' }]
+  function consultarParametrosIntegracaoSF() returns DetalheParametrosIntegracaoSF;
+
   /** R17, R26 (005; Ruling R-02): estrutura de responsáveis e participantes para o Gestor. */
   type DetalheResponsaveis {
     responsavelPrincipal : String(50);

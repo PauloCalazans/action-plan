@@ -112,6 +112,22 @@ service AdministracaoService {
     horaExecucaoUtc              : Integer;
   }
 
+  type DetalheParametrosIntegracaoSF {
+    nivelUnidadeSF : String(100);
+    nivelAreaSF    : String(100);
+  }
+
+  /** R6 (spec integracao-successfactors): consulta por Gestor ou Administrador. */
+  @restrict: [{ grant: '*', to: ['Administrador', 'GestorTratativa'] }]
+  function consultarParametrosIntegracaoSF() returns DetalheParametrosIntegracaoSF;
+
+  /** R6 (spec integracao-successfactors): atualização exclusiva do Administrador. */
+  @restrict: [{ grant: '*', to: 'Administrador' }]
+  action atualizarParametrosIntegracaoSF(
+    nivelUnidadeSF : String,
+    nivelAreaSF    : String
+  ) returns DetalheParametrosIntegracaoSF;
+
   type RelatorioProcessamentoAlertas {
     ocorrenciasAvaliadas : Integer;
     alertasGerados       : Integer;

@@ -85,6 +85,24 @@
           "impl": "test/apoio/teams-espiao"
         }
       },
+      "ProvedorPessoasAdapter": {
+        "impl": "srv/integracoes/provedor-pessoas-adapter",
+        "[development]": {
+          "impl": "test/apoio/pessoas-espiao"
+        },
+        "[test]": {
+          "impl": "test/apoio/pessoas-espiao"
+        }
+      },
+      "ProvedorEstruturaAdapter": {
+        "impl": "srv/integracoes/provedor-estrutura-adapter",
+        "[development]": {
+          "impl": "test/apoio/estrutura-espiao"
+        },
+        "[test]": {
+          "impl": "test/apoio/estrutura-espiao"
+        }
+      },
       "DiretorioPessoasAdapter": {
         "impl": "srv/alertas/diretorio-pessoas-adapter",
         "[development]": {
