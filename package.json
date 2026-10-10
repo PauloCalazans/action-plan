@@ -66,6 +66,33 @@
         "[test]": {
           "impl": "test/apoio/armazenamento-espiao"
         }
+      },
+      "EmailAdapter": {
+        "impl": "srv/alertas/email-adapter",
+        "[development]": {
+          "impl": "test/apoio/email-espiao"
+        },
+        "[test]": {
+          "impl": "test/apoio/email-espiao"
+        }
+      },
+      "TeamsAdapter": {
+        "impl": "srv/alertas/teams-adapter",
+        "[development]": {
+          "impl": "test/apoio/teams-espiao"
+        },
+        "[test]": {
+          "impl": "test/apoio/teams-espiao"
+        }
+      },
+      "DiretorioPessoasAdapter": {
+        "impl": "srv/alertas/diretorio-pessoas-adapter",
+        "[development]": {
+          "impl": "test/apoio/diretorio-espiao"
+        },
+        "[test]": {
+          "impl": "test/apoio/diretorio-espiao"
+        }
       }
     }
   },

@@ -78,6 +78,32 @@ type EventoHistoricoAcao : String(30) enum {
   InclusaoComentario;
 }
 
+/** R1 (spec alertas-e-notificacoes): modalidades de alertas de negócio. */
+type TipoAlerta : String(30) enum {
+  PrazoProximo;
+  PrazoVencido;
+  Inatividade;
+  EvidenciaPendente;
+}
+
+/** R10 (spec alertas-e-notificacoes): nível da entidade associada ao alerta. */
+type EntidadeAlerta : String(20) enum {
+  Tratativa;
+  Acao;
+}
+
+/** R5 (spec alertas-e-notificacoes): canais corporativos suportados. */
+type CanalNotificacao : String(20) enum {
+  Email;
+  Teams;
+}
+
+/** R10 (spec alertas-e-notificacoes): resultado da tentativa de envio. */
+type StatusEnvioAlerta : String(20) enum {
+  Sucesso;
+  Falha;
+}
+
 /** R22: Código opaco (UUID v4 gerado pela plataforma). R1, R2, R7, R10, R13, R20, R23. */
 @PersonalData.EntitySemantics: 'Other'
 entity Tratativas {
@@ -273,4 +299,32 @@ entity MencoesComentario {
       comentario : Association to one Comentarios not null;
       @PersonalData.IsPotentiallyPersonal
       matricula  : String(50) not null;
+}
+
+/** R2 (spec alertas-e-notificacoes): parâmetros globais singleton para governança de alertas. */
+@PersonalData.EntitySemantics: 'Other'
+entity ParametrosAlertas : managed {
+  key chave                        : String(10);
+      diasAntecedenciaPrazoProximo : Integer not null default 3;
+      diasInatividade              : Integer not null default 15;
+      emailHabilitado              : Boolean not null default true;
+      teamsHabilitado              : Boolean not null default true;
+      horaExecucaoUtc              : Integer not null default 8;
+}
+
+/** R10 (spec alertas-e-notificacoes): auditoria de notificações independente do histórico executivo. */
+@PersonalData.EntitySemantics: 'Other'
+entity AlertasEmitidos {
+  key id           : UUID;
+      tipo         : TipoAlerta not null;
+      entidade     : EntidadeAlerta not null;
+      tratativa    : Association to one Tratativas not null;
+      acao         : Association to one Acoes;
+      @PersonalData.IsPotentiallyPersonal
+      destinatario : String(50) not null;
+      canal        : CanalNotificacao not null;
+      enviadoEm    : Timestamp not null;
+      statusEnvio  : StatusEnvioAlerta not null;
+      motivoFalha  : String(255);
+      dadosAlerta  : String(1000);
 }

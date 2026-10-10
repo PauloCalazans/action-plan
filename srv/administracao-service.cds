@@ -2,7 +2,8 @@ using { br.com.calazanstec as m } from '../db/tratativa';
 
 /** Administração da plataforma (R11, R18): tabela de prazos e credenciais de aplicativo. */
 @path    : '/api/administracao/v1'
-@requires: 'authenticated-user'
+// Mantém requisições autenticadas até o hook para padronizar a recusa de AplicativoOrigem.
+@requires: ['authenticated-user', 'Administrador', 'GestorTratativa']
 service AdministracaoService {
 
   /** R11: o Administrador só altera os dias; a lista de Criticidades é fixa (R7). */
@@ -102,4 +103,62 @@ service AdministracaoService {
   function consultarTemplate(
     template : UUID
   ) returns DetalheTemplate;
+
+  type DetalheParametrosAlertas {
+    diasAntecedenciaPrazoProximo : Integer;
+    diasInatividade              : Integer;
+    emailHabilitado              : Boolean;
+    teamsHabilitado              : Boolean;
+    horaExecucaoUtc              : Integer;
+  }
+
+  type RelatorioProcessamentoAlertas {
+    ocorrenciasAvaliadas : Integer;
+    alertasGerados       : Integer;
+    notificacoesEnviadas : Integer;
+    falhas               : Integer;
+  }
+
+  type ItemAlertaEmitido {
+    id           : UUID;
+    tipo         : m.TipoAlerta;
+    entidade     : m.EntidadeAlerta;
+    tratativa    : UUID;
+    acao         : UUID;
+    destinatario : String(50);
+    canal        : m.CanalNotificacao;
+    enviadoEm    : Timestamp;
+    statusEnvio  : m.StatusEnvioAlerta;
+    motivoFalha  : String(255);
+    dadosAlerta  : String(1000);
+  }
+
+  /** R3: consulta os parâmetros vigentes por Administrador ou Gestor de Tratativa. */
+  @restrict: [{ grant: '*', to: ['Administrador', 'GestorTratativa'] }]
+  function consultarParametrosAlertas() returns DetalheParametrosAlertas;
+
+  /** R3: atualização dos parâmetros de alertas, exclusiva do Administrador. */
+  @restrict: [{ grant: '*', to: 'Administrador' }]
+  action atualizarParametrosAlertas(
+    diasAntecedenciaPrazoProximo : Integer,
+    diasInatividade              : Integer,
+    emailHabilitado              : Boolean,
+    teamsHabilitado              : Boolean,
+    horaExecucaoUtc              : Integer
+  ) returns DetalheParametrosAlertas;
+
+  /** R12: execução sob demanda do processamento dos alertas, exclusiva do Administrador. */
+  @restrict: [{ grant: '*', to: 'Administrador' }]
+  action executarProcessamentoAlertas() returns RelatorioProcessamentoAlertas;
+
+  /** R11: consulta paginada de alertas emitidos para Administrador e Gestor de Tratativa. */
+  @restrict: [{ grant: '*', to: ['Administrador', 'GestorTratativa'] }]
+  function listarAlertasEmitidos(
+    tratativa     : UUID,
+    tipo          : String,
+    destinatario  : String,
+    statusEnvio   : String,
+    tamanhoPagina : Integer,
+    pagina        : Integer
+  ) returns many ItemAlertaEmitido;
 }
