@@ -1,9 +1,11 @@
 import cds from '@sap/cds';
 import { comoAdmin, comoApp, comoGestor, comoUsuario, semAuth } from './apoio/usuarios';
+import { definirEstrutura } from './apoio/estrutura-espiao';
 
 const { GET, POST } = cds.test(__dirname + '/..');
 const ADMIN = '/api/administracao/v1';
 const TRATATIVA = '/api/tratativa/v1';
+const PESSOAS = '/api/integracao-pessoas/v1';
 
 jest.setTimeout(60000);
 
@@ -22,6 +24,49 @@ describe('integração SuccessFactors – parametrização e governança (etapa 
 
     expect(resposta.status).toBe(200);
     expect(resposta.data).toMatchObject(PARAMETROS_PADRAO);
+  });
+
+  it('CA10: administrador atualiza parâmetros persistidos e orienta a listagem da estrutura', async () => {
+    const provedor = await cds.connect.to('ProvedorEstruturaAdapter');
+    const listarEstrutura = jest.spyOn(provedor, 'send');
+    const parametros = { nivelUnidadeSF: 'Division', nivelAreaSF: 'Department' };
+
+    const atualizacao = await POST(`${ADMIN}/atualizarParametrosIntegracaoSF`, parametros, comoAdmin);
+
+    expect(atualizacao.status).toBe(200);
+    expect(atualizacao.data).toMatchObject(parametros);
+
+    const consulta = await GET(`${ADMIN}/consultarParametrosIntegracaoSF()`, comoAdmin);
+
+    expect(consulta.status).toBe(200);
+    expect(consulta.data).toMatchObject(parametros);
+
+    const estrutura = [{
+      codigoUnidade: 'D1',
+      nomeUnidade: 'Divisão principal',
+      areas: [{ codigoArea: 'DEP1', nomeArea: 'Departamento principal', ativa: true }],
+    }];
+    definirEstrutura(estrutura);
+
+    const listagem = await GET(`${PESSOAS}/listarEstruturaOrganizacional()`, comoGestor);
+
+    expect(listagem.status).toBe(200);
+    expect(listagem.data.value).toEqual([{
+      codigoUnidade: 'D1',
+      nomeUnidade: 'Divisão principal',
+      areas: [{ codigoArea: 'DEP1', nomeArea: 'Departamento principal' }],
+    }]);
+    expect(listarEstrutura).toHaveBeenCalledWith('listarEstrutura', {
+      nivelUnidade: 'Division',
+      nivelArea: 'Department',
+    });
+
+    const restauracao = await POST(
+      `${ADMIN}/atualizarParametrosIntegracaoSF`,
+      PARAMETROS_PADRAO,
+      comoAdmin,
+    );
+    expect(restauracao.status).toBe(200);
   });
 
   it('CA10: gestor consulta os parâmetros vigentes do SF', async () => {
