@@ -2,7 +2,8 @@ using { br.com.calazanstec as m } from '../db/tratativa';
 
 /** Administração da plataforma (R11, R18): tabela de prazos e credenciais de aplicativo. */
 @path    : '/api/administracao/v1'
-@requires: 'authenticated-user'
+// Mantém requisições autenticadas até o hook para padronizar a recusa de AplicativoOrigem.
+@requires: ['authenticated-user', 'Administrador', 'GestorTratativa']
 service AdministracaoService {
 
   /** R11: o Administrador só altera os dias; a lista de Criticidades é fixa (R7). */
@@ -102,4 +103,26 @@ service AdministracaoService {
   function consultarTemplate(
     template : UUID
   ) returns DetalheTemplate;
+
+  type DetalheParametrosAlertas {
+    diasAntecedenciaPrazoProximo : Integer;
+    diasInatividade              : Integer;
+    emailHabilitado              : Boolean;
+    teamsHabilitado              : Boolean;
+    horaExecucaoUtc              : Integer;
+  }
+
+  /** R3: consulta os parâmetros vigentes por Administrador ou Gestor de Tratativa. */
+  @restrict: [{ grant: '*', to: ['Administrador', 'GestorTratativa'] }]
+  function consultarParametrosAlertas() returns DetalheParametrosAlertas;
+
+  /** R3: atualização dos parâmetros de alertas, exclusiva do Administrador. */
+  @restrict: [{ grant: '*', to: 'Administrador' }]
+  action atualizarParametrosAlertas(
+    diasAntecedenciaPrazoProximo : Integer,
+    diasInatividade              : Integer,
+    emailHabilitado              : Boolean,
+    teamsHabilitado              : Boolean,
+    horaExecucaoUtc              : Integer
+  ) returns DetalheParametrosAlertas;
 }
