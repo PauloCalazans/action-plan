@@ -82,13 +82,13 @@ export default class AdministracaoService extends cds.ApplicationService {
       ];
       for (const limite of limites) {
         const valor = parametros[limite.campo];
-        if (valor < limite.minimo || valor > limite.maximo) {
+        if (valor == null || valor < limite.minimo || valor > limite.maximo) {
           req.reject(400, limite.mensagem, limite.campo);
         }
       }
       return atualizarParametrosAlertas(parametros);
     });
-    this.on('executarProcessamentoAlertas', async () => processarAlertas(new Date(), { modoManual: true }));
+    this.on('executarProcessamentoAlertas', async () => processarAlertas(new Date()));
     this.on('listarAlertasEmitidos', (req) => listarAlertasEmitidos(req.data as FiltrosListagemAlertas));
     return super.init();
   }

@@ -4,15 +4,8 @@ import { avaliarAlertas, type AlertaGerado } from './motor-regras';
 import { consultarParametrosAlertas } from './parametros';
 
 const ALERTAS_EMITIDOS = 'br.com.calazanstec.AlertasEmitidos';
-const chavesProcessadas = new Set<string>();
 
-function obterCanaisProcessamento(parametros: { emailHabilitado: boolean; teamsHabilitado: boolean }, modoManual = false): Array<'Email' | 'Teams'> {
-  if (modoManual) {
-    if (parametros.emailHabilitado) return ['Email'];
-    if (parametros.teamsHabilitado) return ['Teams'];
-    return [];
-  }
-
+function obterCanaisProcessamento(parametros: { emailHabilitado: boolean; teamsHabilitado: boolean }): Array<'Email' | 'Teams'> {
   return [
     ...(parametros.emailHabilitado ? ['Email' as const] : []),
     ...(parametros.teamsHabilitado ? ['Teams' as const] : []),
@@ -133,11 +126,10 @@ async function enviarCanal(
   await teams.send('enviarMensagem', { destinatarioTeamsId: destinatario, titulo: assunto, corpo });
 }
 
-export async function processarAlertas(agora: Date, opcional?: { modoManual?: boolean }): Promise<RelatorioProcessamentoAlertas> {
-  chavesProcessadas.clear();
+export async function processarAlertas(agora: Date): Promise<RelatorioProcessamentoAlertas> {
+  const chavesProcessadas = new Set<string>();
   const parametros = await consultarParametrosAlertas();
   const avaliacao = await avaliarAlertas(agora);
-  const modoManual = opcional?.modoManual === true;
   const relatorio: RelatorioProcessamentoAlertas = {
     ocorrenciasAvaliadas: avaliacao.ocorrenciasAvaliadas,
     alertasGerados: avaliacao.alertas.length,
@@ -146,7 +138,7 @@ export async function processarAlertas(agora: Date, opcional?: { modoManual?: bo
   };
 
   const tratarivaResumo = new Map<string, { titulo: string; dataPrevistaConclusao: string }>();
-  const acoesResumo = new Map<string, { pra: string }>();
+  const acoesResumo = new Map<string, { prazo: string }>();
 
   for (const alerta of avaliacao.alertas) {
     if (!tratarivaResumo.has(alerta.tratativa)) {
@@ -162,16 +154,16 @@ export async function processarAlertas(agora: Date, opcional?: { modoManual?: bo
     if (alerta.acao && !acoesResumo.has(alerta.acao)) {
       const acao = await cds.db.run(SELECT.one.from('br.com.calazanstec.Acoes').columns('prazo').where({ codigo: alerta.acao })) as { prazo?: string } | undefined;
       if (acao) {
-        acoesResumo.set(alerta.acao, { pra: acao.prazo ?? agora.toISOString() });
+        acoesResumo.set(alerta.acao, { prazo: acao.prazo ?? agora.toISOString() });
       }
     }
 
     const tratativa = tratarivaResumo.get(alerta.tratativa) ?? { titulo: 'Tratativa', dataPrevistaConclusao: agora.toISOString() };
-    const prazoBase = alerta.acao ? (acoesResumo.get(alerta.acao)?.pra ?? tratativa.dataPrevistaConclusao) : tratativa.dataPrevistaConclusao;
+    const prazoBase = alerta.acao ? (acoesResumo.get(alerta.acao)?.prazo ?? tratativa.dataPrevistaConclusao) : tratativa.dataPrevistaConclusao;
     const dataPrazo = new Date(`${prazoBase}T00:00:00.000Z`);
     const url = `https://plataforma.empresa.com/tratativas/${alerta.tratativa}`;
 
-    const canais = obterCanaisProcessamento(parametros, modoManual);
+    const canais = obterCanaisProcessamento(parametros);
 
     for (const canal of canais) {
       const chave = `${alerta.tipo}|${alerta.entidade}|${alerta.tratativa}|${alerta.acao ?? ''}|${alerta.destinatario}|${canal}|${formatarDataUtc(agora)}`;
