@@ -14,6 +14,9 @@ export interface LinhaHistorico {
   evidencia?: string | null;
   mimeType?: string | null;
   tamanho?: number | null;
+  /** R11 (spec templates-de-acoes): metadado aditivo do template gerador da Ação (sem cópia de Descrição). */
+  template?: string | null;
+  templateNome?: string | null;
 }
 
 /** R20: autor e tipo de autor válidos antes de qualquer gravação. */
@@ -54,6 +57,8 @@ export async function registrarHistorico(
         ...(l.evidencia ? { evidencia: l.evidencia } : {}),
         ...(l.mimeType ? { mimeType: l.mimeType } : {}),
         ...(l.tamanho !== undefined && l.tamanho !== null ? { tamanho: l.tamanho } : {}),
+        ...(l.template ? { template_id: l.template } : {}),
+        ...(l.templateNome ? { templateNome: l.templateNome } : {}),
       })),
     ),
   );
