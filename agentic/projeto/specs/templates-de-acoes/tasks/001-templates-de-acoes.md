@@ -1,7 +1,7 @@
 # Task 001: templates-de-acoes
 
 **Spec:** agentic/projeto/specs/templates-de-acoes/spec.md  
-**Status:** em-andamento  
+**Status:** publicada  
 <!-- pendente | em-andamento | em-revisão | publicada (integrada não é escrito: deriva do git) -->  
 **Branch:** templates-de-acoes/001-templates-de-acoes
 
