@@ -25,6 +25,7 @@ Entregar o intent 008 unificando a consulta da trilha de auditoria e do históri
 - `test/historico-filtros-paginacao.test.ts`
 - `test/historico-autorizacao-lgpd.test.ts`
 - `test/historico-precedencia-imutabilidade.test.ts`
+- `test/historico-paginacao-restrita.test.ts`
 
 ---
 
