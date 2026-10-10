@@ -17,6 +17,8 @@ import { removerEvidencia, type DadosRemocaoEvidencia } from './tratativa/eviden
 import { listarPendenciasEvidenciasTratativa, listarEvidenciasAcao, listarEvidenciasTratativa, baixarEvidencia } from './tratativa/evidencias-consultas';
 import { comentarTratativa, comentarAcao, type DadosComentarioTratativa, type DadosComentarioAcao } from './tratativa/comentarios-inclusao';
 import { listarComentariosTratativa, listarComentariosAcao } from './tratativa/comentarios-consulta';
+import { consultarHistoricoUnificado } from './tratativa/historico-consulta';
+import { filtrarPorAutorizacao, mascarar } from './tratativa/historico-autorizacao';
 
 /** Contrato dos usuários: só monta o Autor e delega ao domínio (decisões 6, 14 e 15). */
 export default class TratativaService extends cds.ApplicationService {
@@ -220,6 +222,13 @@ export default class TratativaService extends cds.ApplicationService {
         pagina?: number;
       };
       return listarComentariosAcao(req, String(tratativa).toLowerCase(), String(acao).toLowerCase(), tamanhoPagina, pagina);
+    });
+    // historico-e-auditoria R1, R4, R6 (etapa 1): consulta unificada de histórico, somente leitura.
+    this.on('consultarHistoricoTratativa', async (req) => {
+      const { tratativa, tamanhoPagina, pagina } = req.data as { tratativa?: string; tamanhoPagina?: number; pagina?: number };
+      const itens = await consultarHistoricoUnificado(tratativa, tamanhoPagina, pagina);
+      const autorizados = await filtrarPorAutorizacao(req, itens);
+      return autorizados.map((item) => mascarar(req, item));
     });
     return super.init();
   }
