@@ -112,6 +112,13 @@ service AdministracaoService {
     horaExecucaoUtc              : Integer;
   }
 
+  type RelatorioProcessamentoAlertas {
+    ocorrenciasAvaliadas : Integer;
+    alertasGerados       : Integer;
+    notificacoesEnviadas : Integer;
+    falhas               : Integer;
+  }
+
   /** R3: consulta os parâmetros vigentes por Administrador ou Gestor de Tratativa. */
   @restrict: [{ grant: '*', to: ['Administrador', 'GestorTratativa'] }]
   function consultarParametrosAlertas() returns DetalheParametrosAlertas;
