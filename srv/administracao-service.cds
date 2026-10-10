@@ -132,4 +132,8 @@ service AdministracaoService {
     teamsHabilitado              : Boolean,
     horaExecucaoUtc              : Integer
   ) returns DetalheParametrosAlertas;
+
+  /** R12: execução sob demanda do processamento dos alertas, exclusiva do Administrador. */
+  @restrict: [{ grant: '*', to: 'Administrador' }]
+  action executarProcessamentoAlertas() returns RelatorioProcessamentoAlertas;
 }

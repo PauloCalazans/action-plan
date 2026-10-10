@@ -13,6 +13,7 @@ import {
   consultarParametrosAlertas,
   type DadosParametrosAlertas,
 } from './alertas/parametros';
+import { processarAlertas } from './alertas/processamento';
 
 /**
  * Administração da plataforma (R11, R18, spec templates-de-acoes R1-R4, R14, R15(b), e
@@ -83,6 +84,7 @@ export default class AdministracaoService extends cds.ApplicationService {
       }
       return atualizarParametrosAlertas(parametros);
     });
+    this.on('executarProcessamentoAlertas', async () => processarAlertas(new Date(), { modoManual: true }));
     return super.init();
   }
 }
