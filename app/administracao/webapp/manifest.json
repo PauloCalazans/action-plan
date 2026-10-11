@@ -1,0 +1,176 @@
+{
+  "_version": "1.65.0",
+  "sap.app": {
+    "id": "br.com.calazanstec.actionplan.administracao",
+    "type": "application",
+    "i18n": "i18n/i18n.properties",
+    "title": "{{appTitle}}",
+    "description": "{{appDescription}}",
+    "applicationVersion": {
+      "version": "1.0.0"
+    },
+    "dataSources": {
+      "mainService": {
+        "uri": "/api/administracao/v1/",
+        "type": "OData",
+        "settings": {
+          "odataVersion": "4.0"
+        }
+      }
+    },
+    "crossNavigation": {
+      "inbounds": {
+        "AdministracaoPlataforma-manage": {
+          "semanticObject": "AdministracaoPlataforma",
+          "action": "manage",
+          "title": "{{appTitle}}",
+          "subTitle": "{{appSubTitle}}",
+          "icon": "sap-icon://settings"
+        }
+      }
+    }
+  },
+  "sap.ui": {
+    "technology": "UI5",
+    "deviceTypes": {
+      "desktop": true,
+      "tablet": true,
+      "phone": true
+    }
+  },
+  "sap.ui5": {
+    "dependencies": {
+      "minUI5Version": "1.120.0",
+      "libs": {
+        "sap.fe.templates": {},
+        "sap.m": {},
+        "sap.ui.core": {}
+      }
+    },
+    "models": {
+      "": {
+        "dataSource": "mainService",
+        "settings": {
+          "operationMode": "Server",
+          "autoExpandSelect": true,
+          "synchronizationMode": "None"
+        }
+      },
+      "i18n": {
+        "type": "sap.ui.model.resource.ResourceModel",
+        "settings": {
+          "bundleName": "br.com.calazanstec.actionplan.administracao.i18n.i18n"
+        }
+      }
+    },
+    "routing": {
+      "routes": [
+        {
+          "pattern": ":?query:",
+          "name": "AdministracaoList",
+          "target": "AdministracaoList"
+        },
+        {
+          "pattern": "Templates({key}):?query:",
+          "name": "TemplatesObjectPage",
+          "target": "TemplatesObjectPage"
+        },
+        {
+          "pattern": "ParametrosAlertas(chave='{key}'):?query:",
+          "name": "ParametrosAlertasObjectPage",
+          "target": "ParametrosAlertasObjectPage"
+        },
+        {
+          "pattern": "ParametrosIntegracaoSF(chave='{key}'):?query:",
+          "name": "ParametrosIntegracaoSFObjectPage",
+          "target": "ParametrosIntegracaoSFObjectPage"
+        }
+      ],
+      "targets": {
+        "AdministracaoList": {
+          "type": "Component",
+          "id": "AdministracaoList",
+          "name": "sap.fe.templates.ListReport",
+          "options": {
+            "settings": {
+              "contextPath": "/Templates",
+              "navigation": {
+                "Templates": {
+                  "detail": {
+                    "route": "TemplatesObjectPage"
+                  }
+                },
+                "ParametrosAlertas": {
+                  "detail": {
+                    "route": "ParametrosAlertasObjectPage"
+                  }
+                },
+                "ParametrosIntegracaoSF": {
+                  "detail": {
+                    "route": "ParametrosIntegracaoSFObjectPage"
+                  }
+                }
+              },
+              "views": {
+                "paths": [
+                  {
+                    "key": "Templates",
+                    "label": "{{templatesTab}}",
+                    "entitySet": "Templates",
+                    "annotationPath": "com.sap.vocabularies.UI.v1.LineItem"
+                  },
+                  {
+                    "key": "ParametrosAlertas",
+                    "label": "{{alertasTab}}",
+                    "entitySet": "ParametrosAlertas",
+                    "annotationPath": "com.sap.vocabularies.UI.v1.LineItem"
+                  },
+                  {
+                    "key": "ParametrosIntegracaoSF",
+                    "label": "{{estruturaOrganizacionalTab}}",
+                    "entitySet": "ParametrosIntegracaoSF",
+                    "annotationPath": "com.sap.vocabularies.UI.v1.LineItem"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "TemplatesObjectPage": {
+          "type": "Component",
+          "id": "TemplatesObjectPage",
+          "name": "sap.fe.templates.ObjectPage",
+          "options": {
+            "settings": {
+              "contextPath": "/Templates"
+            }
+          }
+        },
+        "ParametrosAlertasObjectPage": {
+          "type": "Component",
+          "id": "ParametrosAlertasObjectPage",
+          "name": "sap.fe.templates.ObjectPage",
+          "options": {
+            "settings": {
+              "contextPath": "/ParametrosAlertas"
+            }
+          }
+        },
+        "ParametrosIntegracaoSFObjectPage": {
+          "type": "Component",
+          "id": "ParametrosIntegracaoSFObjectPage",
+          "name": "sap.fe.templates.ObjectPage",
+          "options": {
+            "settings": {
+              "contextPath": "/ParametrosIntegracaoSF"
+            }
+          }
+        }
+      }
+    }
+  },
+  "sap.cloud": {
+    "public": true,
+    "service": "br.com.calazanstec.actionplan"
+  }
+}

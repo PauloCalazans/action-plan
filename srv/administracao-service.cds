@@ -177,4 +177,20 @@ service AdministracaoService {
     tamanhoPagina : Integer,
     pagina        : Integer
   ) returns many ItemAlertaEmitido;
+
+  /** R6, Ruling R-04: projeções somente leitura para consumo pelo Fiori elements. */
+  @readonly
+  @Capabilities: { InsertRestrictions.Insertable: false, DeleteRestrictions.Deletable: false }
+  @restrict    : [{ grant: '*', to: 'Administrador' }]
+  entity Templates as projection on m.Templates;
+
+  @readonly
+  @Capabilities: { InsertRestrictions.Insertable: false, DeleteRestrictions.Deletable: false }
+  @restrict    : [{ grant: '*', to: 'Administrador' }]
+  entity ParametrosAlertas as projection on m.ParametrosAlertas;
+
+  @readonly
+  @Capabilities: { InsertRestrictions.Insertable: false, DeleteRestrictions.Deletable: false }
+  @restrict    : [{ grant: '*', to: 'Administrador' }]
+  entity ParametrosIntegracaoSF as projection on m.ParametrosIntegracaoSF;
 }

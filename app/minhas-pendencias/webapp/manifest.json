@@ -1,0 +1,108 @@
+{
+  "_version": "1.65.0",
+  "sap.app": {
+    "id": "br.com.calazanstec.actionplan.minhaspendencias",
+    "type": "application",
+    "i18n": "i18n/i18n.properties",
+    "title": "{{appTitle}}",
+    "description": "{{appDescription}}",
+    "applicationVersion": {
+      "version": "1.0.0"
+    },
+    "dataSources": {
+      "mainService": {
+        "uri": "/api/app/v1/",
+        "type": "OData",
+        "settings": {
+          "odataVersion": "4.0"
+        }
+      }
+    },
+    "crossNavigation": {
+      "inbounds": {
+        "MinhasPendencias-display": {
+          "semanticObject": "MinhasPendencias",
+          "action": "display",
+          "title": "{{appTitle}}",
+          "subTitle": "{{appSubTitle}}",
+          "icon": "sap-icon://user-edit"
+        }
+      }
+    }
+  },
+  "sap.ui": {
+    "technology": "UI5",
+    "deviceTypes": {
+      "desktop": true,
+      "tablet": true,
+      "phone": true
+    }
+  },
+  "sap.ui5": {
+    "dependencies": {
+      "minUI5Version": "1.120.0",
+      "libs": {
+        "sap.fe.templates": {},
+        "sap.m": {},
+        "sap.ui.core": {}
+      }
+    },
+    "models": {
+      "": {
+        "dataSource": "mainService",
+        "settings": {
+          "operationMode": "Server",
+          "autoExpandSelect": true,
+          "synchronizationMode": "None"
+        }
+      },
+      "i18n": {
+        "type": "sap.ui.model.resource.ResourceModel",
+        "settings": {
+          "bundleName": "br.com.calazanstec.actionplan.minhaspendencias.i18n.i18n"
+        }
+      }
+    },
+    "routing": {
+      "routes": [
+        {
+          "pattern": ":?query:",
+          "name": "MinhasPendenciasList",
+          "target": "MinhasPendenciasList"
+        }
+      ],
+      "targets": {
+        "MinhasPendenciasList": {
+          "type": "Component",
+          "id": "MinhasPendenciasList",
+          "name": "sap.fe.templates.ListReport",
+          "options": {
+            "settings": {
+              "contextPath": "/MinhasAcoes",
+              "views": {
+                "paths": [
+                  {
+                    "key": "MinhasAcoes",
+                    "label": "{{minhasAcoesTab}}",
+                    "entitySet": "MinhasAcoes",
+                    "annotationPath": "com.sap.vocabularies.UI.v1.LineItem"
+                  },
+                  {
+                    "key": "MinhasTratativas",
+                    "label": "{{minhasTratativasTab}}",
+                    "entitySet": "MinhasTratativas",
+                    "annotationPath": "com.sap.vocabularies.UI.v1.LineItem"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "sap.cloud": {
+    "public": true,
+    "service": "br.com.calazanstec.actionplan"
+  }
+}
