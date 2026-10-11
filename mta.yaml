@@ -1,0 +1,96 @@
+_schema-version: '3.1'
+ID: action-plan
+version: 1.0.0
+description: Plataforma Corporativa de Tratativas e Planos de Acao no SAP BTP
+
+parameters:
+  enable-parallel-deployments: true
+
+build-parameters:
+  before-all:
+    - builder: custom
+      commands:
+        - npm ci
+        - npm run build
+
+modules:
+  - name: action-plan-srv
+    type: nodejs
+    path: gen/srv
+    parameters:
+      buildpack: nodejs_buildpack
+    build-parameters:
+      builder: npm
+      ignore:
+        - default-env.json
+        - .env
+    requires:
+      - name: action-plan-hdi
+      - name: action-plan-auth
+      - name: action-plan-destination
+    provides:
+      - name: srv-api
+        properties:
+          srv-url: ${default-url}
+
+  - name: action-plan-db
+    type: hdb
+    path: gen/db
+    parameters:
+      buildpack: nodejs_buildpack
+    requires:
+      - name: action-plan-hdi
+
+  - name: action-plan-app-deployer
+    type: com.sap.application.content
+    path: gen/app
+    requires:
+      - name: action-plan-html5-host
+      - name: action-plan-auth
+    build-parameters:
+      build-result: resources
+
+resources:
+  - name: action-plan-hdi
+    type: com.sap.xs.hdi-container
+    parameters:
+      service: hana
+      service-plan: hdi-shared
+
+  - name: action-plan-auth
+    type: org.cloudfoundry.managed-service
+    parameters:
+      service: xsuaa
+      service-plan: application
+      path: ./xs-security.json
+      config:
+        xsappname: action-plan
+        tenant-mode: dedicated
+
+  - name: action-plan-destination
+    type: org.cloudfoundry.managed-service
+    parameters:
+      service: destination
+      service-plan: lite
+      config:
+        HTML5Runtime_enabled: true
+        init_data:
+          instance:
+            destinations:
+              - Name: action-plan-srv-api
+                Description: Destination para a API CAP backend com propagacao de token JWT
+                Authentication: ForwardAuthToken
+                ProxyType: Internet
+                Type: HTTP
+                URL: ~{srv-api/srv-url}
+                HTML5.ForwardAuthToken: true
+                HTML5.DynamicDestination: true
+            existing_destinations_policy: update
+    requires:
+      - name: srv-api
+
+  - name: action-plan-html5-host
+    type: org.cloudfoundry.managed-service
+    parameters:
+      service: html5-apps-repo
+      service-plan: app-host
