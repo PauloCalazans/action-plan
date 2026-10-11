@@ -27,24 +27,57 @@ service TratativaAppService {
         comentarios   : Composition of many Comentarios on comentarios.tratativa = $self,
         historico     : Association to many Historico on historico.tratativa = $self
   } actions {
-    @restrict: [{ grant: '*', to: 'GestorTratativa' }]
+    @requires: 'GestorTratativa'
     action mudarStatus(status : String, justificativa : String);
 
-    @restrict: [{ grant: '*', to: 'GestorTratativa' }]
+    @requires: 'GestorTratativa'
     action editar(titulo : String, descricao : String, unidade : String, area : String, solicitante : String);
 
-    @restrict: [{ grant: '*', to: 'GestorTratativa' }]
+    @requires: 'GestorTratativa'
     action mudarCriticidade(criticidade : m.Criticidade);
 
-    @restrict: [{ grant: '*', to: 'GestorTratativa' }]
+    @requires: 'GestorTratativa'
     action aplicarTemplate(templateId : UUID);
 
-    @restrict: [{ grant: '*', to: 'GestorTratativa' }]
+    @requires: 'GestorTratativa'
     action criarAcao(descricao : String, responsavel : String, prazo : String, prioridade : String, evidenciaObrigatoria : String) returns ResultadoCriacaoAcao;
+
+    @requires: 'GestorTratativa'
+    action criarSubacao(acaoMae : UUID, descricao : String, responsavel : String, prazo : String, prioridade : String, evidenciaObrigatoria : String) returns ResultadoCriacaoAcao;
+
+    @requires: 'GestorTratativa'
+    action delegarAcao(acao : UUID, novoResponsavel : String, justificativa : String);
+
+    @requires: 'authenticated-user'
+    action anexarEvidencia(acao : UUID, nomeArquivo : String, mimeType : String, conteudo : String, descricao : String) returns DetalheEvidencia;
+
+    @requires: 'authenticated-user'
+    action removerEvidencia(acao : UUID, evidencia : UUID);
+
+    @requires: 'authenticated-user'
+    action comentarTratativa(texto : String, mencoes : many String) returns ResultadoComentario;
+
+    @requires: 'authenticated-user'
+    action comentarAcao(acao : String, texto : String, mencoes : many String) returns ResultadoComentario;
   };
 
   type ResultadoCriacaoAcao {
     codigo : UUID;
+  }
+
+  type ResultadoComentario {
+    codigo : UUID;
+  }
+
+  type DetalheEvidencia {
+    codigo      : UUID;
+    acao        : UUID;
+    nomeArquivo : String(255);
+    mimeType    : String(100);
+    tamanho     : Integer;
+    descricao   : String(500);
+    criadoEm    : Timestamp;
+    autorAnexo  : String(50);
   }
 
   action criarTratativaAvulsa(
@@ -95,6 +128,7 @@ service TratativaAppService {
 
   @readonly
   @cds.redirection.target: false
+  @cds.query.limit: { default: 50, max: 200 }
   entity MinhasAcoes as projection on m.Acoes {
     key codigo as codigoAcao,
         tratativa.codigo as codigoTratativa,
@@ -113,6 +147,7 @@ service TratativaAppService {
 
   @readonly
   @cds.redirection.target: false
+  @cds.query.limit: { default: 50, max: 200 }
   entity MinhasTratativas as projection on m.Tratativas {
     key codigo as codigoTratativa,
         titulo as tituloTratativa,

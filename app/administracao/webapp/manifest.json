@@ -28,36 +28,6 @@
           "icon": "sap-icon://settings"
         }
       }
-    },
-    "TemplatesObjectPage": {
-      "type": "Component",
-      "id": "TemplatesObjectPage",
-      "name": "sap.fe.templates.ObjectPage",
-      "options": {
-        "settings": {
-          "contextPath": "/Templates"
-        }
-      }
-    },
-    "ParametrosAlertasObjectPage": {
-      "type": "Component",
-      "id": "ParametrosAlertasObjectPage",
-      "name": "sap.fe.templates.ObjectPage",
-      "options": {
-        "settings": {
-          "contextPath": "/ParametrosAlertas"
-        }
-      }
-    },
-    "ParametrosIntegracaoSFObjectPage": {
-      "type": "Component",
-      "id": "ParametrosIntegracaoSFObjectPage",
-      "name": "sap.fe.templates.ObjectPage",
-      "options": {
-        "settings": {
-          "contextPath": "/ParametrosIntegracaoSF"
-        }
-      }
     }
   },
   "sap.ui": {
@@ -163,6 +133,36 @@
                   }
                 ]
               }
+            }
+          }
+        },
+        "TemplatesObjectPage": {
+          "type": "Component",
+          "id": "TemplatesObjectPage",
+          "name": "sap.fe.templates.ObjectPage",
+          "options": {
+            "settings": {
+              "contextPath": "/Templates"
+            }
+          }
+        },
+        "ParametrosAlertasObjectPage": {
+          "type": "Component",
+          "id": "ParametrosAlertasObjectPage",
+          "name": "sap.fe.templates.ObjectPage",
+          "options": {
+            "settings": {
+              "contextPath": "/ParametrosAlertas"
+            }
+          }
+        },
+        "ParametrosIntegracaoSFObjectPage": {
+          "type": "Component",
+          "id": "ParametrosIntegracaoSFObjectPage",
+          "name": "sap.fe.templates.ObjectPage",
+          "options": {
+            "settings": {
+              "contextPath": "/ParametrosIntegracaoSF"
             }
           }
         }

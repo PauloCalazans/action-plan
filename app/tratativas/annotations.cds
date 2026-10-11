@@ -40,6 +40,36 @@ annotate TratativaAppService.Tratativas with @(
     },
     {
       $Type: 'UI.DataFieldForAction',
+      Label: 'Adicionar Subação',
+      Action: 'TratativaAppService.criarSubacao'
+    },
+    {
+      $Type: 'UI.DataFieldForAction',
+      Label: 'Delegar Ação',
+      Action: 'TratativaAppService.delegarAcao'
+    },
+    {
+      $Type: 'UI.DataFieldForAction',
+      Label: 'Anexar Evidência',
+      Action: 'TratativaAppService.anexarEvidencia'
+    },
+    {
+      $Type: 'UI.DataFieldForAction',
+      Label: 'Remover Evidência',
+      Action: 'TratativaAppService.removerEvidencia'
+    },
+    {
+      $Type: 'UI.DataFieldForAction',
+      Label: 'Comentar Tratativa',
+      Action: 'TratativaAppService.comentarTratativa'
+    },
+    {
+      $Type: 'UI.DataFieldForAction',
+      Label: 'Comentar Ação',
+      Action: 'TratativaAppService.comentarAcao'
+    },
+    {
+      $Type: 'UI.DataFieldForAction',
       Label: 'Aplicar Template',
       Action: 'TratativaAppService.aplicarTemplate'
     }
