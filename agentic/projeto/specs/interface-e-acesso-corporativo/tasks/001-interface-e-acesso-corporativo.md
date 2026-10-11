@@ -30,6 +30,7 @@
 
 ### Modificados
 - `srv/administracao-service.cds`
+- `srv/administracao-service.ts` (inicialização dos parâmetros singleton antes do READ, Ruling R-05)
 
 ## Interfaces
 
