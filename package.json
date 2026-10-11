@@ -62,6 +62,30 @@
               ]
             }
           }
+        },
+        "[production]": {
+          "kind": "xsuaa"
+        }
+      },
+      "db": {
+        "[production]": {
+          "kind": "hana"
+        }
+      },
+      "SuccessFactors": {
+        "kind": "odata",
+        "[production]": {
+          "credentials": {
+            "destination": "SuccessFactors"
+          }
+        }
+      },
+      "ServicoNotificacoes": {
+        "kind": "rest",
+        "[production]": {
+          "credentials": {
+            "destination": "ServicoNotificacoes"
+          }
         }
       },
       "ArmazenamentoEvidencias": {

@@ -8,6 +8,8 @@ coverage/
 .env.*
 default-env.json
 .cdsrc-private.json
+*.pem
+*.key
 *.sqlite
 *.db
 agentic/.estado/
