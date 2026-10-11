@@ -18,6 +18,7 @@
 ### Modificados
 - `package.json`
 - `package-lock.json` (só a entrada raiz do js-yaml como devDependency, mesma versão 4.3.2 já resolvida; Ruling R-02)
+- `tsconfig.cdsbuild.json` (configuração da compilação TypeScript do cds build para gen/srv — outDir/exclude; Ruling R-04)
 - `.gitignore`
 
 ## Interfaces
