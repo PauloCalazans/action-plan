@@ -1,4 +1,5 @@
 import cds from '@sap/cds';
+import { aplicarOpcoesOdata, validarFiltros } from './analitico/filtros';
 
 const NS = 'br.com.calazanstec';
 
@@ -69,6 +70,11 @@ export default class AnaliticoService extends cds.ApplicationService {
       ) {
         req.reject(403, 'Acesso negado.');
       }
+    });
+    this.before('*', validarFiltros);
+    this.after('READ', (resultado, req) => {
+      if (!Array.isArray(resultado)) return;
+      resultado.splice(0, resultado.length, ...(aplicarOpcoesOdata(resultado, req) as unknown[]));
     });
     this.before('READ', 'PendenciasPorResponsavel', (req) => {
       if (!req.user.is('GestorTratativa') && !req.user.is('Administrador')) req.reject(403, 'Acesso negado.');
