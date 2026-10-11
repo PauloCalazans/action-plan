@@ -123,6 +123,6 @@ service TratativaAppService {
         unidade,
         area,
         dataPrevistaConclusao,
-        'Responsável' as meuPapel : String(20)
+        'Responsável' as meuPapel : String(30)
   };
 }

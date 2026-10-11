@@ -6,6 +6,7 @@ import { editarTratativa } from './tratativa/edicao';
 import { obterMatriculaUsuario } from './tratativa/identidade';
 import { mudarStatusAcao } from './tratativa/acoes-ciclo-de-vida';
 import { criarAcao, type DadosCriacaoAcao } from './tratativa/acoes-criacao';
+import { minhasAcoes, minhasTratativas } from './tratativa/consultas-responsabilidade';
 import { aplicarTemplateTratativa } from './templates/templates-aplicacao';
 
 const NS = 'br.com.calazanstec';
@@ -97,6 +98,36 @@ export default class TratativaAppService extends cds.ApplicationService {
         tipo: 'Usuario',
       });
     });
+
+    this.on('READ', 'MinhasAcoes', async (req) =>
+      (await minhasAcoes(req)).map((acao) => ({
+        codigoAcao: acao.codigo,
+        codigoTratativa: acao.codigoTratativa,
+        tituloTratativa: acao.tituloTratativa,
+        statusTratativa: acao.statusTratativa,
+        descricao: acao.descricao,
+        prioridade: acao.prioridade,
+        statusAcao: acao.status,
+        prazo: acao.prazo,
+        evidenciaObrigatoria: acao.evidenciaObrigatoria,
+        dataConclusao: acao.dataConclusao,
+      })),
+    );
+
+    this.on('READ', 'MinhasTratativas', async (req) =>
+      (await minhasTratativas(req)).map((tratativa) => ({
+        codigoTratativa: tratativa.codigo,
+        tituloTratativa: tratativa.titulo,
+        origem: tratativa.origem,
+        idOrigem: tratativa.idOrigem,
+        criticidade: tratativa.criticidade,
+        statusTratativa: tratativa.status,
+        unidade: tratativa.unidade,
+        area: tratativa.area,
+        dataPrevistaConclusao: tratativa.dataPrevistaConclusao,
+        meuPapel: tratativa.meuPapel,
+      })),
+    );
 
     const alterarStatusAcao = async (req: cds.Request, status: 'Em andamento' | 'Concluída') => {
       const chave = req.params[0] as ChaveAcao;

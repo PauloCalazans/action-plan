@@ -1,1 +1,2 @@
-using from '../srv/tratativa-app-service';
+using from './tratativas/annotations';
+using from './minhas-pendencias/annotations';
