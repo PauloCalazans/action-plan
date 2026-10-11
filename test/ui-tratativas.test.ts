@@ -3,6 +3,7 @@ import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { fixarInstante, liberarRelogio } from './apoio/relogio';
 import { comoGestor, comoUsuario, semAuth } from './apoio/usuarios';
+import { sufixoUnico } from './apoio/tratativas';
 
 const { GET, POST } = cds.test(__dirname + '/..');
 const BASE = '/api/app/v1';
@@ -28,6 +29,33 @@ function arquivosEm(diretorio: string): string[] {
   return readdirSync(diretorio, { recursive: true })
     .map((entrada) => join(diretorio, String(entrada)))
     .filter((caminho) => statSync(caminho).isFile());
+}
+
+// GET de coleção OData v4: devolve o array de itens (ou [] quando vazio).
+function itens(dados: unknown): Record<string, unknown>[] {
+  const corpo = dados as { value?: Record<string, unknown>[] };
+  return Array.isArray(corpo?.value) ? corpo.value : [];
+}
+
+// Setup pela API da UI (Achado 4): cria a Tratativa e a Ação pelo próprio TratativaAppService.
+async function novaTratativaApp(): Promise<string> {
+  const r = await POST(
+    `${BASE}/criarTratativaAvulsa`,
+    { titulo: `Tratativa da UI ${sufixoUnico()}`, criticidade: 'Alta' },
+    comoUsuario,
+  );
+  expect(r.status).toBe(200);
+  return r.data.codigo as string;
+}
+
+async function novaAcaoApp(tratativa: string, responsavel: string): Promise<string> {
+  const r = await POST(
+    `${BASE}/Tratativas(${tratativa})/criarAcao`,
+    { descricao: `Ação da UI ${sufixoUnico()}`, responsavel, prazo: '2027-01-01', prioridade: 'Alta' },
+    comoGestor,
+  );
+  expect(r.status).toBe(200);
+  return r.data.codigo as string;
 }
 
 describe('Gestão de Tratativas: serviço OData e interface declarativa', () => {
@@ -155,6 +183,131 @@ describe('Gestão de Tratativas: serviço OData e interface declarativa', () => 
     }
     expect(anotacoes).toContain('Value: quando');
     expect(anotacoes).toContain('Value: justificativa');
+  });
+
+  it('CA9, CA10 e CA12 (Achado 4): as anotações declaram os botões das actions de Subação, Delegação e Evidência', () => {
+    const anotacoes = textoDo(ANOTACOES);
+
+    for (const action of ['criarSubacao', 'delegarAcao', 'anexarEvidencia']) {
+      expect(anotacoes).toContain(`Action: 'TratativaAppService.${action}'`);
+    }
+  });
+
+  it('CA9 (Achado 4): criarSubacao monta a hierarquia de 2 níveis pelo TratativaAppService', async () => {
+    const tratativa = await novaTratativaApp();
+    const mae = await novaAcaoApp(tratativa, 'M1001');
+
+    const filha = await POST(
+      `${BASE}/Tratativas(${tratativa})/criarSubacao`,
+      { acaoMae: mae, descricao: 'Subação da UI', responsavel: 'M1001', prazo: '2027-01-01', prioridade: 'Média' },
+      comoGestor,
+    );
+    expect(filha.status).toBe(200);
+
+    const detalhe = await GET(`${BASE}/Acoes(${filha.data.codigo})?$expand=acaoMae`, comoGestor);
+    expect(detalhe.status).toBe(200);
+    expect((detalhe.data as { acaoMae?: { codigo?: string } }).acaoMae?.codigo).toBe(mae);
+  });
+
+  it('CA10 (Achado 4): anexarEvidencia e removerEvidencia operam pelo TratativaAppService', async () => {
+    const tratativa = await novaTratativaApp();
+    const acao = await novaAcaoApp(tratativa, 'M1001');
+    const conteudo = Buffer.from('%PDF-1.4\nEvidência de teste').toString('base64');
+
+    const anexo = await POST(
+      `${BASE}/Tratativas(${tratativa})/anexarEvidencia`,
+      { acao, nomeArquivo: 'evidencia.pdf', mimeType: 'application/pdf', conteudo, descricao: 'Evidência de teste' },
+      comoGestor,
+    );
+    expect(anexo.status).toBe(200);
+    const evidencia = anexo.data.codigo as string;
+
+    const ativa = await GET(`${BASE}/Evidencias(${evidencia})`, comoGestor);
+    expect(ativa.status).toBe(200);
+    expect(ativa.data.ativo).toBe(true);
+
+    const remocao = await POST(`${BASE}/Tratativas(${tratativa})/removerEvidencia`, { acao, evidencia }, comoGestor);
+    expect(remocao.status).toBe(204);
+    const removida = await GET(`${BASE}/Evidencias(${evidencia})`, comoGestor);
+    expect(removida.status).toBe(200);
+    expect(removida.data.ativo).toBe(false);
+  });
+
+  it('CA11 (Achado 4): comentarTratativa e comentarAcao registram comentários com menção pelo TratativaAppService', async () => {
+    const tratativa = await novaTratativaApp();
+    const acao = await novaAcaoApp(tratativa, 'M1001');
+
+    const naTratativa = await POST(
+      `${BASE}/Tratativas(${tratativa})/comentarTratativa`,
+      { texto: 'Comentário na Tratativa', mencoes: ['M2002'] },
+      comoGestor,
+    );
+    expect(naTratativa.status).toBe(200);
+    const comentarioTratativa = await GET(`${BASE}/Comentarios(${naTratativa.data.codigo})`, comoGestor);
+    expect(comentarioTratativa.status).toBe(200);
+    expect(comentarioTratativa.data.texto).toBe('Comentário na Tratativa');
+
+    const naAcao = await POST(
+      `${BASE}/Tratativas(${tratativa})/comentarAcao`,
+      { acao, texto: 'Comentário na Ação', mencoes: ['M2002'] },
+      comoGestor,
+    );
+    expect(naAcao.status).toBe(200);
+    const comentarioAcao = await GET(`${BASE}/Comentarios(${naAcao.data.codigo})`, comoGestor);
+    expect(comentarioAcao.status).toBe(200);
+    expect(comentarioAcao.data.texto).toBe('Comentário na Ação');
+  });
+
+  it('CA12 (Achado 4): delegarAcao troca o responsável pela ação pelo TratativaAppService', async () => {
+    const tratativa = await novaTratativaApp();
+    const acao = await novaAcaoApp(tratativa, 'M1001');
+
+    const delegacao = await POST(
+      `${BASE}/Tratativas(${tratativa})/delegarAcao`,
+      { acao, novoResponsavel: 'M2002', justificativa: 'Redistribuição de carga' },
+      comoGestor,
+    );
+    expect(delegacao.status).toBe(204);
+
+    const detalhe = await GET(`${BASE}/Acoes(${acao})`, comoGestor);
+    expect(detalhe.status).toBe(200);
+    expect(detalhe.data.responsavel).toBe('M2002');
+  });
+
+  it('CA21 (Achado 1 LGPD): Participantes e Acoes não expõem matrícula/responsável a quem não é Gestor', async () => {
+    const criada = await POST(
+      `${BASE}/criarTratativaAvulsa`,
+      { titulo: 'Tratativa LGPD', criticidade: 'Alta' },
+      comoUsuario,
+    );
+    expect(criada.status).toBe(200);
+    const tratativa = criada.data.codigo as string;
+
+    const participante = await POST(`/api/tratativa/v1/Tratativas(${tratativa})/incluirParticipante`, { participante: 'M2002' }, comoGestor);
+    expect(participante.status).toBe(204);
+    const acao = await novaAcaoApp(tratativa, 'M1001');
+
+    // Não-gestor: nenhuma matrícula nem responsável exposto (mascarados como null).
+    const participantesUsuario = await GET(`${BASE}/Participantes`, comoUsuario);
+    expect(participantesUsuario.status).toBe(200);
+    expect(itens(participantesUsuario.data).every((linha) => linha.matricula === null)).toBe(true);
+
+    const acoesUsuario = await GET(`${BASE}/Acoes`, comoUsuario);
+    expect(acoesUsuario.status).toBe(200);
+    expect(itens(acoesUsuario.data).every((linha) => linha.responsavel === null)).toBe(true);
+
+    // O $expand a partir de Tratativas também respeita a máscara.
+    const expandido = await GET(`${BASE}/Tratativas(${tratativa})?$expand=participantes,acoes`, comoUsuario);
+    expect(expandido.status).toBe(200);
+    const detalhe = expandido.data as { participantes?: { matricula?: unknown }[]; acoes?: { responsavel?: unknown }[] };
+    expect((detalhe.participantes ?? []).every((linha) => linha.matricula === null)).toBe(true);
+    expect((detalhe.acoes ?? []).every((linha) => linha.responsavel === null)).toBe(true);
+
+    // Gestor: os dados aparecem (a máscara vale só para quem não é Gestor).
+    const participantesGestor = await GET(`${BASE}/Participantes`, comoGestor);
+    expect(itens(participantesGestor.data).some((linha) => linha.matricula === 'M2002')).toBe(true);
+    const acoesGestor = await GET(`${BASE}/Acoes`, comoGestor);
+    expect(itens(acoesGestor.data).some((linha) => linha.codigo === acao && linha.responsavel === 'M1001')).toBe(true);
   });
 
   it('CA21: leitura por usuário comum mascara dados pessoais e oculta Responsáveis', async () => {

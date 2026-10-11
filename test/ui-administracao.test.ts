@@ -171,6 +171,23 @@ describe('Administração da Plataforma: leitura OData administrada e escrita pe
     expect(serializado).toContain('ParametrosIntegracaoSF');
   });
 
+  it('CA26 (Achado 3): as Object Pages da Administração estão em sap.ui5.routing.targets e são alvo de rotas', () => {
+    const manifesto = JSON.parse(textoDo(MANIFESTO)) as {
+      'sap.app'?: Record<string, unknown>;
+      'sap.ui5'?: { routing?: { routes?: { target?: string }[]; targets?: Record<string, unknown> } };
+    };
+    const alvos = ['TemplatesObjectPage', 'ParametrosAlertasObjectPage', 'ParametrosIntegracaoSFObjectPage'];
+    const routing = manifesto['sap.ui5']?.routing;
+    const targets = routing?.targets ?? {};
+    const rotas = routing?.routes ?? [];
+
+    for (const alvo of alvos) {
+      expect(manifesto['sap.app']).not.toHaveProperty(alvo);
+      expect(targets).toHaveProperty(alvo);
+      expect(rotas.some((rota) => rota.target === alvo)).toBe(true);
+    }
+  });
+
   it('CA27 e CA27a: anotações e manifesto válidos em execução OData headless', async () => {
     const metadados = await GET(`${BASE}/$metadata`, comoAdmin);
 

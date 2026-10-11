@@ -34,8 +34,8 @@ function itens(dados: unknown): Record<string, unknown>[] {
 }
 
 // Setup pela API transacional (helpers): cria a Tratativa avulsa e devolve o Código.
-async function novaTratativa(): Promise<string> {
-  const r = await criarAvulsa(enviar, { titulo: `Tratativa ${sufixoUnico()}`, criticidade: 'Alta' });
+async function novaTratativa(criticidade = 'Alta'): Promise<string> {
+  const r = await criarAvulsa(enviar, { titulo: `Tratativa ${sufixoUnico()}`, criticidade });
   expect(r.status).toBe(200);
   return r.data.codigo as string;
 }
@@ -142,6 +142,95 @@ describe('Minhas Pendências: visão pessoal do colaborador', () => {
     const anotacoes = textoDo(ANOTACOES);
     expect(anotacoes).toContain('annotate TratativaAppService.MinhasTratativas');
     expect(anotacoes).toContain('Value: meuPapel');
+  });
+
+  it('CA13 (Achado 2): MinhasAcoes respeita $filter, $top/$skip, $orderby e $count no escopo de M1001', async () => {
+    const tratativa = await novaTratativa();
+    await atribuirResponsavelPrincipal(enviar, tratativa, { responsavelPrincipal: 'M1001' }, comoGestor);
+
+    // 55 Ações de M1001 na mesma Tratativa (a 2ª página do corte padrão de 50 precisa existir) + 1 de M2002.
+    const minhas: string[] = [];
+    for (let i = 0; i < 55; i += 1) {
+      const r = await criarAcao(enviar, tratativa, {
+        descricao: `Ação ${sufixoUnico()}`,
+        responsavel: 'M1001',
+        prazo: i === 0 ? '2027-12-31' : '2027-01-01',
+        prioridade: 'Alta',
+      }, comoGestor);
+      expect(r.status).toBe(200);
+      minhas.push(r.data.codigo as string);
+    }
+    await novaAcao(tratativa, 'M2002');
+    const inicio = await POST(`${BASE}/MinhasAcoes(${minhas[0]})/iniciar`, {}, comoM1001);
+    expect(inicio.status).toBe(204);
+
+    const escopo = `codigoTratativa eq '${tratativa}'`;
+    const filtro = `$filter=${encodeURIComponent(escopo)}`;
+
+    // $count + corte padrão de 50: só as 55 de M1001 (a de M2002 não conta).
+    const contado = await GET(`${BASE}/MinhasAcoes?${filtro}&$count=true`, comoM1001);
+    expect(contado.status).toBe(200);
+    expect(itens(contado.data)).toHaveLength(50);
+    expect((contado.data as Record<string, unknown>)['@odata.count']).toBe(55);
+
+    // $filter por status.
+    const porStatus = await GET(
+      `${BASE}/MinhasAcoes?$filter=${encodeURIComponent(`${escopo} and statusAcao eq 'Em andamento'`)}`,
+      comoM1001,
+    );
+    expect(porStatus.status).toBe(200);
+    expect(itens(porStatus.data).map((linha) => linha.codigoAcao)).toEqual([minhas[0]]);
+
+    // $top/$skip: a 2ª página existe.
+    const segunda = await GET(`${BASE}/MinhasAcoes?${filtro}&$top=50&$skip=50`, comoM1001);
+    expect(segunda.status).toBe(200);
+    expect(itens(segunda.data)).toHaveLength(5);
+
+    // $orderby.
+    const ordenado = await GET(`${BASE}/MinhasAcoes?${filtro}&$orderby=${encodeURIComponent('prazo desc')}&$top=1`, comoM1001);
+    expect(ordenado.status).toBe(200);
+    expect(itens(ordenado.data)[0]?.prazo).toBe('2027-12-31');
+  });
+
+  it('CA15 (Achado 2): MinhasTratativas respeita $filter, $top/$skip, $orderby e $count no escopo de M1001', async () => {
+    const baixa = await novaTratativa('Baixa');
+    const media = await novaTratativa('Média');
+    const alta = await novaTratativa('Alta');
+    for (const t of [baixa, media, alta]) {
+      expect((await atribuirResponsavelPrincipal(enviar, t, { responsavelPrincipal: 'M1001' }, comoGestor)).status).toBe(204);
+    }
+    const alheia = await novaTratativa('Alta');
+    expect((await atribuirResponsavelPrincipal(enviar, alheia, { responsavelPrincipal: 'M2002' }, comoGestor)).status).toBe(204);
+
+    const escopo = [baixa, media, alta].map((t) => `codigoTratativa eq '${t}'`).join(' or ');
+    const filtro = `$filter=${encodeURIComponent(escopo)}`;
+    const asc = `$orderby=${encodeURIComponent('dataPrevistaConclusao asc')}`;
+
+    const contado = await GET(`${BASE}/MinhasTratativas?${filtro}&$count=true`, comoM1001);
+    expect(contado.status).toBe(200);
+    expect(itens(contado.data)).toHaveLength(3);
+    expect((contado.data as Record<string, unknown>)['@odata.count']).toBe(3);
+
+    // Escopo por usuário: a Tratativa de outra pessoa não aparece para M1001.
+    const soAlheia = await GET(`${BASE}/MinhasTratativas?$filter=${encodeURIComponent(`codigoTratativa eq '${alheia}'`)}&$count=true`, comoM1001);
+    expect(soAlheia.status).toBe(200);
+    expect((soAlheia.data as Record<string, unknown>)['@odata.count']).toBe(0);
+
+    // $top/$skip.
+    const pagina1 = await GET(`${BASE}/MinhasTratativas?${filtro}&${asc}&$top=2`, comoM1001);
+    expect(pagina1.status).toBe(200);
+    expect(itens(pagina1.data)).toHaveLength(2);
+    const pagina2 = await GET(`${BASE}/MinhasTratativas?${filtro}&${asc}&$top=2&$skip=2`, comoM1001);
+    expect(pagina2.status).toBe(200);
+    expect(itens(pagina2.data)).toHaveLength(1);
+
+    // $orderby: a de maior Data prevista (criticidade Baixa) vem por último em asc e primeira em desc.
+    const maior = await GET(
+      `${BASE}/MinhasTratativas?${filtro}&$orderby=${encodeURIComponent('dataPrevistaConclusao desc')}&$top=1`,
+      comoM1001,
+    );
+    expect(maior.status).toBe(200);
+    expect(itens(maior.data)[0]?.codigoTratativa).toBe(baixa);
   });
 
   it('CA25: a visão pessoal usa textos em pt-BR a partir do i18n.properties', () => {
