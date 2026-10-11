@@ -10,6 +10,8 @@ const enviar = POST as unknown as Envia;
 const BASE = '/api/app/v1';
 const RAIZ = join(__dirname, '..');
 const ANOTACOES = join(RAIZ, 'app', 'tratativas', 'annotations.cds');
+const PACOTE = join(RAIZ, 'package.json');
+const DEPCRUISER = join(RAIZ, '.dependency-cruiser.cjs');
 
 jest.setTimeout(60000);
 
@@ -135,6 +137,17 @@ describe('Acabamento da UI: robustez do backend e contratos de serviço', () => 
         'nome',
       ]);
     }
+  });
+
+  it('CA16: a esteira de verificação (lint, test e arch) está configurada e sem navegador real', () => {
+    const pacote = JSON.parse(textoDo(PACOTE)) as { scripts?: Record<string, string> };
+    expect(pacote.scripts?.lint).toContain('eslint');
+    expect(pacote.scripts?.test).toContain('jest');
+    expect(pacote.scripts?.arch).toContain('depcruise');
+
+    const configuracao = textoDo(DEPCRUISER);
+    expect(configuracao).toContain('app-nao-importa-srv');
+    expect(configuracao).toContain('db-nao-depende-de-srv-nem-app');
   });
 
   // Último teste do arquivo: esvazia PrazosCriticidade (o OData bloqueia POST/DELETE da lista fixa, R7).
