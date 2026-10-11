@@ -54,6 +54,12 @@
               "roles": [
                 "GestorTratativa"
               ]
+            },
+            "leitor-analitico": {
+              "password": "",
+              "roles": [
+                "LeitorAnalitico"
+              ]
             }
           }
         }
