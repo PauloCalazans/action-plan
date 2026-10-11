@@ -27,6 +27,7 @@ Entregar o intent 012 disponibilizando o catálogo corporativo de métricas e in
 - `test/analitico-gestao-metricas.test.ts`
 - `test/analitico-executivo-evidencias.test.ts`
 - `test/analitico-odata-precedencia-d10.test.ts`
+- `test/analitico-correcao-revisao.test.ts` (correção da revisão do diff, Ruling R-07)
 
 ---
 
