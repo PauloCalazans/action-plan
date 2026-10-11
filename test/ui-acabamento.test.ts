@@ -12,6 +12,11 @@ const RAIZ = join(__dirname, '..');
 const ANOTACOES = join(RAIZ, 'app', 'tratativas', 'annotations.cds');
 const PACOTE = join(RAIZ, 'package.json');
 const DEPCRUISER = join(RAIZ, '.dependency-cruiser.cjs');
+const APPS = [
+  { dir: 'tratativas', id: 'br.com.calazanstec.actionplan.tratativas' },
+  { dir: 'minhas-pendencias', id: 'br.com.calazanstec.actionplan.minhaspendencias' },
+  { dir: 'administracao', id: 'br.com.calazanstec.actionplan.administracao' },
+];
 
 jest.setTimeout(60000);
 
@@ -148,6 +153,33 @@ describe('Acabamento da UI: robustez do backend e contratos de serviço', () => 
     const configuracao = textoDo(DEPCRUISER);
     expect(configuracao).toContain('app-nao-importa-srv');
     expect(configuracao).toContain('db-nao-depende-de-srv-nem-app');
+  });
+
+  describe('Componentes SAPUI5 autônomos e sandbox local', () => {
+    it('CA1: cada app tem webapp/Component.js estendendo sap.fe.core.AppComponent e apontando o manifest', () => {
+      for (const app of APPS) {
+        const componente = textoDo(join(RAIZ, 'app', app.dir, 'webapp', 'Component.js'));
+        expect(componente).toContain('sap.fe.core.AppComponent');
+        expect(componente).toContain(`${app.id}.Component`);
+        expect(componente).toMatch(/manifest\s*:\s*["']json["']/);
+
+        const manifesto = JSON.parse(textoDo(join(RAIZ, 'app', app.dir, 'webapp', 'manifest.json'))) as {
+          'sap.app'?: { id?: string };
+        };
+        expect(manifesto['sap.app']?.id).toBe(app.id);
+      }
+    });
+
+    it('CA1: cada app tem webapp/index.html com bootstrap UI5 (Horizon e ComponentSupport)', () => {
+      for (const app of APPS) {
+        const html = textoDo(join(RAIZ, 'app', app.dir, 'webapp', 'index.html'));
+        expect(html).toContain('sap-ui-core.js');
+        expect(html).toContain('sap_horizon');
+        expect(html).toContain('ComponentSupport');
+        expect(html).toContain('data-sap-ui-component');
+        expect(html).toContain(app.id);
+      }
+    });
   });
 
   // Último teste do arquivo: esvazia PrazosCriticidade (o OData bloqueia POST/DELETE da lista fixa, R7).
