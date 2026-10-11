@@ -134,6 +134,14 @@ describe('Descritores declarativos de deploy e segurança (mta.yaml e xs-securit
       expect(requisito?.['target-path']).toBe('resources/');
     }
 
+    // Ruling R-07: o build-result do deployer tem de ser 'resources' e casar com o target-path (sem a barra) dos zips.
+    const buildResult = deployer?.['build-parameters']?.['build-result'];
+    expect(buildResult).toBe('resources');
+    for (const nome of Object.keys(zips)) {
+      const requisito = porRequisito.get(nome);
+      expect(requisito?.['target-path']?.replace(/\/$/, '')).toBe(buildResult);
+    }
+
     // Nenhum módulo aponta para o diretório inexistente gen/app.
     for (const modulo of modulos) {
       expect(modulo.path).not.toBe('gen/app');
