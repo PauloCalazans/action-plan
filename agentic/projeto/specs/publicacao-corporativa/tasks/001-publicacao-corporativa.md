@@ -10,6 +10,12 @@
 ### Criados
 - `mta.yaml`
 - `xs-security.json`
+- `app/tratativas/package.json`
+- `app/tratativas/ui5.yaml`
+- `app/minhas-pendencias/package.json`
+- `app/minhas-pendencias/ui5.yaml`
+- `app/administracao/package.json`
+- `app/administracao/ui5.yaml`
 - `test/publicacao-descritores.test.ts`
 - `test/publicacao-seguranca-destinations.test.ts`
 - `test/publicacao-build-producao.test.ts`
@@ -39,9 +45,50 @@ modules:
   - name: action-plan-db
     type: hdb
     path: gen/db
+  - name: action-plan-tratativas
+    type: html5
+    path: app/tratativas
+    build-parameters:
+      builder: custom
+      commands:
+        - npm install
+        - npm run build
+  - name: action-plan-minhas-pendencias
+    type: html5
+    path: app/minhas-pendencias
+    build-parameters:
+      builder: custom
+      commands:
+        - npm install
+        - npm run build
+  - name: action-plan-administracao
+    type: html5
+    path: app/administracao
+    build-parameters:
+      builder: custom
+      commands:
+        - npm install
+        - npm run build
   - name: action-plan-app-deployer
     type: com.sap.application.content
-    path: gen/app
+    path: .
+    requires:
+      - name: action-plan-html5-host
+        parameters:
+          content-target: true
+      - name: action-plan-auth
+    build-parameters:
+      build-result: resources
+      requires:
+        - artifacts: [brcomcalazanstecactionplantratativas.zip]
+          name: action-plan-tratativas
+          target-path: resources/
+        - artifacts: [brcomcalazanstecactionplanminhaspendencias.zip]
+          name: action-plan-minhas-pendencias
+          target-path: resources/
+        - artifacts: [brcomcalazanstecactionplanadministracao.zip]
+          name: action-plan-administracao
+          target-path: resources/
 resources:
   - name: action-plan-hdi
     type: com.sap.xs.hdi-container
@@ -79,13 +126,18 @@ resources:
     { "name": "ActionPlan_Gestor" },
     { "name": "ActionPlan_Administrador" },
     { "name": "ActionPlan_LeitorAnalitico" }
-  ]
+  ],
+  "oauth2-configuration": {
+    "redirect-uris": [
+      "https://*.launchpad.cfapps.*.hana.ondemand.com/**"
+    ]
+  }
 }
 ```
 
 ## Regras
-- R1: Estrutura declarativa do descritor de deploy Multi-Target Application (`mta.yaml`) contendo 3 módulos gerenciados (`action-plan-db`, `action-plan-srv`, `action-plan-app-deployer`) e 4 recursos gerenciados obrigatórios (`action-plan-hdi`, `action-plan-auth`, `action-plan-destination` com `HTML5.ForwardAuthToken=true`, `action-plan-html5-host`), viabilizando a integração com o Channel Manager do SAP Build Work Zone.
-- R2: Segurança declarativa e catálogo de escopos corporativos (`xs-security.json`) contendo atributo de usuário `matricula` para propagação da matrícula funcional, 4 escopos corporativos formais, 3 Role Collections oficiais e restrição da credencial técnica M2M `AplicativoOrigem` (bloqueada na UI com HTTP 403).
+- R1: Estrutura declarativa do descritor de deploy Multi-Target Application (`mta.yaml`) contendo 6 módulos gerenciados (`action-plan-db`, `action-plan-srv`, 3 módulos `html5` das aplicações em `app/` com builders customizados gerando artefatos zip, e o módulo deployer `action-plan-app-deployer` com `path: .` e `content-target: true`) e 4 recursos gerenciados obrigatórios (`action-plan-hdi`, `action-plan-auth`, `action-plan-destination` com destination `action-plan-srv-api` e `HTML5.ForwardAuthToken=true`, `action-plan-html5-host`), viabilizando a integração com o Channel Manager do SAP Build Work Zone Standard Edition via `mbt build`.
+- R2: Segurança declarativa e catálogo de escopos corporativos (`xs-security.json`) contendo atributo de usuário `matricula` para propagação da matrícula funcional, 4 escopos corporativos formais, 3 Role Collections oficiais, restrição de `redirect-uris` ao domínio do Work Zone Launchpad (`https://*.launchpad.cfapps.*.hana.ondemand.com/**`) e isolamento da credencial técnica M2M `AplicativoOrigem` (bloqueada na UI com HTTP 403).
 - R3: Configuração declarativa de destinations (`SuccessFactors`, `ServicoNotificacoes`) diretamente sob `cds.requires` e preservação integral dos usuários mockados em `[development]`.
 - R4: Vedação absoluta de versionamento de credenciais e segredos (`default-env.json`, `.env`, `.cdsrc-private.json`, service keys) e bloqueio no `.gitignore`.
 - R5: Critérios verificáveis de empacotamento local e ausência de deploy real (`npm run build`, `npm run lint`, `npm test` verde em SQLite em memória; AGENTS.md:38). Testes nunca importam `srv/`.
@@ -95,8 +147,8 @@ resources:
 - R9: Generalidade e não exclusividade de infraestrutura corporativa (AGENTS.md:36).
 
 ## Itens N3 (aguardam aprovação no Gate 1)
-- N3-1: Descritor de empacotamento MTA (`mta.yaml`) e recursos gerenciados BTP (`action-plan-hdi`, `action-plan-auth`, `action-plan-destination` com destination gerenciada `action-plan-srv-api` e `HTML5.ForwardAuthToken=true`, `action-plan-html5-host`).
-- N3-2: Descritor de segurança XSUAA (`xs-security.json`), escopos corporativos, atributo `matricula` (Opção A para resolução de matrícula no IAS/XSUAA), credencial técnica M2M `AplicativoOrigem` via OAuth2 client credentials e role collections (`ActionPlan_Gestor`, `ActionPlan_Administrador`, `ActionPlan_LeitorAnalitico`).
+- N3-1: Descritor de empacotamento MTA (`mta.yaml`) com 6 módulos gerenciados e 4 recursos gerenciados BTP (`action-plan-hdi`, `action-plan-auth`, `action-plan-destination` com destination gerenciada `action-plan-srv-api` e `HTML5.ForwardAuthToken=true`, `action-plan-html5-host`), além dos descritores de empacotamento em `app/` (`package.json`, `ui5.yaml`).
+- N3-2: Descritor de segurança XSUAA (`xs-security.json`), escopos corporativos, atributo `matricula` (Opção A para resolução de matrícula no IAS/XSUAA), credencial técnica M2M `AplicativoOrigem` via OAuth2 client credentials, role collections (`ActionPlan_Gestor`, `ActionPlan_Administrador`, `ActionPlan_LeitorAnalitico`) e restrição de `redirect-uris` ao domínio do Work Zone Launchpad.
 - N3-3: Destinos lógicos (`SuccessFactors`, `ServicoNotificacoes`) e configuração de perfis em `cds.requires` (`[production]` com `hana` e `xsuaa`), preservando usuários mockados em `[development]`.
 - N3-4: Bloqueio estrito de segredos e credenciais no repositório (`default-env.json`, `.env`, `.cdsrc-private.json`, chaves BTP) e regras do `.gitignore`.
 - N3-5: Governança de promoção e deploy: proibição de deploy autônomo por IA, promoção manual DEV/QA/PRD reservada ao humano (AGENTS.md:33, AGENTS.md:65, D11).
@@ -110,15 +162,17 @@ Itens N3 envolvidos: N3-1, N3-2.
 
 ### RED
 Criar `test/publicacao-descritores.test.ts` verificando:
-- Presença e validade estrutural de `mta.yaml` com os 3 módulos (`action-plan-db`, `action-plan-srv`, `action-plan-app-deployer`) e 4 recursos gerenciados (`action-plan-hdi`, `action-plan-auth`, `action-plan-destination`, `action-plan-html5-host`), comprovando configuração da destination gerenciada `action-plan-srv-api` com `HTML5.ForwardAuthToken=true` (CA1).
-- Validade de esquema de `xs-security.json` contendo o atributo de usuário `matricula` e os escopos `GestorTratativa`, `Administrador`, `LeitorAnalitico` e `AplicativoOrigem` (CA3).
+- Presença e validade estrutural de `mta.yaml` com os 6 módulos (`action-plan-db`, `action-plan-srv`, `action-plan-tratativas`, `action-plan-minhas-pendencias`, `action-plan-administracao`, `action-plan-app-deployer` com `path: .`, `content-target: true` e `requires` dos zips) e 4 recursos gerenciados (`action-plan-hdi`, `action-plan-auth`, `action-plan-destination`, `action-plan-html5-host`), comprovando configuração da destination gerenciada `action-plan-srv-api` com `HTML5.ForwardAuthToken=true` (CA1).
+- Presença e validade dos descritores de empacotamento em `app/` (`package.json` com script de build/archive e `ui5.yaml` em `tratativas`, `minhas-pendencias`, `administracao`) para compilação HTML5 via `mbt build` (CA1).
+- Validade de esquema de `xs-security.json` contendo o atributo de usuário `matricula`, os escopos `GestorTratativa`, `Administrador`, `LeitorAnalitico` e `AplicativoOrigem` (CA3), e `redirect-uris` restrito ao domínio do launchpad (`https://*.launchpad.cfapps.*.hana.ondemand.com/**`) sob `oauth2-configuration` (CA3).
 - Role Collections declaradas `ActionPlan_Gestor`, `ActionPlan_Administrador` e `ActionPlan_LeitorAnalitico` com referências corretas (CA4).
 - Neutralidade corporativa sem nomes exclusivos de departamentos em `mta.yaml` e `xs-security.json` (CA14).
 - Regra de isolamento: testes nunca importam arquivos de `srv/`.
 
 ### GREEN
-- Criar `mta.yaml` com a especificação canônica MTA 3.1 contendo os 3 módulos e 4 recursos gerenciados.
-- Criar `xs-security.json` com os atributos, escopos, role-templates e role-collections da plataforma.
+- Criar `mta.yaml` com a especificação canônica MTA 3.1 contendo os 6 módulos e 4 recursos gerenciados.
+- Criar `app/tratativas/package.json`, `app/tratativas/ui5.yaml`, `app/minhas-pendencias/package.json`, `app/minhas-pendencias/ui5.yaml`, `app/administracao/package.json` e `app/administracao/ui5.yaml`.
+- Criar `xs-security.json` com os atributos, escopos, role-templates, role-collections e `redirect-uris` restrito da plataforma.
 
 ---
 
