@@ -18,6 +18,7 @@
 - `app/administracao/webapp/index.html` (sandbox individual com `resources/sap-ui-core.js` local, ComponentSupport, sem CDN e sem script inline)
 - `test/ui-acabamento.test.ts`
 - `test/publicacao-descritores.test.ts` (014; Ruling R-09: o build dos apps passa do '--archive', inexistente no UI5 CLI 4, para o ui5-task-zipper)
+- `test/publicacao-seguranca-destinations.test.ts` (014; Ruling R-11: [development] passa a dummy; mocked conferido em [test])
 
 ### Modificados
 - `package.json` (raiz: inclusão da devDependency `cds-plugin-ui5: "0.9.3"` e configuração de perfis de autenticação em `cds.requires.auth`: `[development]` como `kind: "dummy"`, `[test]` como `kind: "mocked"` com os 7 usuários mocked pré-existentes, e `[papeis]` como `kind: "mocked"`)
