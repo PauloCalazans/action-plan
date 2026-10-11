@@ -1,0 +1,9 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "outDir": "./gen/srv"
+  },
+  "include": ["srv/**/*.ts", "@cds-models/**/*.ts"],
+  "exclude": ["app", "gen", "test"]
+}
