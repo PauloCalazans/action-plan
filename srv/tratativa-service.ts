@@ -21,6 +21,7 @@ import { consultarHistoricoUnificado, paginar } from './tratativa/historico-cons
 import { filtrarPorAutorizacao, mascarar } from './tratativa/historico-autorizacao';
 import { listarTemplates, consultarTemplate, type FiltrosListagemTemplates } from './templates/templates-consulta';
 import { aplicarTemplateTratativa, type DadosAplicacaoTemplate } from './templates/templates-aplicacao';
+import { consultarParametrosIntegracaoSF } from './integracoes/parametros-sf';
 
 /** Contrato dos usuários: só monta o Autor e delega ao domínio (decisões 6, 14 e 15). */
 export default class TratativaService extends cds.ApplicationService {
@@ -43,6 +44,11 @@ export default class TratativaService extends cds.ApplicationService {
           : 'Aplicativo de origem não usa este serviço.',
       );
     });
+    this.before('consultarParametrosIntegracaoSF', (req) => {
+      if (!req.user.is('GestorTratativa') && !req.user.is('Administrador')) {
+        req.reject(403, 'Acesso negado.');
+      }
+    });
     // CA21a (R5, R15) (spec templates-de-acoes): só GestorTratativa aplica Template; recusa na etapa 2,
     // antes de checar formato de parâmetros ou existência de recursos. Verificado em código (e não via
     // @restrict somado ao grant estático de GestorTratativa) porque o enforcement genérico de @restrict
@@ -58,6 +64,7 @@ export default class TratativaService extends cds.ApplicationService {
     this.on('consultarTratativa', (req) =>
       consultarTratativa((req.data as { codigo?: string }).codigo, req.user.is('GestorTratativa')),
     );
+    this.on('consultarParametrosIntegracaoSF', () => consultarParametrosIntegracaoSF());
     this.on('criarTratativaAvulsa', (req) =>
       abrirTratativa(req.data as DadosAbertura, { id: obterMatriculaUsuario(req), tipo: 'Usuario' }),
     );

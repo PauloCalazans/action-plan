@@ -11,6 +11,7 @@ import { registrarCredenciais } from './apoio/credenciais';
 import { limparEnviosEmail, obterEnviosEmail } from './apoio/email-espiao';
 import { limparEnviosTeams, obterEnviosTeams } from './apoio/teams-espiao';
 import { limparDiretorio } from './apoio/diretorio-espiao';
+import { definirColaboradores, limparProvedor } from './apoio/pessoas-espiao';
 import { executarRotinaAlertas, type RelatorioRotinaAlertas } from './apoio/alertas';
 
 const { PATCH, POST } = cds.test(__dirname + '/..');
@@ -171,6 +172,45 @@ beforeEach(async () => {
   limparEnviosEmail();
   limparEnviosTeams();
   limparDiretorio();
+  limparProvedor();
+  definirColaboradores([
+    {
+      matricula: 'M1001',
+      nome: 'Colaborador M1001',
+      email: 'm1001@empresa.com',
+      codigoUnidade: 'SP',
+      codigoArea: 'SESMT',
+      matriculaGestor: null,
+      situacao: 'Ativo',
+    },
+    {
+      matricula: 'M2001',
+      nome: 'Colaborador M2001',
+      email: 'm2001@empresa.com',
+      codigoUnidade: 'SP',
+      codigoArea: 'SESMT',
+      matriculaGestor: null,
+      situacao: 'Ativo',
+    },
+    {
+      matricula: 'M2002',
+      nome: 'Colaborador M2002',
+      email: 'm2002@empresa.com',
+      codigoUnidade: 'SP',
+      codigoArea: 'SESMT',
+      matriculaGestor: null,
+      situacao: 'Ativo',
+    },
+    {
+      matricula: 'M3003',
+      nome: 'Colaborador M3003',
+      email: 'm3003@empresa.com',
+      codigoUnidade: 'SP',
+      codigoArea: 'SESMT',
+      matriculaGestor: null,
+      situacao: 'Ativo',
+    },
+  ]);
   await atualizarParametros();
   await diasPrazoAlta(7);
 });

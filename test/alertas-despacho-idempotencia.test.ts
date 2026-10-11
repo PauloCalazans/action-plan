@@ -21,6 +21,7 @@ import {
   limparDiretorio,
   simularFalhaMatricula,
 } from './apoio/diretorio-espiao';
+import { definirColaboradores, limparProvedor } from './apoio/pessoas-espiao';
 
 const { PATCH, POST } = cds.test(__dirname + '/..');
 const enviar = POST as unknown as Envia;
@@ -110,6 +111,27 @@ beforeEach(async () => {
   limparEnviosEmail();
   limparEnviosTeams();
   limparDiretorio();
+  limparProvedor();
+  definirColaboradores([
+    {
+      matricula: 'M1001',
+      nome: 'Colaborador M1001',
+      email: 'm1001@empresa.com',
+      codigoUnidade: 'SP',
+      codigoArea: 'SESMT',
+      matriculaGestor: null,
+      situacao: 'Ativo',
+    },
+    {
+      matricula: 'M2002',
+      nome: 'Colaborador M2002',
+      email: 'm2002@empresa.com',
+      codigoUnidade: 'SP',
+      codigoArea: 'SESMT',
+      matriculaGestor: null,
+      situacao: 'Ativo',
+    },
+  ]);
   await atualizarParametros();
   await definirPrazoCriticidadeAlta(7);
 });

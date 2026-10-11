@@ -13,6 +13,11 @@ import {
   consultarParametrosAlertas,
   type DadosParametrosAlertas,
 } from './alertas/parametros';
+import {
+  atualizarParametrosIntegracaoSF,
+  consultarParametrosIntegracaoSF,
+  type DadosParametrosIntegracaoSF,
+} from './integracoes/parametros-sf';
 import { listarAlertasEmitidos, type FiltrosListagemAlertas } from './alertas/consulta-alertas';
 import { processarAlertas } from './alertas/processamento';
 
@@ -34,7 +39,11 @@ export default class AdministracaoService extends cds.ApplicationService {
       if (req.user.is('Administrador')) return;
       if (
         req.user.is('GestorTratativa')
-        && ['consultarParametrosAlertas', 'listarAlertasEmitidos'].includes(req.event)
+        && [
+          'consultarParametrosAlertas',
+          'listarAlertasEmitidos',
+          'consultarParametrosIntegracaoSF',
+        ].includes(req.event)
       ) return;
       req.reject(403, 'Acesso negado.');
     });
@@ -49,6 +58,52 @@ export default class AdministracaoService extends cds.ApplicationService {
     this.on('listarTemplates', (req) => listarTemplates(req.data as FiltrosListagemTemplates, true));
     this.on('consultarTemplate', (req) => consultarTemplateAdministrativo((req.data as { template?: string }).template));
     this.on('consultarParametrosAlertas', () => consultarParametrosAlertas());
+    this.on('consultarParametrosIntegracaoSF', () => consultarParametrosIntegracaoSF());
+    this.on('atualizarParametrosIntegracaoSF', (req) => {
+      const parametros = req.data as DadosParametrosIntegracaoSF;
+      const limites: Array<{
+        campo: keyof DadosParametrosIntegracaoSF;
+        valor: unknown;
+        mensagemObrigatorio: string;
+        mensagemLimite: string;
+      }> = [
+        {
+          campo: 'nivelUnidadeSF',
+          valor: parametros.nivelUnidadeSF,
+          mensagemObrigatorio: 'O campo Nível de unidade é obrigatório.',
+          mensagemLimite: 'O campo Nível de unidade aceita no máximo 100 caracteres.',
+        },
+        {
+          campo: 'nivelAreaSF',
+          valor: parametros.nivelAreaSF,
+          mensagemObrigatorio: 'O campo Nível de área é obrigatório.',
+          mensagemLimite: 'O campo Nível de área aceita no máximo 100 caracteres.',
+        },
+      ];
+      let invalido = false;
+      for (const limite of limites) {
+        if (typeof limite.valor !== 'string') {
+          req.reject(400, limite.mensagemObrigatorio, limite.campo);
+          invalido = true;
+          continue;
+        }
+        const valor = limite.valor.trim();
+        if (!valor) {
+          req.reject(400, limite.mensagemObrigatorio, limite.campo);
+          invalido = true;
+          continue;
+        }
+        if (valor.length > 100) {
+          req.reject(400, limite.mensagemLimite, limite.campo);
+          invalido = true;
+        }
+      }
+      if (invalido) return;
+      return atualizarParametrosIntegracaoSF({
+        nivelUnidadeSF: parametros.nivelUnidadeSF.trim(),
+        nivelAreaSF: parametros.nivelAreaSF.trim(),
+      });
+    });
     this.on('atualizarParametrosAlertas', (req) => {
       const parametros = req.data as DadosParametrosAlertas;
       type CampoNumerico = keyof Pick<

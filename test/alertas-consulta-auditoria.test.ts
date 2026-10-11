@@ -4,6 +4,7 @@ import { executarRotinaAlertas } from './apoio/alertas';
 import { registrarCredenciais } from './apoio/credenciais';
 import { fixarInstante, liberarRelogio } from './apoio/relogio';
 import { falharProximoTeams, limparEnviosTeams } from './apoio/teams-espiao';
+import { definirColaboradores, limparProvedor } from './apoio/pessoas-espiao';
 import { criarAvulsa, type Envia } from './apoio/tratativas';
 import { comoAdmin, comoApp, comoGestor, comoUsuario, semAuth } from './apoio/usuarios';
 
@@ -95,6 +96,27 @@ beforeAll(registrarCredenciais);
 beforeEach(async () => {
   fixarInstante(INSTANTE_CRIACAO);
   limparEnviosTeams();
+  limparProvedor();
+  definirColaboradores([
+    {
+      matricula: 'M1001',
+      nome: 'Colaborador M1001',
+      email: 'm1001@empresa.com',
+      codigoUnidade: 'SP',
+      codigoArea: 'SESMT',
+      matriculaGestor: null,
+      situacao: 'Ativo',
+    },
+    {
+      matricula: 'M2002',
+      nome: 'Colaborador M2002',
+      email: 'm2002@empresa.com',
+      codigoUnidade: 'SP',
+      codigoArea: 'SESMT',
+      matriculaGestor: null,
+      situacao: 'Ativo',
+    },
+  ]);
   await atualizarParametros();
 });
 afterEach(liberarRelogio);
