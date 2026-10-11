@@ -30,3 +30,13 @@ Leia antes de escrever ou ajustar qualquer teste. Cada item abaixo já causou re
 
 ## Proibido
 17. Teste que afirma que a operação **não existe** ("falha esperada no RED"); teste sem asserção real ou com `expect(true).toBe(true)`; asserção dentro de `if (status === 200)`; variáveis e imports sem uso (o lint faz parte do `verify`); arquivos soltos no worktree (`test-output.txt` etc.).
+
+## Armadilhas medidas em 010–014
+18. Respostas OData v4 trazem anotações como `@odata.context`: ao contar campos de um objeto, ignore as chaves que começam com `@` (`Object.keys(r.data).filter((k) => !k.startsWith('@'))`).
+19. Não rode `npm`/`cds`/`npx` dentro do Jest (`spawnSync npm.cmd` dá EINVAL no Windows, e arch/lint/build já são passos do `verify`). Prove o estrutural lendo os arquivos (ex.: nenhum arquivo de `app/` importa `srv/` ou `db/`; `manifest.json` é JSON válido). Se um teste precisar do build, só o rode quando `gen/` ainda não existir.
+20. Tratativa **com origem** nasce por `abrirPorApp` (`comoApp`); `criarTratativaAvulsa` não aceita origem (400).
+21. Depois de `fixarInstante` para um evento, **refixe** o relógio antes de criar o próximo cenário — senão ele nasce no instante do evento anterior.
+22. Indicadores e listas globais (contagens, rankings, backlog, envios de espiões) compartilham a base entre os testes do arquivo: meça antes e asserte o **delta**, ou filtre pelos registros do próprio teste.
+23. Não invente regra: confira cada `expect` contra a spec. Em divergência entre a spec e o resumo de CAs do design, vale a **spec** (registre no FIM). Estado inalcançável pela API → use o equivalente alcançável que preserve a intenção e reporte.
+24. `AlertasEmitidos` tem um registro **por canal** (010 R10); conte alertas pela chave sem o canal quando o CA falar de alertas, não de envios.
+25. Setup que já passa vai num commit `test(support)` separado do `test(red)`: o `verify` exige que todo arquivo de um `test(red)` falhe naquele commit.
