@@ -1,0 +1,8 @@
+specVersion: "4.0"
+metadata:
+  name: br.com.calazanstec.actionplan.administracao
+type: application
+resources:
+  configuration:
+    paths:
+      webapp: webapp

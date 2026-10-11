@@ -1,0 +1,92 @@
+{
+  "xsappname": "action-plan",
+  "tenant-mode": "dedicated",
+  "description": "Segurança corporativa para a plataforma de tratativas e planos de ação",
+  "attributes": [
+    {
+      "name": "matricula",
+      "description": "Matrícula funcional do colaborador",
+      "valueType": "string"
+    }
+  ],
+  "scopes": [
+    {
+      "name": "$XSAPPNAME.GestorTratativa",
+      "description": "Gestor de Tratativa - Gestão operacional de ocorrências, transições e planos de ação"
+    },
+    {
+      "name": "$XSAPPNAME.Administrador",
+      "description": "Administrador da Plataforma - Parametrização global, templates, alertas e integrações"
+    },
+    {
+      "name": "$XSAPPNAME.LeitorAnalitico",
+      "description": "Leitor Analítico - Consulta a indicadores e consumo analítico via Power BI / SAC"
+    },
+    {
+      "name": "$XSAPPNAME.AplicativoOrigem",
+      "description": "Aplicativo de Origem - Identidade técnica para abertura de tratativas via API"
+    }
+  ],
+  "role-templates": [
+    {
+      "name": "GestorTratativa",
+      "description": "Papel de Gestor de Tratativa",
+      "scope-references": [
+        "$XSAPPNAME.GestorTratativa"
+      ]
+    },
+    {
+      "name": "Administrador",
+      "description": "Papel de Administrador da Plataforma",
+      "scope-references": [
+        "$XSAPPNAME.Administrador"
+      ]
+    },
+    {
+      "name": "LeitorAnalitico",
+      "description": "Papel de Leitor Analítico",
+      "scope-references": [
+        "$XSAPPNAME.LeitorAnalitico"
+      ]
+    },
+    {
+      "name": "AplicativoOrigem",
+      "description": "Papel de Aplicativo de Origem (técnico)",
+      "scope-references": [
+        "$XSAPPNAME.AplicativoOrigem"
+      ]
+    }
+  ],
+  "role-collections": [
+    {
+      "name": "ActionPlan_Gestor",
+      "description": "Coleção de regras para Gestores de Tratativa",
+      "role-template-references": [
+        "$XSAPPNAME.GestorTratativa"
+      ]
+    },
+    {
+      "name": "ActionPlan_Administrador",
+      "description": "Coleção de regras para Administradores da Plataforma",
+      "role-template-references": [
+        "$XSAPPNAME.Administrador"
+      ]
+    },
+    {
+      "name": "ActionPlan_LeitorAnalitico",
+      "description": "Coleção de regras para Leitores Analíticos (Power BI / SAC)",
+      "role-template-references": [
+        "$XSAPPNAME.LeitorAnalitico"
+      ]
+    }
+  ],
+  "oauth2-configuration": {
+    "credential-types": [
+      "binding-secret",
+      "x509"
+    ],
+    "redirect-uris": [
+      "https://*.launchpad.cfapps.*.hana.ondemand.com/**"
+    ]
+  }
+}

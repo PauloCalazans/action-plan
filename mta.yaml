@@ -1,0 +1,144 @@
+_schema-version: '3.1'
+ID: action-plan
+version: 1.0.0
+description: Plataforma Corporativa de Tratativas e Planos de Acao no SAP BTP
+
+parameters:
+  enable-parallel-deployments: true
+
+build-parameters:
+  before-all:
+    - builder: custom
+      commands:
+        - npm ci
+        - npm run build
+
+modules:
+  - name: action-plan-srv
+    type: nodejs
+    path: gen/srv
+    parameters:
+      buildpack: nodejs_buildpack
+    build-parameters:
+      builder: npm
+      ignore:
+        - default-env.json
+        - .env
+    requires:
+      - name: action-plan-hdi
+      - name: action-plan-auth
+      - name: action-plan-destination
+    provides:
+      - name: srv-api
+        properties:
+          srv-url: ${default-url}
+
+  - name: action-plan-db
+    type: hdb
+    path: gen/db
+    parameters:
+      buildpack: nodejs_buildpack
+    requires:
+      - name: action-plan-hdi
+
+  - name: action-plan-tratativas
+    type: html5
+    path: app/tratativas
+    build-parameters:
+      builder: custom
+      supported-platforms: []
+      commands:
+        - npm install
+        - npm run build
+      build-result: dist
+
+  - name: action-plan-minhas-pendencias
+    type: html5
+    path: app/minhas-pendencias
+    build-parameters:
+      builder: custom
+      supported-platforms: []
+      commands:
+        - npm install
+        - npm run build
+      build-result: dist
+
+  - name: action-plan-administracao
+    type: html5
+    path: app/administracao
+    build-parameters:
+      builder: custom
+      supported-platforms: []
+      commands:
+        - npm install
+        - npm run build
+      build-result: dist
+
+  - name: action-plan-app-deployer
+    type: com.sap.application.content
+    path: .
+    requires:
+      - name: action-plan-html5-host
+        parameters:
+          content-target: true
+      - name: action-plan-auth
+    build-parameters:
+      build-result: resources
+      requires:
+        - name: action-plan-tratativas
+          artifacts:
+            - brcomcalazanstecactionplantratativas.zip
+          target-path: resources/
+        - name: action-plan-minhas-pendencias
+          artifacts:
+            - brcomcalazanstecactionplanminhaspendencias.zip
+          target-path: resources/
+        - name: action-plan-administracao
+          artifacts:
+            - brcomcalazanstecactionplanadministracao.zip
+          target-path: resources/
+
+resources:
+  - name: action-plan-hdi
+    type: com.sap.xs.hdi-container
+    parameters:
+      service: hana
+      service-plan: hdi-shared
+
+  - name: action-plan-auth
+    type: org.cloudfoundry.managed-service
+    parameters:
+      service: xsuaa
+      service-plan: application
+      path: ./xs-security.json
+      config:
+        xsappname: action-plan
+        tenant-mode: dedicated
+
+  - name: action-plan-destination
+    type: org.cloudfoundry.managed-service
+    parameters:
+      service: destination
+      service-plan: lite
+      config:
+        HTML5Runtime_enabled: true
+        init_data:
+          instance:
+            destinations:
+              - Name: action-plan-srv-api
+                Description: Destination para a API CAP backend com propagacao de token JWT
+                Authentication: ForwardAuthToken
+                ProxyType: Internet
+                Type: HTTP
+                URL: ~{srv-api/srv-url}
+                HTML5.ForwardAuthToken: true
+                HTML5.DynamicDestination: true
+            existing_destinations_policy: update
+    requires:
+      - name: srv-api
+
+  - name: action-plan-html5-host
+    type: org.cloudfoundry.managed-service
+    parameters:
+      service: html5-apps-repo
+      service-plan: app-host
