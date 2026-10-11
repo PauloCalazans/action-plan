@@ -3,31 +3,50 @@
 **Spec:** agentic/projeto/specs/acabamento-ui-fiori/spec.md
 **Status:** aprovado
 
-Escopo técnico: acabamento visual, ergonomia operacional, internacionalização e usabilidade corporativa das aplicações SAP Fiori elements v4 em `app/` (`app/tratativas/`, `app/minhas-pendencias/`, `app/administracao/`) consumindo os serviços CAP consolidados (`TratativaAppService`, `AdministracaoService`). Resolve integralmente os oito achados apontados no teste visual em navegador (`agentic/.estado/execucao/2026-10-11-teste-visual-ui/achados.md`), assegurando: (1) autonomia e execução local isolada de cada aplicação como componente SAPUI5 (`Component.js` estendendo `sap.fe.core.AppComponent` e `index.html` com bootstrap sandbox Fiori), mantendo estritamente o empacotamento MTA/HTML5 da spec 014; (2) internacionalização e rótulos amigáveis em Português do Brasil (pt-BR) em 100% das entidades, propriedades, colunas, filtros e parâmetros de ações, banindo identificadores técnicos em camelCase; (3) Action Import canônico `TratativaAppService.EntityContainer/criarTratativaAvulsa` na barra de ferramentas do List Report de Tratativas, sem campo de data prevista discricionária e com persistência síncrona; (4) controles de entrada tipados e ajudas visuais: seletor de calendário (DatePicker) para prazos (`Edm.Date`), listas suspensas (dropdowns com `@Common.ValueListWithFixedValues`) para domínios enumerados (criticidade em tratativas; prioridade e evidência obrigatória em ações) e ajuda de pesquisa de colaboradores (Value Help consumindo dados de pessoas do SuccessFactors da spec 011 em modo estritamente leitura conforme diretriz do humano sob a LGPD); (5) botões de cabeçalho dedicados para cada transição de status da Tratativa com controle dinâmico declarativo de visibilidade/habilitação via `@Core.OperationAvailable` / flags de estado (`Aberta`, `Em andamento`, `Encerrada`, `Cancelada`), com diálogo de justificativa obrigatória em Cancelamento e Reabertura; (6) completude visual de telas: Dados Gerais rotulados, colunas Unidade/Área/Data prevista visíveis sem corte em desktop e botões "Salvar Parâmetros" e "Executar Processamento Manual" operacionais na Administração; e (7) proteção defensiva no cálculo de prazos (`diasDoPrazo` em `srv/tratativa/prazo.ts`), tratando bases com `PrazosCriticidade` não inicializada com recusa HTTP 400 controlada, impedindo falhas por `TypeError` que interrompam o servidor Node.js.
+Escopo técnico: acabamento visual, ergonomia operacional, internacionalização e usabilidade corporativa das aplicações SAP Fiori elements v4 em `app/` (`app/tratativas/`, `app/minhas-pendencias/`, `app/administracao/`) consumindo os serviços CAP consolidados (`TratativaAppService`, `AdministracaoService`). Resolve integralmente os oito achados apontados no teste visual em navegador (`agentic/.estado/execucao/2026-10-11-teste-visual-ui/achados.md`), assegurando: (1) componentes SAPUI5 autônomos (`Component.js` estendendo `sap.fe.core.AppComponent`), sandbox unificado do Fiori Launchpad em `app/index.html` e execução local no padrão CAP/BAS via `cds watch` e `cds-plugin-ui5` (com os 3 tiles pelos intents, sem pedido de login em desenvolvimento e com `ui5-task-zipper` no empacotamento MTA/HTML5 da spec 014); (2) internacionalização e rótulos amigáveis em Português do Brasil (pt-BR) em 100% das entidades, propriedades, colunas, filtros e parâmetros de ações, banindo identificadores técnicos em camelCase; (3) Action Import canônico `TratativaAppService.EntityContainer/criarTratativaAvulsa` na barra de ferramentas do List Report de Tratativas, sem campo de data prevista discricionária e com persistência síncrona; (4) controles de entrada tipados e ajudas visuais: seletor de calendário (DatePicker) para prazos (`Edm.Date`), listas suspensas (dropdowns com `@Common.ValueListWithFixedValues`) para domínios enumerados (criticidade em tratativas; prioridade e evidência obrigatória em ações) e ajuda de pesquisa de colaboradores (Value Help consumindo dados de pessoas do SuccessFactors da spec 011 em modo estritamente leitura conforme diretriz do humano sob a LGPD); (5) botões de cabeçalho dedicados para cada transição de status da Tratativa com controle dinâmico declarativo de visibilidade/habilitação via `@Core.OperationAvailable` / flags de estado (`Aberta`, `Em andamento`, `Encerrada`, `Cancelada`), com diálogo de justificativa obrigatória em Cancelamento e Reabertura; (6) completude visual de telas: Dados Gerais rotulados, colunas Unidade/Área/Data prevista visíveis sem corte em desktop e botões "Salvar Parâmetros" e "Executar Processamento Manual" operacionais na Administração; e (7) proteção defensiva no cálculo de prazos (`diasDoPrazo` em `srv/tratativa/prazo.ts`), tratando bases com `PrazosCriticidade` não inicializada com recusa HTTP 400 controlada, impedindo falhas por `TypeError` que interrompam o servidor Node.js.
 
 ---
 
 ## Decisões
 
-1. **Componentes SAPUI5 autônomos (`Component.js`) e sandbox local (`index.html`) por aplicação Fiori elements v4 (R1; Achado 1).**
-   - O teste visual revelou que as três pastas em `app/` continham apenas `manifest.json`, `xs-app.json` e `annotations.cds`, sem `Component.js` nem `index.html`. O Fiori elements v4 requer que cada aplicação seja um componente SAPUI5 autônomo estendendo `sap.fe.core.AppComponent` para carregar nativamente em runtime, tanto em sandbox local quanto no SAP Build Work Zone corporativo.
-   - **Estrutura por aplicação (`app/<app>/webapp/`):**
-     - `Component.js`: declaração canônica herdando de `sap.fe.core.AppComponent`:
-       ```javascript
-       sap.ui.define(["sap/fe/core/AppComponent"], function (AppComponent) {
-         "use strict";
-         return AppComponent.extend("br.com.calazanstec.actionplan.<appName>.Component", {
-           metadata: { manifest: "json" }
+1. **Componentes SAPUI5 autônomos (`Component.js`), sandbox unificado do Launchpad (`app/index.html`) e execução local no padrão CAP/BAS (R1; Achado 1).**
+   - A estratégia anterior baseada em CDN externa pública (`https://ui5.sap.com/...` ou `https://sapui5.hana.ondemand.com/...`), autenticação básica com prompt no navegador e flag inexistente `--archive` no UI5 CLI 4 é integralmente substituída pelo padrão oficial SAP CAP / Business Application Studio (BAS), em conformidade com o MCP `ui5-mcp-server: get_guidelines` (seção 3: CAP Integration) e a documentação do CAP (`cds-mcp: search_docs`).
+   - **Execução local unificada com `cds-plugin-ui5`:**
+     - A dependência `cds-plugin-ui5` é configurada como `devDependency` na versão exata e estável `"0.9.3"` no `package.json` raiz.
+     - A execução do servidor de desenvolvimento é realizada exclusivamente via comando unificado `cds watch` na raiz do projeto, servindo backend e todas as aplicações UI5 sob a mesma origem (`http://localhost:4004`), sendo terminantemente vedado rodar `ui5 serve`, scripts isolados ou proxies reversos (`ui5-middleware-simpleproxy`).
+     - O plugin provê os recursos do runtime SAPUI5 localmente em `/resources/...` a partir das bibliotecas declaradas no `ui5.yaml` de cada app, garantindo independência de internet e de CDN externa.
+   - **Estrutura por aplicação (`app/<app>/`):**
+     - Cada aplicação é configurada como projeto UI5 Tooling padrão:
+       - `ui5.yaml`: declara `specVersion: "4.0"`, `type: application`, framework SAPUI5 na versão exata `"1.120.0"` (LTS conforme `ui5-mcp-server: get_version_info`) com as bibliotecas `sap.m`, `sap.ui.core`, `sap.fe.templates` e `themelib_sap_horizon`, além da custom task `ui5-task-zipper`.
+       - `package.json` da app: define `"build": "ui5 build --config=ui5.yaml --clean-dest"` (sem `--archive`) e devDependencies contendo `"@ui5/cli": "^4.0.0"` e `"ui5-task-zipper": "^3.1.3"`.
+       - `webapp/Component.js`: declaração canônica herdando de `sap.fe.core.AppComponent`:
+         ```javascript
+         sap.ui.define(["sap/fe/core/AppComponent"], function (AppComponent) {
+           "use strict";
+           return AppComponent.extend("br.com.calazanstec.actionplan.<appName>.Component", {
+             metadata: { manifest: "json" }
+           });
          });
-       });
-       ```
-       Onde `<appName>` corresponde ao sufixo do ID do `manifest.json` (`tratativas`, `minhaspendencias`, `administracao`).
-     - `index.html`: página de sandbox Fiori local leve servida diretamente pelo servidor de desenvolvimento (`cds watch` / preview local), carregando o bootstrap do SAPUI5 via CDN oficial (`https://ui5.sap.com/1.120.0/resources/sap-ui-core.js`), configurando o tema `sap_horizon`, declarando `data-sap-ui-oninit="module:sap/ui/core/ComponentSupport"` e renderizando o componente via tag `<div data-sap-ui-component ...>`. As requisições OData `/api/...` são direcionadas diretamente à porta local servida pelo CAP.
-   - **Compatibilidade MTA e Build HTML5 (spec 014):**
-     - O arquivo `xs-app.json` já declara `"welcomeFile": "/index.html"`. A inclusão de `index.html` e `Component.js` completa formalmente a raiz estática esperada pelo Application Router.
-     - O comando de build do MTA em `app/<app>/package.json` (`ui5 build --config=ui5.yaml --clean-dest --archive ...`) empacota o conteúdo de `webapp/` no arquivo zip em `dist/`. `Component.js` é o ponto de entrada oficial exigido pelo builder de preload (`Component-preload.js`), garantindo compatibilidade total com o deployer no HTML5 Application Repository sem nenhuma alteração no `mta.yaml`.
-   — **Por quê:** viabiliza o carregamento isolado nativo no navegador sem depender do `$fiori-preview` genérico do CAP e prepara as aplicações para o deploy corporativo no Work Zone.
-   — **Verificado por:** CA1 (inspeção de arquivos estruturais) e CA2 (carregamento das URLs `/tratativas/webapp/index.html`, `/minhas-pendencias/webapp/index.html` e `/administracao/webapp/index.html`).
+         ```
+         Onde `<appName>` corresponde ao sufixo do ID do `manifest.json` (`tratativas`, `minhaspendencias`, `administracao`).
+       - `webapp/index.html`: página de sandbox individual servida diretamente pelo CAP via `ComponentSupport`, carregando bootstrap local em `resources/sap-ui-core.js` (sem CDN), tema `sap_horizon`, idioma `pt-BR`, `data-sap-ui-on-init="module:sap/ui/core/ComponentSupport"`, `data-sap-ui-async="true"` e renderizando via `<div data-sap-ui-component ...>`. Nenhum script inline é utilizado, respeitando rigorosamente a política de segurança de conteúdo (CSP) do UI5 (`ui5-mcp-server: get_guidelines`).
+   - **Sandbox do Fiori Launchpad Unificado (`app/index.html` e `app/sandbox.js`):**
+     - Na raiz de `app/`, é disponibilizado o ambiente de launchpad sandbox unificado com navegação por hash entre os três apps, equivalente ao SAP Build Work Zone:
+       - `app/sandbox.js`: módulo JavaScript externo (sem script inline) que configura `window["sap-ushell-config"]` com os três tiles baseados estritamente nos intents dos manifests:
+         1. `Tratativa-manage` (`semanticObject: "Tratativa"`, `action: "manage"`, título "Gestão de Tratativas", subtítulo "Plataforma de Ação", URL `./tratativas/webapp`, componente `br.com.calazanstec.actionplan.tratativas`).
+         2. `MinhasPendencias-display` (`semanticObject: "MinhasPendencias"`, `action: "display"`, título "Minhas Pendências", subtítulo "Ações e Ocorrências", URL `./minhas-pendencias/webapp`, componente `br.com.calazanstec.actionplan.minhaspendencias`).
+         3. `AdministracaoPlataforma-manage` (`semanticObject: "AdministracaoPlataforma"`, `action: "manage"`, título "Administração da Plataforma", subtítulo "Parâmetros e Alertas", URL `./administracao/webapp`, componente `br.com.calazanstec.actionplan.administracao`).
+       - `app/index.html`: casca HTML que importa `<script src="sandbox.js"></script>`, carrega `resources/sap-ui-core.js` local, inicializa `data-sap-ui-on-init="module:sap/ushell/shells/sandbox/fioriSandbox"`, sem nenhum bloco inline de script, viabilizando a navegação por hash (`#Tratativa-manage`, `#MinhasPendencias-display`, `#AdministracaoPlataforma-manage`).
+   - **Autenticação Local e Perfis no `package.json` raiz:**
+     - `[development]`: adota a estratégia built-in `'dummy'` do CAP (`cds.requires.auth: { "[development]": { "kind": "dummy" } }`). Abre o sandbox e as aplicações diretamente no navegador sem solicitar usuário nem senha (sem popup de login).
+     - `[test]`: adota `'mocked'` (`"kind": "mocked"`) preservando integralmente o dicionário dos 7 usuários mocked (`app-origem-a`, `app-origem-b`, `app-revogado`, `admin`, `usuario`, `gestor`, `leitor-analitico`), garantindo a execução dos 1092+ testes automatizados sob `cds.test`.
+     - `[papeis]`: perfil dedicado (`"kind": "mocked"` com usuários mocked) para validação manual de papéis no navegador via `cds watch --profile papeis`.
+     - `[production]`: `'xsuaa'` da spec 014 permanece intacto para nuvem SAP BTP.
+   - **Empacotamento da spec 014 e R-05 via `ui5-task-zipper`:**
+     - O UI5 CLI 4 não possui a flag `--archive`. O empacotamento é realizado via `ui5-task-zipper` configurado como custom task no `ui5.yaml` de cada app (`afterTask: generateVersionInfo`), gerando em `dist/` os arquivos zip exatamente com os nomes esperados pelo módulo `action-plan-app-deployer` do `mta.yaml`: `brcomcalazanstecactionplantratativas.zip`, `brcomcalazanstecactionplanminhaspendencias.zip` e `brcomcalazanstecactionplanadministracao.zip`.
+     - O `mta.yaml` permanece 100% inalterado e compatível com a publicação no HTML5 Application Repository.
+   — **Por quê:** viabiliza o desenvolvimento local completo no padrão oficial CAP/BAS sem login e sem CDN, provê sandbox de launchpad idêntico ao Work Zone e resolve a geração de zips no UI5 CLI 4.
+   — **Verificado por:** CA1 (testes automatizados estruturais dos arquivos, dependências, perfis de auth e ausência de scripts inline/CDN) e CA2 (abertura visual de `http://localhost:4004/` e `app/index.html` com os 3 tiles e navegação por hash sem pedido de login).
 
 2. **Centralização de rótulos pt-BR em `@title` / `@Common.Label` no CDS e catálogos `i18n.properties` (R2; Achado 2).**
    - O teste visual identificou ausência de rótulos em colunas, filtros, campos e diálogos de ações, exibindo identificadores técnicos em camelCase (`codigo`, `idOrigem`, `evidenciaObrigatoria`, `responsavelPrincipal`, `dataPrevistaConclusao`, etc.).
@@ -723,7 +742,7 @@ annotate TratativaAppService.Tratativas with actions {
 
 | Task | Objetivo | Branch |
 |---|---|---|
-| `tasks/001-acabamento-ui-fiori.md` | Entregar o intent 015 em 4 etapas sequenciais RED/GREEN: (1) Robustez do backend e contratos de serviço (`diasDoPrazo`, tipagem Date, listas de valores e Value Help SF); (2) Componentes SAPUI5 autônomos (`Component.js`) e sandbox local (`index.html`); (3) Rótulos amigáveis pt-BR, internacionalização e acabamento de `app/tratativas/`; (4) Acabamento de `app/minhas-pendencias/` e `app/administracao/`. | `acabamento-ui-fiori/001-acabamento-ui-fiori` |
+| `tasks/001-acabamento-ui-fiori.md` | Entregar o intent 015 em 4 etapas sequenciais RED/GREEN: (1) Robustez do backend e contratos de serviço (`diasDoPrazo`, tipagem Date, listas de valores e Value Help SF); (2) Componentes SAPUI5 autônomos (`Component.js`), sandbox Fiori launchpad (`app/index.html`) e execução local no padrão CAP/BAS (`cds-plugin-ui5`, auth dummy e `ui5-task-zipper`); (3) Rótulos amigáveis pt-BR, internacionalização e acabamento de `app/tratativas/`; (4) Acabamento de `app/minhas-pendencias/` e `app/administracao/`. | `acabamento-ui-fiori/001-acabamento-ui-fiori` |
 
 ---
 
@@ -755,24 +774,33 @@ annotate TratativaAppService.Tratativas with actions {
 
 1. **Separação entre flags de visualização e regras de domínio:**
    Para governar a visibilidade e habilitação dos botões no Fiori elements declarativamente via `@Core.OperationAvailable`, o `TratativaAppService` expõe flags auxiliares (`podeIniciar`, `podeEncerrar`, etc.). A verdadeira segurança continua sendo garantida no backend pelos handlers que validam os estados permitidos e rejeitam transições inválidas com HTTP 409.
-2. **Dependência de CDN oficial no sandbox local:**
-   O arquivo `index.html` de sandbox local consome os recursos da biblioteca SAPUI5 a partir da CDN oficial da SAP (`https://ui5.sap.com`). Em ambiente corporativo com isolamento absoluto de rede externa, o desenvolvedor deve utilizar a execução integrada via preview do Work Zone ou servir o SDK UI5 localmente.
+2. **Resolução de bibliotecas UI5 em tempo de desenvolvimento:**
+   Com o uso do `cds-plugin-ui5`, o runtime e os temas do SAPUI5 não são versionados no git nem dependem de requisições de rede para CDN pública durante a execução local; o plugin serve os recursos dinamicamente pelo tooling a partir do ecossistema Node.js/npm. Em builds de produção BTP, a responsabilidade pelo runtime do SAPUI5 é transferida para o HTML5 Application Repository e o SAP Launchpad Service (Work Zone) via `mta.yaml`.
 
 ---
 
 ## Arquivos Envolvidos
 
+- `package.json`
 - `srv/tratativa/prazo.ts`
 - `srv/tratativa-app-service.cds`
 - `srv/tratativa-app-service.ts`
+- `app/index.html`
+- `app/sandbox.js`
+- `app/tratativas/ui5.yaml`
+- `app/tratativas/package.json`
 - `app/tratativas/annotations.cds`
 - `app/tratativas/webapp/Component.js`
 - `app/tratativas/webapp/index.html`
 - `app/tratativas/webapp/i18n/i18n.properties`
+- `app/minhas-pendencias/ui5.yaml`
+- `app/minhas-pendencias/package.json`
 - `app/minhas-pendencias/annotations.cds`
 - `app/minhas-pendencias/webapp/Component.js`
 - `app/minhas-pendencias/webapp/index.html`
 - `app/minhas-pendencias/webapp/i18n/i18n.properties`
+- `app/administracao/ui5.yaml`
+- `app/administracao/package.json`
 - `app/administracao/annotations.cds`
 - `app/administracao/webapp/Component.js`
 - `app/administracao/webapp/index.html`
@@ -792,3 +820,33 @@ Ajustes efetuados para atender integralmente ao Parecer de Revisão (`revisao-de
 4. **Inclusão dos testes pré-existentes em `## Arquivos Envolvidos` (Achado 4):** Adicionados `test/ui-tratativas.test.ts` e `test/ui-administracao.test.ts`, documentando a adequação das asserções de Action Import (`EntityContainer/`) e das 4 ações de status dedicadas.
 5. **Compatibilidade de tipagem `Date` com validação de string (Achado 5):** Esclarecido que parâmetros `Date` OData v4 são recebidos no CAP Node.js como string ISO `YYYY-MM-DD`, mantendo conformidade nativa com `validarPrazo`.
 6. **Comportamento nativo de retorno em `executarProcessamentoAlertas` (Achado 6):** Esclarecido que o tipo complexo de retorno `RelatorioProcessamentoAlertas` gera diálogo nativo no Fiori elements v4 sem necessidade de código customizado.
+
+---
+
+## Revisão (execução local padrão CAP/BAS, 2026-10-11)
+
+Revisão estrutural da execução local e empacotamento das aplicações Fiori elements (substituindo a etapa 2 anterior baseada em CDN externa e flag `--archive` inexistente no UI5 CLI 4):
+
+1. **Execução Local no Padrão CAP / BAS:**
+   - Baseado nas diretrizes do MCP `ui5-mcp-server: get_guidelines` (Seção 3 "CAP Integration"):
+     - Adição de `cds-plugin-ui5` como `devDependency` na raiz (`0.9.3`).
+     - Execução unificada com `cds watch` na raiz, servindo backend e UI5 sob a mesma origem (`http://localhost:4004`).
+     - Proibição de `ui5 serve`, comandos `npm start` em subpastas ou proxies (`ui5-middleware-simpleproxy`).
+     - Inicialização via `sap/ui/core/ComponentSupport` com `resources/sap-ui-core.js` local em cada `app/<app>/webapp/index.html`.
+     - Proibição estrita de scripts inline em arquivos HTML (`<script>...</script>`), assegurando compatibilidade com políticas CSP (Content Security Policy).
+   - Launchpad Sandbox unificado em `app/index.html` com arquivo de configuração desacoplado `app/sandbox.js`, mapeando os 3 intents dos manifestos (`Tratativa-manage`, `MinhasPendencias-display`, `AdministracaoPlataforma-manage`) com navegação por hash entre os apps.
+
+2. **Estratégia de Autenticação Local:**
+   - Baseado na documentação oficial SAP CAP (`cds-mcp: search_docs` / capire, tópicos "Authentication" e "Serving SAP Fiori UIs"):
+     - Perfil `[development]` configurado com auth `'dummy'` (`"kind": "dummy"`), permitindo abertura direta das aplicações e do launchpad sandbox no navegador sem prompt de login HTTP Basic.
+     - Perfil `[test]` configurado com auth `'mocked'` (`"kind": "mocked"`), preservando integralmente os 7 usuários mocked e a execução de toda a suíte de mais de 1092 testes automatizados sob `cds.test`.
+     - Perfil `[papeis]` dedicado (`"kind": "mocked"`) para testes manuais de autorização no navegador via `cds watch --profile papeis`.
+     - Perfil `[production]` com `'xsuaa'` mantido intacto para nuvem SAP BTP.
+
+3. **Empacotamento MTA e Custom Task do UI5 Tooling (R-05):**
+   - O UI5 CLI 4 removeu a flag `--archive`. O empacotamento adota a extensão oficial `ui5-task-zipper` (`^3.1.3`) como custom task no pipeline do `ui5.yaml`.
+   - O comando de build nos `package.json` dos apps é padronizado para `ui5 build --config=ui5.yaml --clean-dest`.
+   - A task gera em `dist/` os arquivos zip exatamente com os nomes esperados pelo `mta.yaml` (`brcomcalazanstecactionplantratativas.zip`, `brcomcalazanstecactionplanminhaspendencias.zip`, `brcomcalazanstecactionplanadministracao.zip`), garantindo conformidade com a spec 014 sem alterações no MTA.
+
+4. **Versão do Framework SAPUI5:**
+   - Consulta ao MCP `ui5-mcp-server: get_version_info` confirmou a compatibilidade do SAPUI5 1.120.x (versão LTS com suporte ativo) com a anotação `minUI5Version: 1.120.0` já presente nos manifestos dos 3 apps.
