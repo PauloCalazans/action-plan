@@ -12,6 +12,7 @@ const RAIZ = join(__dirname, '..');
 const ANOTACOES = join(RAIZ, 'app', 'tratativas', 'annotations.cds');
 const PACOTE = join(RAIZ, 'package.json');
 const DEPCRUISER = join(RAIZ, '.dependency-cruiser.cjs');
+const MTA = join(RAIZ, 'mta.yaml');
 const APPS = [
   { dir: 'tratativas', id: 'br.com.calazanstec.actionplan.tratativas' },
   { dir: 'minhas-pendencias', id: 'br.com.calazanstec.actionplan.minhaspendencias' },
@@ -178,6 +179,19 @@ describe('Acabamento da UI: robustez do backend e contratos de serviço', () => 
         expect(html).toContain('ComponentSupport');
         expect(html).toContain('data-sap-ui-component');
         expect(html).toContain(app.id);
+      }
+    });
+
+    it('CA1 e CA16: mta.yaml, ui5.yaml e package.json dos apps permanecem íntegros para o empacotamento MTA/HTML5', () => {
+      const mta = textoDo(MTA);
+      expect(mta).toContain('action-plan-app-deployer');
+      for (const app of APPS) {
+        expect(mta).toContain(`path: app/${app.dir}`);
+        expect(textoDo(join(RAIZ, 'app', app.dir, 'ui5.yaml'))).toContain('webapp: webapp');
+        const pacoteApp = JSON.parse(textoDo(join(RAIZ, 'app', app.dir, 'package.json'))) as {
+          scripts?: Record<string, string>;
+        };
+        expect(pacoteApp.scripts?.build).toContain('ui5 build --config=ui5.yaml');
       }
     });
   });
