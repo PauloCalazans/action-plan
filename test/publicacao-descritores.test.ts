@@ -19,6 +19,7 @@ interface ModuloMta {
     builder?: string;
     'build-result'?: string;
     commands?: string[];
+    'supported-platforms'?: unknown[];
     requires?: { name?: string; artifacts?: string[]; 'target-path'?: string }[];
   };
 }
@@ -109,6 +110,8 @@ describe('Descritores declarativos de deploy e segurança (mta.yaml e xs-securit
       expect(modulo?.['build-parameters']?.builder).toBe('custom');
       expect(modulo?.['build-parameters']?.['build-result']).toBe('dist');
       expect(modulo?.['build-parameters']?.commands).toEqual(expect.arrayContaining(['npm install', 'npm run build']));
+      // Revisão do diff 2, Achado 1: sem supported-platforms o mbt geraria o módulo como app Cloud Foundry.
+      expect(modulo?.['build-parameters']?.['supported-platforms']).toEqual([]);
     }
 
     // O deployer publica no HTML5 host (content-target) os zips dos 3 apps em resources/.
