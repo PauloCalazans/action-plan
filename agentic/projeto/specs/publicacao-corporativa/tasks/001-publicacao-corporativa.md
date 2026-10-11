@@ -50,6 +50,8 @@ modules:
     path: app/tratativas
     build-parameters:
       builder: custom
+      build-result: dist
+      supported-platforms: []
       commands:
         - npm install
         - npm run build
@@ -58,6 +60,8 @@ modules:
     path: app/minhas-pendencias
     build-parameters:
       builder: custom
+      build-result: dist
+      supported-platforms: []
       commands:
         - npm install
         - npm run build
@@ -66,6 +70,8 @@ modules:
     path: app/administracao
     build-parameters:
       builder: custom
+      build-result: dist
+      supported-platforms: []
       commands:
         - npm install
         - npm run build
