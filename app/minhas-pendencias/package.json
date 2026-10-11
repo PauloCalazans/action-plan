@@ -1,0 +1,11 @@
+{
+  "name": "action-plan-minhas-pendencias",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build": "ui5 build --config=ui5.yaml --clean-dest --archive brcomcalazanstecactionplanminhaspendencias.zip"
+  },
+  "devDependencies": {
+    "@ui5/cli": "^4.0.0"
+  }
+}

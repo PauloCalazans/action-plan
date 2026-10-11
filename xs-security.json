@@ -86,7 +86,7 @@
       "x509"
     ],
     "redirect-uris": [
-      "https://*.cfapps.*.hana.ondemand.com/**"
+      "https://*.launchpad.cfapps.*.hana.ondemand.com/**"
     ]
   }
 }

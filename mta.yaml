@@ -41,14 +41,59 @@ modules:
     requires:
       - name: action-plan-hdi
 
+  - name: action-plan-tratativas
+    type: html5
+    path: app/tratativas
+    build-parameters:
+      builder: custom
+      commands:
+        - npm install
+        - npm run build
+      build-result: dist
+
+  - name: action-plan-minhas-pendencias
+    type: html5
+    path: app/minhas-pendencias
+    build-parameters:
+      builder: custom
+      commands:
+        - npm install
+        - npm run build
+      build-result: dist
+
+  - name: action-plan-administracao
+    type: html5
+    path: app/administracao
+    build-parameters:
+      builder: custom
+      commands:
+        - npm install
+        - npm run build
+      build-result: dist
+
   - name: action-plan-app-deployer
     type: com.sap.application.content
-    path: gen/app
+    path: .
     requires:
       - name: action-plan-html5-host
+        parameters:
+          content-target: true
       - name: action-plan-auth
     build-parameters:
-      build-result: resources
+      build-result: gen/app-content
+      requires:
+        - name: action-plan-tratativas
+          artifacts:
+            - brcomcalazanstecactionplantratativas.zip
+          target-path: resources/
+        - name: action-plan-minhas-pendencias
+          artifacts:
+            - brcomcalazanstecactionplanminhaspendencias.zip
+          target-path: resources/
+        - name: action-plan-administracao
+          artifacts:
+            - brcomcalazanstecactionplanadministracao.zip
+          target-path: resources/
 
 resources:
   - name: action-plan-hdi
