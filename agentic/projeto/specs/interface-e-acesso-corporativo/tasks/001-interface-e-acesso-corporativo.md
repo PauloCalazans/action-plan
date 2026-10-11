@@ -2,7 +2,7 @@
 
 **Spec:** agentic/projeto/specs/interface-e-acesso-corporativo/spec.md
 **Design:** agentic/projeto/specs/interface-e-acesso-corporativo/design.md
-**Status:** em-andamento
+**Status:** publicada
 **Branch:** interface-e-acesso-corporativo/001-interface-e-acesso-corporativo
 
 ## Arquivos
