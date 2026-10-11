@@ -3,9 +3,10 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "build": "ui5 build --config=ui5.yaml --clean-dest --archive brcomcalazanstecactionplanadministracao.zip"
+    "build": "ui5 build --config=ui5.yaml --clean-dest"
   },
   "devDependencies": {
-    "@ui5/cli": "^4.0.0"
+    "@ui5/cli": "^4.0.0",
+    "ui5-task-zipper": "^3.1.3"
   }
 }
