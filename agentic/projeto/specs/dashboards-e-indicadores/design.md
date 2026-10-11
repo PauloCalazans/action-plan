@@ -63,7 +63,7 @@ Escopo técnico: catálogo de 15 métricas corporativas e indicadores de desempe
    - Em `srv/analitico-service.cds`:
      `@requires: ['GestorTratativa', 'Administrador', 'LeitorAnalitico']`
    - Requisições sem autenticação recebem HTTP 401 do runtime.
-   - Requisições de usuários corporativos sem os papéis analíticos ou de `AplicativoOrigem` recebem o HTTP 403 padrão do runtime CAP (sem interceptação de mensagem de corpo customizada pelo handler).
+   - Requisições de usuários corporativos sem os papéis analíticos ou de `AplicativoOrigem` recebem HTTP 403 com a mensagem `Acesso negado.` exigida pela spec (CA27, CA30); como o 403 estático do `@restrict`/`@requires` do CAP responde `Forbidden` (mensagem fixa), a recusa por papel é feita no handler `before`, como em `mudarStatusAcao`/`aplicarTemplateTratativa` (009). Ruling R-07.
    - Requisições com verbos de modificação (POST, PUT, PATCH, DELETE) são rejeitadas com HTTP 405 Method Not Allowed pelas anotações `@readonly`.
    — **Por quê:** alinha a arquitetura ao comportamento padrão do runtime do CAP.
    — **Verificado por:** CA1, CA25, CA27, CA28.
