@@ -47,6 +47,12 @@ export default class AdministracaoService extends cds.ApplicationService {
       ) return;
       req.reject(403, 'Acesso negado.');
     });
+    this.before('READ', 'ParametrosAlertas', async () => {
+      await consultarParametrosAlertas();
+    });
+    this.before('READ', 'ParametrosIntegracaoSF', async () => {
+      await consultarParametrosIntegracaoSF();
+    });
     this.on('criarTemplate', (req) => criarTemplate(req.data as DadosTemplate));
     this.on('editarTemplate', async (req) => {
       const { id, ...dados } = req.data as DadosTemplate & { id?: string };
