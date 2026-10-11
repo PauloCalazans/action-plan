@@ -1,7 +1,7 @@
 # Task 001: dashboards-e-indicadores
 
 **Spec:** agentic/projeto/specs/dashboards-e-indicadores/spec.md  
-**Status:** em-andamento  
+**Status:** publicada  
 <!-- pendente | em-andamento | em-revisão | publicada (integrada não é escrito: deriva do git) -->  
 **Branch:** dashboards-e-indicadores/001-dashboards-e-indicadores
 
