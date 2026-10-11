@@ -31,6 +31,16 @@ type Evidencia = {
 };
 
 const ATIVOS = ['Aberta', 'Em andamento'];
+const ENTIDADES_COM_LEITURA_MANUAL = new Set([
+  'TratativasVencidas',
+  'TratativasPorOrigem',
+  'TratativasPorCriticidade',
+  'RankingAreas',
+  'VolumePorOrigem',
+  'PrincipaisDesvios',
+  'BacklogTotal',
+  'EvidenciasPendentes',
+]);
 
 function dataCivil(iso: string): string {
   return new Date(iso).toISOString().slice(0, 10);
@@ -73,12 +83,16 @@ export default class AnaliticoService extends cds.ApplicationService {
     });
     this.before('*', validarFiltros);
     this.after('READ', (resultado, req) => {
-      if (!Array.isArray(resultado)) return;
+      if (!Array.isArray(resultado) || !ENTIDADES_COM_LEITURA_MANUAL.has(req.target?.name.split('.').pop() ?? '')) return;
       resultado.splice(0, resultado.length, ...(aplicarOpcoesOdata(resultado, req) as unknown[]));
     });
     this.before('READ', 'PendenciasPorResponsavel', (req) => {
       if (!req.user.is('GestorTratativa') && !req.user.is('Administrador')) req.reject(403, 'Acesso negado.');
     });
+    this.on('READ', 'TratativasVencidas', async () => [{
+      id: 'TOTAL',
+      total: await totalTratativasVencidas(dataCivil(new Date().toISOString())),
+    }]);
     this.on('READ', 'TratativasPorOrigem', async () => {
       const tratativas = (await cds.db.run(
         SELECT.from(`${NS}.Tratativas`).columns('origem', 'criadoEm').orderBy('criadoEm asc'),
@@ -113,11 +127,7 @@ export default class AnaliticoService extends cds.ApplicationService {
       }
       return [...agrupadas.entries()]
         .map(([area, total]) => ({ area, total }))
-        .sort((a, b) => {
-          if (a.area === 'Sem Área') return 1;
-          if (b.area === 'Sem Área') return -1;
-          return b.total - a.total || a.area.localeCompare(b.area, 'pt-BR');
-        });
+        .sort((a, b) => b.total - a.total || a.area.localeCompare(b.area, 'pt-BR'));
     });
     this.on('READ', 'VolumePorOrigem', async () => {
       const tratativas = (await cds.db.run(
@@ -193,16 +203,20 @@ export default class AnaliticoService extends cds.ApplicationService {
     this.on('consultarCumprimentoDePrazo', async (req) => {
       const { periodoInicio, periodoFim } = req.data as { periodoInicio: string; periodoFim: string };
       const encerramentos = await encerramentosNoPeriodo(periodoInicio, periodoFim);
-      if (!encerramentos.length) return { taxaPercentual: 100 };
       const porCodigo = new Map(encerramentos.map((item) => [item.tratativa_codigo, item]));
       const tratativas = (await cds.db.run(
         SELECT.from(`${NS}.Tratativas`).columns('codigo', 'dataPrevistaConclusao', 'status'),
       )) as Array<Pick<Tratativa, 'codigo' | 'dataPrevistaConclusao' | 'status'>>;
-      const noPrazo = tratativas.filter((tratativa) => {
+      const encerradas = tratativas.filter((tratativa) => {
         const encerramento = porCodigo.get(tratativa.codigo);
-        return encerramento && tratativa.status !== 'Cancelada' && dataCivil(encerramento.quando) <= tratativa.dataPrevistaConclusao;
+        return encerramento && tratativa.status === 'Encerrada';
       });
-      return { taxaPercentual: Number(((noPrazo.length / encerramentos.length) * 100).toFixed(2)) };
+      if (!encerradas.length) return { taxaPercentual: 100 };
+      const noPrazo = encerradas.filter((tratativa) => {
+        const encerramento = porCodigo.get(tratativa.codigo);
+        return encerramento && dataCivil(encerramento.quando) <= tratativa.dataPrevistaConclusao;
+      });
+      return { taxaPercentual: Number(((noPrazo.length / encerradas.length) * 100).toFixed(2)) };
     });
     this.on('consultarTempoMedioResolucao', async (req) => {
       const { periodoInicio, periodoFim } = req.data as { periodoInicio: string; periodoFim: string };
@@ -214,7 +228,7 @@ export default class AnaliticoService extends cds.ApplicationService {
       )) as Array<Pick<Tratativa, 'codigo' | 'criadoEm' | 'status'>>;
       const porCodigo = new Map(tratativas.map((item) => [item.codigo, item]));
       const dias = encerramentos
-        .filter((encerramento) => porCodigo.get(encerramento.tratativa_codigo)?.status !== 'Cancelada')
+        .filter((encerramento) => porCodigo.get(encerramento.tratativa_codigo)?.status === 'Encerrada')
         .map((encerramento) => {
           const criado = porCodigo.get(encerramento.tratativa_codigo)?.criadoEm;
           return criado ? (Date.parse(encerramento.quando) - Date.parse(criado)) / 86400000 : 0;
@@ -223,16 +237,7 @@ export default class AnaliticoService extends cds.ApplicationService {
     });
     this.on('consultarTratativasVencidas', async (req) => {
       const { dataCorte } = req.data as { dataCorte: string };
-      const resultado = (await cds.db.run(
-        SELECT.one
-          .from(`${NS}.Tratativas`)
-          .columns('count(*) as total')
-          .where({
-            status: { in: ['Aberta', 'Em andamento'] },
-            dataPrevistaConclusao: { '<': dataCorte },
-          }),
-      )) as Total | undefined;
-      return { total: Number(resultado?.total ?? 0) };
+      return { total: await totalTratativasVencidas(dataCorte) };
     });
     this.on('consultarTendenciaMensal', async (req) => {
       const { periodoInicio, periodoFim } = req.data as { periodoInicio: string; periodoFim: string };
@@ -273,7 +278,7 @@ export default class AnaliticoService extends cds.ApplicationService {
       const encerradas = (await encerramentosNoPeriodo(periodoInicio, periodoFim)).filter((encerramento) =>
         porCodigo.has(encerramento.tratativa_codigo),
       ).length;
-      return { indicePercentual: criadas ? Number(((encerradas / criadas) * 100).toFixed(2)) : 0 };
+      return { indicePercentual: criadas ? Number(((encerradas / criadas) * 100).toFixed(2)) : 100 };
     });
     return super.init();
   }
@@ -291,4 +296,17 @@ async function encerramentosNoPeriodo(periodoInicio: string, periodoFim: string)
     ultimos.set(historico.tratativa_codigo, historico);
   }
   return [...ultimos.values()].filter((historico) => dentroDoPeriodo(dataCivil(historico.quando), periodoInicio, periodoFim));
+}
+
+async function totalTratativasVencidas(dataCorte: string): Promise<number> {
+  const resultado = (await cds.db.run(
+    SELECT.one
+      .from(`${NS}.Tratativas`)
+      .columns('count(*) as total')
+      .where({
+        status: { in: ['Aberta', 'Em andamento'] },
+        dataPrevistaConclusao: { '<': dataCorte },
+      }),
+  )) as Total | undefined;
+  return Number(resultado?.total ?? 0);
 }

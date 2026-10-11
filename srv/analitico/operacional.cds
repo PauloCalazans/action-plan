@@ -15,7 +15,7 @@ view TratativasVencidasView as
         count(*) as total : Integer
   }
   where (status = 'Aberta' or status = 'Em andamento')
-    and dataPrevistaConclusao < $now;
+    and dataPrevistaConclusao < cast($now as Date);
 
 view AcoesEmAndamentoView as
   select from m.Acoes as a
