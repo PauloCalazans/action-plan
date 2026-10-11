@@ -29,12 +29,35 @@ interface ChaveAcao {
 }
 
 interface LinhaTratativa {
+  status?: string | null;
   descricao?: string | null;
   solicitante?: string | null;
   responsavelPrincipal?: string | null;
   ocultaResponsaveis?: boolean;
+  podeIniciar?: boolean;
+  podeEncerrar?: boolean;
+  podeCancelar?: boolean;
+  podeReabrir?: boolean;
+  ocultaIniciar?: boolean;
+  ocultaEncerrar?: boolean;
+  ocultaCancelar?: boolean;
+  ocultaReabrir?: boolean;
   participantes?: unknown[] | null;
   acoes?: { responsavel?: string | null }[] | null;
+}
+
+interface DefinicaoEnum {
+  enum?: Record<string, { val?: string }>;
+}
+
+interface ConsultaValueHelp {
+  SELECT?: {
+    search?: unknown;
+    limit?: {
+      rows?: { val?: number };
+      offset?: { val?: number };
+    };
+  };
 }
 
 interface ConsultaRestringivel {
@@ -43,6 +66,22 @@ interface ConsultaRestringivel {
 
 const restringir = (req: cds.Request) => req.query as unknown as ConsultaRestringivel;
 const papeisPorRequisicao = new WeakMap<object, Set<string>>();
+
+function valoresEnum(nome: string): { codigo: string; descricao: string }[] {
+  const definicao = cds.model?.definitions[`${NS}.${nome}`] as DefinicaoEnum | undefined;
+  return Object.entries(definicao?.enum ?? {}).map(([chave, item]) => {
+    const codigo = item.val ?? chave;
+    return { codigo, descricao: codigo };
+  });
+}
+
+function termosBusca(expressao: unknown): string[] {
+  if (Array.isArray(expressao)) return expressao.flatMap(termosBusca);
+  if (!expressao || typeof expressao !== 'object') return [];
+  const elemento = expressao as { val?: unknown; xpr?: unknown };
+  if (typeof elemento.val === 'string') return [elemento.val];
+  return termosBusca(elemento.xpr);
+}
 
 export default class TratativaAppService extends cds.ApplicationService {
   async init() {
@@ -55,6 +94,15 @@ export default class TratativaAppService extends cds.ApplicationService {
       const linhas = Array.isArray(resultado) ? resultado : [resultado];
       for (const linha of linhas as LinhaTratativa[]) {
         if (!linha) continue;
+        const status = linha.status;
+        linha.podeIniciar = gestor && status === 'Aberta';
+        linha.podeEncerrar = gestor && (status === 'Aberta' || status === 'Em andamento');
+        linha.podeCancelar = gestor && (status === 'Aberta' || status === 'Em andamento');
+        linha.podeReabrir = gestor && status === 'Encerrada';
+        linha.ocultaIniciar = !linha.podeIniciar;
+        linha.ocultaEncerrar = !linha.podeEncerrar;
+        linha.ocultaCancelar = !linha.podeCancelar;
+        linha.ocultaReabrir = !linha.podeReabrir;
         linha.ocultaResponsaveis = !gestor;
         if (gestor) continue;
         linha.descricao = null;
@@ -66,6 +114,42 @@ export default class TratativaAppService extends cds.ApplicationService {
         }
       }
     });
+
+    this.on('READ', 'Colaboradores', async (req) => {
+      const select = (req.query as unknown as ConsultaValueHelp).SELECT;
+      const tamanho = Math.min(Math.max(select?.limit?.rows?.val ?? 50, 1), 200);
+      const deslocamento = Math.max(select?.limit?.offset?.val ?? 0, 0);
+      const tamanhoPagina = 200;
+      const pagina = Math.floor(deslocamento / tamanhoPagina) + 1;
+      const deslocamentoPagina = deslocamento % tamanhoPagina;
+      const termo = termosBusca(select?.search).join(' ').trim();
+      const integracao = await cds.connect.to('IntegracaoPessoasService');
+      const filtro = {
+        ...(termo ? { termo } : {}),
+        apenasAtivos: true,
+        tamanhoPagina,
+        pagina,
+      };
+      let colaboradores = await integracao.send('buscarColaboradores', filtro) as {
+        matricula: string;
+        nome: string;
+        email: string;
+      }[];
+      if (deslocamentoPagina + tamanho > tamanhoPagina) {
+        const seguintes = await integracao.send('buscarColaboradores', { ...filtro, pagina: pagina + 1 }) as typeof colaboradores;
+        colaboradores = [...colaboradores, ...seguintes];
+      }
+      return colaboradores
+        .slice(deslocamentoPagina, deslocamentoPagina + tamanho)
+        .map(({ matricula, nome, email }) => ({ matricula, nome, email }));
+    });
+
+    this.on('READ', 'ValoresCriticidade', () => valoresEnum('Criticidade'));
+    this.on('READ', 'ValoresPrioridade', () => valoresEnum('PrioridadeAcao'));
+    this.on('READ', 'ValoresEvidenciaObrigatoria', () => [
+      { codigo: 'Sim', descricao: 'Sim' },
+      { codigo: 'Não', descricao: 'Não' },
+    ]);
 
     // Mesma máscara LGPD da Tratativa, aplicada às leituras diretas de Participantes e Acoes.
     this.after('READ', 'Participantes', (resultado, req) => {
@@ -90,6 +174,23 @@ export default class TratativaAppService extends cds.ApplicationService {
       const { codigo } = req.params[0] as ChaveTratativa;
       await mudarStatus(String(codigo).toLowerCase(), req.data, { id: obterMatriculaUsuario(req), tipo: 'Usuario' });
     });
+
+    const mudarStatusDedicado = (
+      req: cds.Request,
+      status: 'Em andamento' | 'Encerrada' | 'Cancelada',
+    ) => {
+      const { codigo } = req.params[0] as ChaveTratativa;
+      const { justificativa } = req.data as { justificativa?: string | null };
+      return mudarStatus(
+        String(codigo).toLowerCase(),
+        { status, justificativa },
+        { id: obterMatriculaUsuario(req), tipo: 'Usuario' },
+      );
+    };
+    this.on('iniciarTratativa', 'Tratativas', (req) => mudarStatusDedicado(req, 'Em andamento'));
+    this.on('encerrarTratativa', 'Tratativas', (req) => mudarStatusDedicado(req, 'Encerrada'));
+    this.on('cancelarTratativa', 'Tratativas', (req) => mudarStatusDedicado(req, 'Cancelada'));
+    this.on('reabrirTratativa', 'Tratativas', (req) => mudarStatusDedicado(req, 'Em andamento'));
 
     this.on('editar', 'Tratativas', async (req) => {
       const { codigo } = req.params[0] as ChaveTratativa;

@@ -233,3 +233,127 @@ annotate TratativaAppService.Historico with @(
     { $Type: 'UI.DataField', Value: quando }
   ]
 );
+
+annotate TratativaAppService with actions {
+  criarTratativaAvulsa(
+    criticidade @(
+      Common.ValueListWithFixedValues: true,
+      Common.ValueList: {
+        CollectionPath: 'ValoresCriticidade',
+        Parameters: [
+          { $Type: 'Common.ValueListParameterInOut', LocalDataProperty: criticidade, ValueListProperty: 'codigo' },
+          { $Type: 'Common.ValueListParameterDisplayOnly', ValueListProperty: 'descricao' }
+        ]
+      }
+    ),
+    solicitante @(
+      Common.ValueList: {
+        CollectionPath: 'Colaboradores',
+        Parameters: [
+          { $Type: 'Common.ValueListParameterInOut', LocalDataProperty: solicitante, ValueListProperty: 'matricula' },
+          { $Type: 'Common.ValueListParameterDisplayOnly', ValueListProperty: 'nome' },
+          { $Type: 'Common.ValueListParameterDisplayOnly', ValueListProperty: 'email' }
+        ]
+      }
+    )
+  );
+};
+
+annotate TratativaAppService.Tratativas with actions {
+  iniciarTratativa @Core.OperationAvailable: podeIniciar;
+  encerrarTratativa @Core.OperationAvailable: podeEncerrar;
+  cancelarTratativa @Core.OperationAvailable: podeCancelar;
+  reabrirTratativa @Core.OperationAvailable: podeReabrir;
+
+  mudarCriticidade(
+    criticidade @(
+      Common.ValueListWithFixedValues: true,
+      Common.ValueList: {
+        CollectionPath: 'ValoresCriticidade',
+        Parameters: [
+          { $Type: 'Common.ValueListParameterInOut', LocalDataProperty: criticidade, ValueListProperty: 'codigo' },
+          { $Type: 'Common.ValueListParameterDisplayOnly', ValueListProperty: 'descricao' }
+        ]
+      }
+    )
+  );
+
+  criarAcao(
+    responsavel @(
+      Common.ValueList: {
+        CollectionPath: 'Colaboradores',
+        Parameters: [
+          { $Type: 'Common.ValueListParameterInOut', LocalDataProperty: responsavel, ValueListProperty: 'matricula' },
+          { $Type: 'Common.ValueListParameterDisplayOnly', ValueListProperty: 'nome' },
+          { $Type: 'Common.ValueListParameterDisplayOnly', ValueListProperty: 'email' }
+        ]
+      }
+    ),
+    prioridade @(
+      Common.ValueListWithFixedValues: true,
+      Common.ValueList: {
+        CollectionPath: 'ValoresPrioridade',
+        Parameters: [
+          { $Type: 'Common.ValueListParameterInOut', LocalDataProperty: prioridade, ValueListProperty: 'codigo' },
+          { $Type: 'Common.ValueListParameterDisplayOnly', ValueListProperty: 'descricao' }
+        ]
+      }
+    ),
+    evidenciaObrigatoria @(
+      Common.ValueListWithFixedValues: true,
+      Common.ValueList: {
+        CollectionPath: 'ValoresEvidenciaObrigatoria',
+        Parameters: [
+          { $Type: 'Common.ValueListParameterInOut', LocalDataProperty: evidenciaObrigatoria, ValueListProperty: 'codigo' },
+          { $Type: 'Common.ValueListParameterDisplayOnly', ValueListProperty: 'descricao' }
+        ]
+      }
+    )
+  );
+
+  criarSubacao(
+    responsavel @(
+      Common.ValueList: {
+        CollectionPath: 'Colaboradores',
+        Parameters: [
+          { $Type: 'Common.ValueListParameterInOut', LocalDataProperty: responsavel, ValueListProperty: 'matricula' },
+          { $Type: 'Common.ValueListParameterDisplayOnly', ValueListProperty: 'nome' },
+          { $Type: 'Common.ValueListParameterDisplayOnly', ValueListProperty: 'email' }
+        ]
+      }
+    ),
+    prioridade @(
+      Common.ValueListWithFixedValues: true,
+      Common.ValueList: {
+        CollectionPath: 'ValoresPrioridade',
+        Parameters: [
+          { $Type: 'Common.ValueListParameterInOut', LocalDataProperty: prioridade, ValueListProperty: 'codigo' },
+          { $Type: 'Common.ValueListParameterDisplayOnly', ValueListProperty: 'descricao' }
+        ]
+      }
+    ),
+    evidenciaObrigatoria @(
+      Common.ValueListWithFixedValues: true,
+      Common.ValueList: {
+        CollectionPath: 'ValoresEvidenciaObrigatoria',
+        Parameters: [
+          { $Type: 'Common.ValueListParameterInOut', LocalDataProperty: evidenciaObrigatoria, ValueListProperty: 'codigo' },
+          { $Type: 'Common.ValueListParameterDisplayOnly', ValueListProperty: 'descricao' }
+        ]
+      }
+    )
+  );
+
+  delegarAcao(
+    novoResponsavel @(
+      Common.ValueList: {
+        CollectionPath: 'Colaboradores',
+        Parameters: [
+          { $Type: 'Common.ValueListParameterInOut', LocalDataProperty: novoResponsavel, ValueListProperty: 'matricula' },
+          { $Type: 'Common.ValueListParameterDisplayOnly', ValueListProperty: 'nome' },
+          { $Type: 'Common.ValueListParameterDisplayOnly', ValueListProperty: 'email' }
+        ]
+      }
+    )
+  );
+};
