@@ -80,7 +80,7 @@ modules:
           content-target: true
       - name: action-plan-auth
     build-parameters:
-      build-result: gen/app-content
+      build-result: resources
       requires:
         - name: action-plan-tratativas
           artifacts:

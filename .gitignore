@@ -13,3 +13,5 @@ default-env.json
 *.sqlite
 *.db
 agentic/.estado/
+app/*/dist/
+resources/
