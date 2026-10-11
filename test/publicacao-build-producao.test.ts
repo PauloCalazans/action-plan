@@ -42,8 +42,11 @@ function arquivos(diretorio: string): string[] {
 
 describe('Prontidão de compilação corporativa e build de produção', () => {
   beforeAll(() => {
-    // Compila para produção (cds-typer + TypeScript + cds build --production), sem npm.
-    executarScript(pacote.scripts.build);
+    // O verify.sh já executa `npm run build` antes de `npm test`; só compila quando os artefatos
+    // de produção (gen/db e gen/srv) ainda não existem — sem afrouxar o CA2.
+    if (!existsSync(join(GEN, 'db')) || !existsSync(join(GEN, 'srv'))) {
+      executarScript(pacote.scripts.build);
+    }
     construiu = true;
   });
 
