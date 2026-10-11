@@ -156,7 +156,7 @@ describe('Acabamento da UI: robustez do backend e contratos de serviço', () => 
     expect(configuracao).toContain('db-nao-depende-de-srv-nem-app');
   });
 
-  describe('Componentes SAPUI5 autônomos e sandbox local', () => {
+  describe('Componentes SAPUI5, sandbox Fiori launchpad e execução local (padrão CAP/BAS)', () => {
     it('CA1: cada app tem webapp/Component.js estendendo sap.fe.core.AppComponent e apontando o manifest', () => {
       for (const app of APPS) {
         const componente = textoDo(join(RAIZ, 'app', app.dir, 'webapp', 'Component.js'));
@@ -171,14 +171,77 @@ describe('Acabamento da UI: robustez do backend e contratos de serviço', () => 
       }
     });
 
-    it('CA1: cada app tem webapp/index.html com bootstrap UI5 (Horizon e ComponentSupport)', () => {
+    it('CA1: o webapp/index.html de cada app usa UI5 local (sem CDN), ComponentSupport e sem script inline', () => {
       for (const app of APPS) {
         const html = textoDo(join(RAIZ, 'app', app.dir, 'webapp', 'index.html'));
-        expect(html).toContain('sap-ui-core.js');
+        expect(html).toContain('resources/sap-ui-core.js');
+        expect(html).toContain('module:sap/ui/core/ComponentSupport');
         expect(html).toContain('sap_horizon');
-        expect(html).toContain('ComponentSupport');
         expect(html).toContain('data-sap-ui-component');
-        expect(html).toContain(app.id);
+        expect(html).not.toContain('ui5.sap.com');
+        expect(html).not.toContain('sapui5.hana.ondemand.com');
+        expect(html).not.toMatch(/<script(?![^>]*\bsrc=)[^>]*>[\s\S]*?<\/script>/i);
+      }
+    });
+
+    it('CA1: o sandbox do launchpad (app/index.html e app/sandbox.js) publica os 3 apps por intent', () => {
+      const sandboxHtml = textoDo(join(RAIZ, 'app', 'index.html'));
+      expect(sandboxHtml).toContain('sandbox.js');
+      expect(sandboxHtml).toContain('resources/sap-ui-core.js');
+      expect(sandboxHtml).toContain('module:sap/ushell/shells/sandbox/fioriSandbox');
+      expect(sandboxHtml).not.toContain('ui5.sap.com');
+      expect(sandboxHtml).not.toContain('sapui5.hana.ondemand.com');
+      expect(sandboxHtml).not.toMatch(/<script(?![^>]*\bsrc=)[^>]*>[\s\S]*?<\/script>/i);
+
+      const sandbox = textoDo(join(RAIZ, 'app', 'sandbox.js'));
+      expect(sandbox).toContain('sap-ushell-config');
+      for (const intent of ['Tratativa-manage', 'MinhasPendencias-display', 'AdministracaoPlataforma-manage']) {
+        expect(sandbox).toContain(intent);
+      }
+      for (const app of APPS) {
+        expect(sandbox).toContain(app.id);
+      }
+    });
+
+    it('CA1: o package.json raiz declara cds-plugin-ui5 e os perfis de auth (dummy em dev, mocked em teste e papéis)', () => {
+      const raiz = JSON.parse(textoDo(PACOTE)) as {
+        devDependencies?: Record<string, string>;
+        cds?: { requires?: { auth?: Record<string, { kind?: string; users?: Record<string, unknown> }> } };
+      };
+      expect(raiz.devDependencies?.['cds-plugin-ui5']).toBe('0.9.3');
+
+      const auth = raiz.cds?.requires?.auth ?? {};
+      expect(auth['[development]']?.kind).toBe('dummy');
+      expect(auth['[test]']?.kind).toBe('mocked');
+      expect(auth['[papeis]']?.kind).toBe('mocked');
+      expect(Object.keys(auth['[test]']?.users ?? {}).sort()).toEqual([
+        'admin', 'app-origem-a', 'app-origem-b', 'app-revogado', 'gestor', 'leitor-analitico', 'usuario',
+      ]);
+    });
+
+    it('CA1 e CA16: cada app empacota via ui5-task-zipper (SAPUI5 1.120.0) sem --archive', () => {
+      const zips: Record<string, string> = {
+        tratativas: 'brcomcalazanstecactionplantratativas.zip',
+        'minhas-pendencias': 'brcomcalazanstecactionplanminhaspendencias.zip',
+        administracao: 'brcomcalazanstecactionplanadministracao.zip',
+      };
+      const mta = textoDo(MTA);
+      for (const app of APPS) {
+        const ui5 = textoDo(join(RAIZ, 'app', app.dir, 'ui5.yaml'));
+        expect(ui5).toContain('SAPUI5');
+        expect(ui5).toContain('1.120.0');
+        expect(ui5).toContain('sap.ushell');
+        expect(ui5).toContain('themelib_sap_horizon');
+        expect(ui5).toContain('ui5-task-zipper');
+        expect(ui5).toContain(zips[app.dir]);
+        expect(mta).toContain(zips[app.dir]);
+
+        const pacoteApp = JSON.parse(textoDo(join(RAIZ, 'app', app.dir, 'package.json'))) as {
+          scripts?: Record<string, string>;
+          devDependencies?: Record<string, string>;
+        };
+        expect(pacoteApp.scripts?.build).toBe('ui5 build --config=ui5.yaml --clean-dest');
+        expect(pacoteApp.devDependencies?.['ui5-task-zipper']).toBe('^3.1.3');
       }
     });
 

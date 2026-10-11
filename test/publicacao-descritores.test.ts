@@ -192,9 +192,13 @@ describe('Descritores declarativos de deploy e segurança (mta.yaml e xs-securit
       const pacote = JSON.parse(lerTexto(join(RAIZ, 'app', app, 'package.json'))) as {
         private?: boolean;
         scripts?: Record<string, string>;
+        devDependencies?: Record<string, string>;
       };
       expect(pacote.private).toBe(true);
-      expect(pacote.scripts?.build).toBe(`ui5 build --config=ui5.yaml --clean-dest --archive ${esperado.zip}`);
+      // Revisão (R-06): UI5 CLI 4 não aceita mais --archive; o zip passa a ser gerado pela custom task ui5-task-zipper.
+      expect(pacote.scripts?.build).toBe('ui5 build --config=ui5.yaml --clean-dest');
+      expect(pacote.devDependencies?.['ui5-task-zipper']).toBe('^3.1.3');
+      expect(lerTexto(join(RAIZ, 'app', app, 'ui5.yaml'))).toContain(esperado.zip);
 
       const ui5 = carregarYaml(lerTexto(join(RAIZ, 'app', app, 'ui5.yaml'))) as {
         metadata?: { name?: string };
