@@ -69,15 +69,18 @@ describe('Destinations declarativas, perfis de execução e governança de segre
     const pacote = lerPacote();
     const auth = pacote.cds.requires.auth ?? {};
 
-    // Perfil ativo (testes/desenvolvimento): autenticação mockada.
+    // Perfil ativo no Jest (test): autenticação mockada.
     const authResolvido = (cds.env.requires as Record<string, unknown>).auth as { kind?: string } | undefined;
     expect(authResolvido?.kind).toBe('mocked');
 
+    // R-06/R-11: em desenvolvimento a autenticação é 'dummy' (abre sem login via cds-plugin-ui5).
     const desenvolvimento = auth['[development]'];
-    expect(desenvolvimento?.kind).toBe('mocked');
+    expect(desenvolvimento?.kind).toBe('dummy');
 
-    // Preservação integral dos usuários mockados e seus papéis.
-    const usuarios = (desenvolvimento?.users ?? {}) as Record<string, { roles?: string[] }>;
+    // Preservação integral dos usuários mockados e seus papéis no perfil de teste.
+    const teste = auth['[test]'];
+    expect(teste?.kind).toBe('mocked');
+    const usuarios = (teste?.users ?? {}) as Record<string, { roles?: string[] }>;
     const esperados: Record<string, string[]> = {
       'app-origem-a': ['AplicativoOrigem'],
       'app-origem-b': ['AplicativoOrigem'],

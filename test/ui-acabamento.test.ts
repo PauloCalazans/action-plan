@@ -208,7 +208,7 @@ describe('Acabamento da UI: robustez do backend e contratos de serviço', () => 
         devDependencies?: Record<string, string>;
         cds?: { requires?: { auth?: Record<string, { kind?: string; users?: Record<string, unknown> }> } };
       };
-      expect(raiz.devDependencies?.['cds-plugin-ui5']).toBe('0.9.3');
+      expect(raiz.devDependencies?.['cds-plugin-ui5']).toBe('0.17.4');
 
       const auth = raiz.cds?.requires?.auth ?? {};
       expect(auth['[development]']?.kind).toBe('dummy');
