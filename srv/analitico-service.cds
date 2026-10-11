@@ -40,6 +40,15 @@ service AnaliticoService {
   @readonly
   entity BacklogTotal as projection on ex.BacklogTotalView;
 
+  @readonly
+  entity VolumePorOrigem as projection on ex.VolumePorOrigemView;
+
+  @readonly
+  entity PrincipaisDesvios as projection on ex.PrincipaisDesviosView;
+
+  @readonly
+  entity EvidenciasPendentes as projection on ex.EvidenciasPendentesView;
+
   type RetornoCumprimentoPrazo {
     taxaPercentual : Decimal(5,2);
   }
@@ -48,7 +57,19 @@ service AnaliticoService {
     mediaDias : Decimal(5,1);
   }
 
+  type ItemTendenciaMensal {
+    mesReferencia : String(7);
+    totalCriadas : Integer;
+    totalEncerradas : Integer;
+  }
+
+  type RetornoIndiceResolucao {
+    indicePercentual : Decimal(6,2);
+  }
+
   function consultarCumprimentoDePrazo(periodoInicio : String, periodoFim : String) returns RetornoCumprimentoPrazo;
   function consultarTempoMedioResolucao(periodoInicio : String, periodoFim : String) returns RetornoTempoMedioResolucao;
+  function consultarTendenciaMensal(periodoInicio : String, periodoFim : String) returns many ItemTendenciaMensal;
+  function consultarIndiceResolucao(periodoInicio : String, periodoFim : String) returns RetornoIndiceResolucao;
   function consultarTratativasVencidas(dataCorte : String) returns Totalizador;
 }
