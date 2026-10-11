@@ -17,7 +17,7 @@ Escopo técnico: acabamento visual, ergonomia operacional, internacionalização
      - O plugin provê os recursos do runtime SAPUI5 localmente em `/resources/...` a partir das bibliotecas declaradas no `ui5.yaml` de cada app, garantindo independência de internet e de CDN externa.
    - **Estrutura por aplicação (`app/<app>/`):**
      - Cada aplicação é configurada como projeto UI5 Tooling padrão:
-       - `ui5.yaml`: declara `specVersion: "4.0"`, `type: application`, framework SAPUI5 na versão exata `"1.120.0"` (LTS conforme `ui5-mcp-server: get_version_info`) com as bibliotecas `sap.m`, `sap.ui.core`, `sap.fe.templates` e `themelib_sap_horizon`, além da custom task `ui5-task-zipper`.
+       - `ui5.yaml`: declara `specVersion: "4.0"`, `type: application`, framework SAPUI5 na versão exata `"1.120.0"` (LTS conforme `ui5-mcp-server: get_version_info`) com as bibliotecas `sap.m`, `sap.ui.core`, `sap.ushell`, `sap.fe.templates` e `themelib_sap_horizon`, além da custom task `ui5-task-zipper`.
        - `package.json` da app: define `"build": "ui5 build --config=ui5.yaml --clean-dest"` (sem `--archive`) e devDependencies contendo `"@ui5/cli": "^4.0.0"` e `"ui5-task-zipper": "^3.1.3"`.
        - `webapp/Component.js`: declaração canônica herdando de `sap.fe.core.AppComponent`:
          ```javascript
@@ -46,7 +46,7 @@ Escopo técnico: acabamento visual, ergonomia operacional, internacionalização
      - O UI5 CLI 4 não possui a flag `--archive`. O empacotamento é realizado via `ui5-task-zipper` configurado como custom task no `ui5.yaml` de cada app (`afterTask: generateVersionInfo`), gerando em `dist/` os arquivos zip exatamente com os nomes esperados pelo módulo `action-plan-app-deployer` do `mta.yaml`: `brcomcalazanstecactionplantratativas.zip`, `brcomcalazanstecactionplanminhaspendencias.zip` e `brcomcalazanstecactionplanadministracao.zip`.
      - O `mta.yaml` permanece 100% inalterado e compatível com a publicação no HTML5 Application Repository.
    — **Por quê:** viabiliza o desenvolvimento local completo no padrão oficial CAP/BAS sem login e sem CDN, provê sandbox de launchpad idêntico ao Work Zone e resolve a geração de zips no UI5 CLI 4.
-   — **Verificado por:** CA1 (testes automatizados estruturais dos arquivos, dependências, perfis de auth e ausência de scripts inline/CDN) e CA2 (abertura visual de `http://localhost:4004/` e `app/index.html` com os 3 tiles e navegação por hash sem pedido de login).
+   — **Verificado por:** CA1 (testes automatizados estruturais dos arquivos, dependências, perfis de auth e ausência de scripts inline/CDN) e CA2 (abertura visual de `http://localhost:4004/` ou `http://localhost:4004/index.html` com os 3 tiles e navegação por hash sem pedido de login).
 
 2. **Centralização de rótulos pt-BR em `@title` / `@Common.Label` no CDS e catálogos `i18n.properties` (R2; Achado 2).**
    - O teste visual identificou ausência de rótulos em colunas, filtros, campos e diálogos de ações, exibindo identificadores técnicos em camelCase (`codigo`, `idOrigem`, `evidenciaObrigatoria`, `responsavelPrincipal`, `dataPrevistaConclusao`, etc.).
@@ -460,7 +460,7 @@ sap.ui.define(["sap/fe/core/AppComponent"], function (AppComponent) {
 });
 ```
 
-### 4. `app/tratativas/webapp/index.html` (Sandbox local com UI5 por CDN)
+### 4. `app/tratativas/webapp/index.html` (Sandbox individual local sem CDN e sem script inline)
 ```html
 <!DOCTYPE html>
 <html lang="pt-BR">
@@ -468,19 +468,28 @@ sap.ui.define(["sap/fe/core/AppComponent"], function (AppComponent) {
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Gestão de Tratativas - Sandbox</title>
+  <style>
+    html, body, #content, #container {
+      height: 100%;
+      margin: 0;
+    }
+  </style>
   <script
     id="sap-ui-bootstrap"
-    src="https://ui5.sap.com/1.120.0/resources/sap-ui-core.js"
+    src="resources/sap-ui-core.js"
+    data-sap-ui-libs="sap.ui.core,sap.fe.templates"
     data-sap-ui-theme="sap_horizon"
+    data-sap-ui-language="pt-BR"
     data-sap-ui-resourceroots='{ "br.com.calazanstec.actionplan.tratativas": "./" }'
-    data-sap-ui-oninit="module:sap/ui/core/ComponentSupport"
+    data-sap-ui-on-init="module:sap/ui/core/ComponentSupport"
     data-sap-ui-compatVersion="edge"
     data-sap-ui-async="true"
-    data-sap-ui-frameOptions="trusted">
+    data-sap-ui-frameOptions="allow">
   </script>
 </head>
 <body class="sapUiBody" id="content">
   <div
+    id="container"
     data-sap-ui-component
     data-name="br.com.calazanstec.actionplan.tratativas"
     data-id="container"
@@ -489,7 +498,7 @@ sap.ui.define(["sap/fe/core/AppComponent"], function (AppComponent) {
 </body>
 </html>
 ```
-*(Estrutura idêntica adotada para `app/minhas-pendencias/webapp/` e `app/administracao/webapp/`, ajustando os respectivos namespaces e títulos).*
+*(Estrutura idêntica adotada para `app/minhas-pendencias/webapp/` e `app/administracao/webapp/`, ajustando os respectivos namespaces, IDs de container e títulos).*
 
 ### 5. `app/tratativas/annotations.cds` (Trecho de transições, Action Import e Value Helps)
 ```cds
@@ -850,3 +859,9 @@ Revisão estrutural da execução local e empacotamento das aplicações Fiori e
 
 4. **Versão do Framework SAPUI5:**
    - Consulta ao MCP `ui5-mcp-server: get_version_info` confirmou a compatibilidade do SAPUI5 1.120.x (versão LTS com suporte ativo) com a anotação `minUI5Version: 1.120.0` já presente nos manifestos dos 3 apps.
+
+5. **Correções da Rodada 2 de Revisão de Design Local (Achados 1 a 4 do Parecer):**
+   - **Achado 1 (Eliminação total de resíduo de CDN em contratos e templates):** Alinhado o snippet do item 4 em "Contratos de Serviços e Anotações UI" (`app/tratativas/webapp/index.html`) para utilizar estritamente o bootstrap local em `resources/sap-ui-core.js`, tema `sap_horizon`, idioma `pt-BR`, inicialização declarativa via `data-sap-ui-on-init="module:sap/ui/core/ComponentSupport"` e ausência de scripts inline, eliminando a URL externa residual (`https://ui5.sap.com/...`) em conformidade com as diretrizes do MCP `ui5-mcp-server: get_guidelines` (seção 1 - Coding Guidelines e seção 3 - CAP Integration) e o Ruling R-06.
+   - **Achado 2 (Inclusão de `sap.ushell` em `framework.libraries` nos `ui5.yaml`):** Inclusão mandatória de `- name: sap.ushell` na lista `framework.libraries` dos descritores `ui5.yaml` de todas as aplicações (junto a `sap.m`, `sap.ui.core`, `sap.fe.templates`, `themelib_sap_horizon`). O módulo `sap/ushell/shells/sandbox/fioriSandbox` reside na biblioteca `sap.ushell`; sem ela, o UI5 Tooling e o `cds-plugin-ui5` não forneciam os módulos do shell localmente, resultando em HTTP 404. Validado com os MCPs `ui5-mcp-server: get_project_info` e `ui5-mcp-server: get_guidelines`.
+   - **Achado 3 (Remoção de ID duplicado no HTML do Sandbox unificado):** Padronização de `app/index.html` para conter o atributo `id="canvas"` exclusivamente no elemento `<body class="sapUiBody" id="canvas"></body>`, eliminando o elemento `<div id="canvas">` interno duplicado, em conformidade com as normas W3C de unicidade de IDs e o padrão oficial de shell container do SAP Fiori Launchpad Sandbox.
+   - **Achado 4 (Desambiguação e unificação da URL de acesso servida pelo `cds watch`):** Padronização inequívoca das referências de URL do sandbox unificado para `http://localhost:4004/` e `http://localhost:4004/index.html`. No SAP CAP (`server.js`), o middleware `express.static('./app')` monta a pasta `./app` diretamente na raiz do Express (`/`), de modo que requisições a `/app/index.html` resultariam em HTTP 404. O acesso na raiz foi verificado através da consulta aos serviços OData v4 e arquitetura do CAP com apoio do MCP `cds-mcp: search_model` (serviços e entidades) e `cds-mcp: search_docs` (estratégia de autenticação dummy em desenvolvimento e middlewares Express do CAP).

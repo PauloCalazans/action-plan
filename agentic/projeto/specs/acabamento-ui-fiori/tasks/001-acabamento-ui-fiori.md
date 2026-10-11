@@ -20,11 +20,11 @@
 
 ### Modificados
 - `package.json` (raiz: inclusão da devDependency `cds-plugin-ui5: "0.9.3"` e configuração de perfis de autenticação em `cds.requires.auth`: `[development]` como `kind: "dummy"`, `[test]` como `kind: "mocked"` com os 7 usuários mocked pré-existentes, e `[papeis]` como `kind: "mocked"`)
-- `app/tratativas/ui5.yaml` (projeto UI5 Tooling: framework SAPUI5 1.120.0 e custom task `ui5-task-zipper` gerando `brcomcalazanstecactionplantratativas.zip`)
+- `app/tratativas/ui5.yaml` (projeto UI5 Tooling: framework SAPUI5 1.120.0, bibliotecas incluindo sap.ushell e custom task `ui5-task-zipper` gerando `brcomcalazanstecactionplantratativas.zip`)
 - `app/tratativas/package.json` (remoção da flag `--archive` inexistente no UI5 CLI 4 e adição da devDependency `ui5-task-zipper: "^3.1.3"`)
-- `app/minhas-pendencias/ui5.yaml` (projeto UI5 Tooling: framework SAPUI5 1.120.0 e custom task `ui5-task-zipper` gerando `brcomcalazanstecactionplanminhaspendencias.zip`)
+- `app/minhas-pendencias/ui5.yaml` (projeto UI5 Tooling: framework SAPUI5 1.120.0, bibliotecas incluindo sap.ushell e custom task `ui5-task-zipper` gerando `brcomcalazanstecactionplanminhaspendencias.zip`)
 - `app/minhas-pendencias/package.json` (remoção da flag `--archive` inexistente no UI5 CLI 4 e adição da devDependency `ui5-task-zipper: "^3.1.3"`)
-- `app/administracao/ui5.yaml` (projeto UI5 Tooling: framework SAPUI5 1.120.0 e custom task `ui5-task-zipper` gerando `brcomcalazanstecactionplanadministracao.zip`)
+- `app/administracao/ui5.yaml` (projeto UI5 Tooling: framework SAPUI5 1.120.0, bibliotecas incluindo sap.ushell e custom task `ui5-task-zipper` gerando `brcomcalazanstecactionplanadministracao.zip`)
 - `app/administracao/package.json` (remoção da flag `--archive` inexistente no UI5 CLI 4 e adição da devDependency `ui5-task-zipper: "^3.1.3"`)
 - `srv/tratativa/prazo.ts` (tratamento defensivo de ausência de prazos com recusa 400 sem `TypeError`)
 - `srv/tratativa-app-service.cds` (remoção de data discricionária em `criarTratativaAvulsa`, tipagem `Date` em prazos de ações, ações dedicadas de status com flags `pode<Acao>` e `oculta<Acao>`, `@Core.OperationAvailable`, projeção `Colaboradores` e domínios fixos)
@@ -416,7 +416,6 @@ sap.ui.define(["sap/fe/core/AppComponent"], function (AppComponent) {
   </script>
 </head>
 <body class="sapUiBody" id="canvas">
-  <div id="canvas" class="sapUiBody"></div>
 </body>
 </html>
 ```
@@ -522,6 +521,7 @@ framework:
   libraries:
     - name: sap.m
     - name: sap.ui.core
+    - name: sap.ushell
     - name: sap.fe.templates
     - name: themelib_sap_horizon
 builder:
@@ -613,7 +613,7 @@ Criar bloco de testes em `test/ui-acabamento.test.ts` verificando:
 
 ### Verificação visual no navegador (portal do Maestri)
 - O orquestrador inicia o servidor CAP na raiz do projeto via `cds watch` (perfil padrão de desenvolvimento com estratégia de autenticação `'dummy'`).
-- Abre no navegador corporativo (portal do Maestri) o endereço `http://localhost:4004/` (ou `http://localhost:4004/app/index.html` ou `/index.html`):
+- Abre no navegador corporativo (portal do Maestri) o endereço `http://localhost:4004/` (ou `http://localhost:4004/index.html`):
   - A página abre diretamente sem solicitar usuário/senha (sem diálogo nem modal de login HTTP Basic).
   - Exibe o Fiori Launchpad Sandbox com os 3 tiles configurados via `app/sandbox.js`:
     1. "Gestão de Tratativas" (intent `#Tratativa-manage`)
@@ -633,14 +633,14 @@ Criar/atualizar bloco de testes automatizados estruturais estáticos em `test/ui
 - **CA1 [estrutural - index.html por app]:** valida que `webapp/index.html` de cada aplicação referencia `src="resources/sap-ui-core.js"` local, configura `data-sap-ui-on-init="module:sap/ui/core/ComponentSupport"`, tema `sap_horizon`, tag container `<div data-sap-ui-component ...>`, NÃO contém referências a CDN externa (`https://ui5.sap.com` ou `https://sapui5.hana.ondemand.com`) e NÃO contém scripts inline (`<script>...</script>` com corpo executável).
 - **CA1 [estrutural - Launchpad Sandbox unificado]:** valida que existem `app/index.html` e `app/sandbox.js`; que `app/index.html` importa `<script src="sandbox.js"></script>`, carrega `resources/sap-ui-core.js` local, inicializa `sap/ushell/shells/sandbox/fioriSandbox` e NÃO contém scripts inline nem referências a CDN; e que `app/sandbox.js` define `window["sap-ushell-config"]` configurando os 3 intents (`Tratativa-manage`, `MinhasPendencias-display`, `AdministracaoPlataforma-manage`) com os IDs de componentes e títulos corretos.
 - **CA1 [estrutural - Dependências e perfis no package.json raiz]:** valida que `package.json` na raiz declara `cds-plugin-ui5` (versão `"0.9.3"`) em `devDependencies`; que `cds.requires.auth` define `[development]` com `kind: "dummy"`, `[test]` com `kind: "mocked"` contendo o dicionário com os 7 usuários mocked pré-existentes, e `[papeis]` com `kind: "mocked"`.
-- **CA1 e CA16 [estrutural - UI5 Tooling e ui5-task-zipper]:** valida que `ui5.yaml` de cada app declara `framework: { name: "SAPUI5", version: "1.120.0" }` e a custom task `ui5-task-zipper` configurada para gerar o arquivo zip com o nome esperado pelo `mta.yaml`; e que `package.json` de cada app declara `ui5-task-zipper` (versão `"^3.1.3"`) em `devDependencies` e script `build` sem a flag inválida `--archive` (`ui5 build --config=ui5.yaml --clean-dest`).
+- **CA1 e CA16 [estrutural - UI5 Tooling e ui5-task-zipper]:** valida que `ui5.yaml` de cada app declara `framework: { name: "SAPUI5", version: "1.120.0" }`, inclui `sap.ushell` (e as bibliotecas do sandbox e templates: `sap.m`, `sap.ui.core`, `sap.fe.templates`, `themelib_sap_horizon`) em `framework.libraries` e a custom task `ui5-task-zipper` configurada para gerar o arquivo zip com o nome esperado pelo `mta.yaml`; e que `package.json` de cada app declara `ui5-task-zipper` (versão `"^3.1.3"`) em `devDependencies` e script `build` sem a flag inválida `--archive` (`ui5 build --config=ui5.yaml --clean-dest`).
 
 ### GREEN
 - Atualizar `package.json` na raiz do projeto: adicionar `"cds-plugin-ui5": "0.9.3"` às `devDependencies`, configurar `cds.requires.auth` com `[development]: { "kind": "dummy" }`, `[test]: { "kind": "mocked", "users": { ... } }` e `[papeis]: { "kind": "mocked", "users": { ... } }`.
 - Criar `app/sandbox.js` definindo a configuração externa `window["sap-ushell-config"]` com os 3 intents dos manifestos (`Tratativa-manage`, `MinhasPendencias-display`, `AdministracaoPlataforma-manage`).
 - Criar `app/index.html` com o bootstrap do Fiori Launchpad Sandbox UShell consumindo `sandbox.js` e `resources/sap-ui-core.js` local, sem scripts inline.
 - Atualizar `app/tratativas/webapp/index.html`, `app/minhas-pendencias/webapp/index.html` e `app/administracao/webapp/index.html` substituindo a URL da CDN por `resources/sap-ui-core.js` local, garantindo `ComponentSupport` e ausência de scripts inline.
-- Atualizar `app/tratativas/ui5.yaml`, `app/minhas-pendencias/ui5.yaml` e `app/administracao/ui5.yaml` configurando framework SAPUI5 versão `1.120.0` e custom task `ui5-task-zipper` com `archiveName` alinhado ao `mta.yaml`.
+- Atualizar `app/tratativas/ui5.yaml`, `app/minhas-pendencias/ui5.yaml` e `app/administracao/ui5.yaml` configurando framework SAPUI5 versão `1.120.0`, bibliotecas incluindo `sap.ushell` em `framework.libraries`, e custom task `ui5-task-zipper` com `archiveName` alinhado ao `mta.yaml`.
 - Atualizar `app/tratativas/package.json`, `app/minhas-pendencias/package.json` e `app/administracao/package.json` adicionando `"ui5-task-zipper": "^3.1.3"` às `devDependencies` e ajustando o script `build` para `ui5 build --config=ui5.yaml --clean-dest` (sem `--archive`).
 - Manter os arquivos `Component.js` em cada app herdando de `sap.fe.core.AppComponent`.
 
