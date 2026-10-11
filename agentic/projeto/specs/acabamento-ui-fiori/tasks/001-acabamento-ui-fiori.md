@@ -21,6 +21,7 @@
 
 ### Modificados
 - `package.json` (raiz: inclusão da devDependency `cds-plugin-ui5: "0.9.3"` e configuração de perfis de autenticação em `cds.requires.auth`: `[development]` como `kind: "dummy"`, `[test]` como `kind: "mocked"` com os 7 usuários mocked pré-existentes, e `[papeis]` como `kind: "mocked"`)
+- `package-lock.json` (devDependencies novas da execução local — cds-plugin-ui5 e ui5-task-zipper —, atualizado pelo npm; Ruling R-10)
 - `app/tratativas/ui5.yaml` (projeto UI5 Tooling: framework SAPUI5 1.120.0, bibliotecas incluindo sap.ushell e custom task `ui5-task-zipper` gerando `brcomcalazanstecactionplantratativas.zip`)
 - `app/tratativas/package.json` (remoção da flag `--archive` inexistente no UI5 CLI 4 e adição da devDependency `ui5-task-zipper: "^3.1.3"`)
 - `app/minhas-pendencias/ui5.yaml` (projeto UI5 Tooling: framework SAPUI5 1.120.0, bibliotecas incluindo sap.ushell e custom task `ui5-task-zipper` gerando `brcomcalazanstecactionplanminhaspendencias.zip`)
