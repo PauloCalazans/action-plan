@@ -4,20 +4,28 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Minhas Pendências - Sandbox</title>
+  <style>
+    html, body, #content, #container {
+      height: 100%;
+      margin: 0;
+    }
+  </style>
   <script
     id="sap-ui-bootstrap"
-    src="https://ui5.sap.com/1.120.0/resources/sap-ui-core.js"
+    src="https://sapui5.hana.ondemand.com/1.145.0/resources/sap-ui-core.js"
+    data-sap-ui-libs="sap.ui.core,sap.fe.templates"
     data-sap-ui-theme="sap_horizon"
     data-sap-ui-language="pt-BR"
     data-sap-ui-resourceroots='{ "br.com.calazanstec.actionplan.minhaspendencias": "./" }'
     data-sap-ui-oninit="module:sap/ui/core/ComponentSupport"
     data-sap-ui-compatVersion="edge"
     data-sap-ui-async="true"
-    data-sap-ui-frameOptions="trusted">
+    data-sap-ui-frameOptions="allow">
   </script>
 </head>
 <body class="sapUiBody" id="content">
   <div
+    id="container"
     data-sap-ui-component
     data-name="br.com.calazanstec.actionplan.minhaspendencias"
     data-id="container"
