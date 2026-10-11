@@ -2,7 +2,7 @@
 
 **Spec:** agentic/projeto/specs/publicacao-corporativa/spec.md
 **Design:** agentic/projeto/specs/publicacao-corporativa/design.md
-**Status:** em-andamento
+**Status:** publicada
 **Branch:** publicacao-corporativa/001-publicacao-corporativa
 
 ## Arquivos
