@@ -13,8 +13,14 @@ interface ModuloMta {
   name?: string;
   type?: string;
   path?: string;
-  requires?: { name?: string }[];
+  requires?: { name?: string; parameters?: { 'content-target'?: boolean } }[];
   provides?: { name?: string; properties?: Record<string, unknown> }[];
+  'build-parameters'?: {
+    builder?: string;
+    'build-result'?: string;
+    commands?: string[];
+    requires?: { name?: string; artifacts?: string[]; 'target-path'?: string }[];
+  };
 }
 
 interface RecursoMta {
@@ -62,6 +68,7 @@ interface XsSecurity {
   scopes?: Escopo[];
   'role-templates'?: RoleTemplate[];
   'role-collections'?: RoleCollection[];
+  'oauth2-configuration'?: { 'redirect-uris'?: string[] };
 }
 
 function lerTexto(caminho: string): string {
@@ -70,7 +77,7 @@ function lerTexto(caminho: string): string {
 }
 
 describe('Descritores declarativos de deploy e segurança (mta.yaml e xs-security.json)', () => {
-  it('CA1: mta.yaml declara os 3 módulos e os 4 recursos gerenciados, sem módulos legados', () => {
+  it('CA1: mta.yaml declara os 6 módulos (com empacotamento HTML5) e os 4 recursos gerenciados', () => {
     const mta = carregarYaml(lerTexto(MTA)) as Mta;
 
     expect(String(mta['_schema-version'])).toBe('3.1');
@@ -78,8 +85,13 @@ describe('Descritores declarativos de deploy e segurança (mta.yaml e xs-securit
 
     const modulos = mta.modules ?? [];
     const porModulo = new Map(modulos.map((modulo) => [modulo.name, modulo]));
-    expect(modulos.map((modulo) => modulo.name)).toHaveLength(3);
-    for (const nome of ['action-plan-db', 'action-plan-srv', 'action-plan-app-deployer']) {
+    const appsHtml5: Record<string, string> = {
+      'action-plan-tratativas': 'app/tratativas',
+      'action-plan-minhas-pendencias': 'app/minhas-pendencias',
+      'action-plan-administracao': 'app/administracao',
+    };
+    expect(modulos.map((modulo) => modulo.name)).toHaveLength(6);
+    for (const nome of ['action-plan-db', 'action-plan-srv', ...Object.keys(appsHtml5), 'action-plan-app-deployer']) {
       expect(porModulo.has(nome)).toBe(true);
     }
     expect(modulos.map((modulo) => modulo.name)).not.toContain('action-plan-portal-content');
@@ -88,17 +100,51 @@ describe('Descritores declarativos de deploy e segurança (mta.yaml e xs-securit
     expect(porModulo.get('action-plan-db')?.path).toBe('gen/db');
     expect(porModulo.get('action-plan-srv')?.type).toBe('nodejs');
     expect(porModulo.get('action-plan-srv')?.path).toBe('gen/srv');
-    expect(porModulo.get('action-plan-app-deployer')?.type).toBe('com.sap.application.content');
-    expect(porModulo.get('action-plan-app-deployer')?.path).toBe('gen/app');
 
-    // Associação dos módulos aos recursos gerenciados (R1).
-    const exige = (nome: string) => (porModulo.get(nome)?.requires ?? []).map((item) => item.name);
-    expect(exige('action-plan-db')).toEqual(expect.arrayContaining(['action-plan-hdi']));
-    expect(exige('action-plan-srv')).toEqual(
-      expect.arrayContaining(['action-plan-hdi', 'action-plan-auth', 'action-plan-destination']),
-    );
-    expect(exige('action-plan-app-deployer')).toEqual(
+    // Um módulo html5 por app, com builder custom e build-result dist (empacotamento dos apps).
+    for (const [nome, caminho] of Object.entries(appsHtml5)) {
+      const modulo = porModulo.get(nome);
+      expect(modulo?.type).toBe('html5');
+      expect(modulo?.path).toBe(caminho);
+      expect(modulo?.['build-parameters']?.builder).toBe('custom');
+      expect(modulo?.['build-parameters']?.['build-result']).toBe('dist');
+      expect(modulo?.['build-parameters']?.commands).toEqual(expect.arrayContaining(['npm install', 'npm run build']));
+    }
+
+    // O deployer publica no HTML5 host (content-target) os zips dos 3 apps em resources/.
+    const deployer = porModulo.get('action-plan-app-deployer');
+    expect(deployer?.type).toBe('com.sap.application.content');
+    expect(deployer?.path).toBe('.');
+    const exige = deployer?.requires ?? [];
+    expect(exige.map((item) => item.name)).toEqual(
       expect.arrayContaining(['action-plan-html5-host', 'action-plan-auth']),
+    );
+    expect(exige.find((item) => item.name === 'action-plan-html5-host')?.parameters?.['content-target']).toBe(true);
+
+    const zips: Record<string, string> = {
+      'action-plan-tratativas': 'brcomcalazanstecactionplantratativas.zip',
+      'action-plan-minhas-pendencias': 'brcomcalazanstecactionplanminhaspendencias.zip',
+      'action-plan-administracao': 'brcomcalazanstecactionplanadministracao.zip',
+    };
+    const requisitosBuild = deployer?.['build-parameters']?.requires ?? [];
+    const porRequisito = new Map(requisitosBuild.map((item) => [item.name, item]));
+    for (const [nome, zip] of Object.entries(zips)) {
+      const requisito = porRequisito.get(nome);
+      expect(requisito?.artifacts).toEqual([zip]);
+      expect(requisito?.['target-path']).toBe('resources/');
+    }
+
+    // Nenhum módulo aponta para o diretório inexistente gen/app.
+    for (const modulo of modulos) {
+      expect(modulo.path).not.toBe('gen/app');
+    }
+
+    // Associação dos módulos de runtime aos recursos gerenciados (R1).
+    expect((porModulo.get('action-plan-db')?.requires ?? []).map((item) => item.name)).toEqual(
+      expect.arrayContaining(['action-plan-hdi']),
+    );
+    expect((porModulo.get('action-plan-srv')?.requires ?? []).map((item) => item.name)).toEqual(
+      expect.arrayContaining(['action-plan-hdi', 'action-plan-auth', 'action-plan-destination']),
     );
     expect((porModulo.get('action-plan-srv')?.provides ?? []).map((item) => item.name)).toContain('srv-api');
 
@@ -116,6 +162,36 @@ describe('Descritores declarativos de deploy e segurança (mta.yaml e xs-securit
     const srvApi = destinos.find((item) => item['Name'] === 'action-plan-srv-api');
     expect(srvApi).toBeDefined();
     expect(srvApi?.['HTML5.ForwardAuthToken']).toBe(true);
+  });
+
+  it('CA1: cada app de app/ tem package.json com o build do design e ui5.yaml apontando para webapp', () => {
+    const apps: Record<string, { zip: string; id: string }> = {
+      tratativas: { zip: 'brcomcalazanstecactionplantratativas.zip', id: 'br.com.calazanstec.actionplan.tratativas' },
+      'minhas-pendencias': {
+        zip: 'brcomcalazanstecactionplanminhaspendencias.zip',
+        id: 'br.com.calazanstec.actionplan.minhaspendencias',
+      },
+      administracao: {
+        zip: 'brcomcalazanstecactionplanadministracao.zip',
+        id: 'br.com.calazanstec.actionplan.administracao',
+      },
+    };
+
+    for (const [app, esperado] of Object.entries(apps)) {
+      const pacote = JSON.parse(lerTexto(join(RAIZ, 'app', app, 'package.json'))) as {
+        private?: boolean;
+        scripts?: Record<string, string>;
+      };
+      expect(pacote.private).toBe(true);
+      expect(pacote.scripts?.build).toBe(`ui5 build --config=ui5.yaml --clean-dest --archive ${esperado.zip}`);
+
+      const ui5 = carregarYaml(lerTexto(join(RAIZ, 'app', app, 'ui5.yaml'))) as {
+        metadata?: { name?: string };
+        resources?: { configuration?: { paths?: { webapp?: string } } };
+      };
+      expect(ui5.metadata?.name).toBe(esperado.id);
+      expect(ui5.resources?.configuration?.paths?.webapp).toBe('webapp');
+    }
   });
 
   it('CA3: xs-security.json declara o atributo matricula e os 4 escopos corporativos', () => {
@@ -138,6 +214,12 @@ describe('Descritores declarativos de deploy e segurança (mta.yaml e xs-securit
     ]) {
       expect(escopos).toContain(escopo);
     }
+
+    // Achado 1 (revisão do diff): redirect-uris restrito ao Launchpad do Work Zone, sem o curinga aberto de cfapps.
+    expect(xs['oauth2-configuration']?.['redirect-uris']).toEqual([
+      'https://*.launchpad.cfapps.*.hana.ondemand.com/**',
+    ]);
+    expect(lerTexto(XS_SECURITY)).not.toContain('https://*.cfapps.*.hana.ondemand.com/**');
   });
 
   it('CA4: xs-security.json declara role-templates e as 3 Role Collections com referências corretas', () => {
