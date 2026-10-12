@@ -11,22 +11,26 @@ annotate TratativaAppService.Tratativas with @(
     {
       $Type: 'UI.DataFieldForAction',
       Label: 'Iniciar Tratativa',
-      Action: 'TratativaAppService.mudarStatus'
+      Action: 'TratativaAppService.iniciarTratativa',
+      @UI.Hidden: ocultaIniciar
     },
     {
       $Type: 'UI.DataFieldForAction',
       Label: 'Encerrar Tratativa',
-      Action: 'TratativaAppService.mudarStatus'
+      Action: 'TratativaAppService.encerrarTratativa',
+      @UI.Hidden: ocultaEncerrar
     },
     {
       $Type: 'UI.DataFieldForAction',
       Label: 'Cancelar Tratativa',
-      Action: 'TratativaAppService.mudarStatus'
+      Action: 'TratativaAppService.cancelarTratativa',
+      @UI.Hidden: ocultaCancelar
     },
     {
       $Type: 'UI.DataFieldForAction',
       Label: 'Reabrir Tratativa',
-      Action: 'TratativaAppService.mudarStatus'
+      Action: 'TratativaAppService.reabrirTratativa',
+      @UI.Hidden: ocultaReabrir
     },
     {
       $Type: 'UI.DataFieldForAction',
@@ -88,13 +92,13 @@ annotate TratativaAppService.Tratativas with @(
     { $Type: 'UI.DataField', Value: idOrigem },
     { $Type: 'UI.DataField', Value: criticidade },
     { $Type: 'UI.DataField', Value: status },
-    { $Type: 'UI.DataField', Value: unidade },
-    { $Type: 'UI.DataField', Value: area },
-    { $Type: 'UI.DataField', Value: dataPrevistaConclusao },
+    { $Type: 'UI.DataField', Value: unidade, Label: 'Unidade', @UI.Importance: #High },
+    { $Type: 'UI.DataField', Value: area, Label: 'Área', @UI.Importance: #High },
+    { $Type: 'UI.DataField', Value: dataPrevistaConclusao, Label: 'Data prevista', @UI.Importance: #High },
     {
       $Type: 'UI.DataFieldForAction',
       Label: 'Criar Tratativa Avulsa',
-      Action: 'TratativaAppService.criarTratativaAvulsa'
+      Action: 'TratativaAppService.EntityContainer/criarTratativaAvulsa'
     }
   ],
   UI.Facets: [
@@ -153,12 +157,12 @@ annotate TratativaAppService.Tratativas with @(
   ],
   UI.FieldGroup #DadosGerais: {
     Data: [
-      { $Type: 'UI.DataField', Value: titulo },
-      { $Type: 'UI.DataField', Value: descricao },
-      { $Type: 'UI.DataField', Value: unidade },
-      { $Type: 'UI.DataField', Value: area },
-      { $Type: 'UI.DataField', Value: solicitante },
-      { $Type: 'UI.DataField', Value: dataPrevistaConclusao }
+      { $Type: 'UI.DataField', Value: titulo, Label: 'Título' },
+      { $Type: 'UI.DataField', Value: descricao, Label: 'Descrição' },
+      { $Type: 'UI.DataField', Value: unidade, Label: 'Unidade' },
+      { $Type: 'UI.DataField', Value: area, Label: 'Área' },
+      { $Type: 'UI.DataField', Value: solicitante, Label: 'Solicitante' },
+      { $Type: 'UI.DataField', Value: dataPrevistaConclusao, Label: 'Data prevista' }
     ]
   },
   UI.FieldGroup #ResponsavelPrincipal: {
