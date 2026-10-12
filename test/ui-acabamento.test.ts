@@ -48,10 +48,13 @@ type CaminhoDeView = { entitySet?: string; annotationPath?: string };
 const SERVICOS_DE_UI = ['TratativaAppService', 'AdministracaoService'];
 const ANOTACOES_DE_PROPRIEDADE = /^@UI\.(LineItem|SelectionFields|Identification)$|^@UI\.FieldGroup#[\w-]+\.Data$/;
 
+type AcaoCSN = { params?: Record<string, Record<string, unknown>>; [chave: string]: unknown };
+
 type DefinicaoCSN = {
   kind?: string;
   elements?: Record<string, Record<string, unknown>>;
   params?: Record<string, Record<string, unknown>>;
+  actions?: Record<string, AcaoCSN>;
   [chave: string]: unknown;
 };
 
@@ -707,6 +710,125 @@ describe('Acabamento da UI: robustez do backend e contratos de serviço', () => 
       expect(linha.ocultaEncerrar).toBe(false);
       expect(linha.ocultaCancelar).toBe(false);
       expect(linha.ocultaReabrir).toBe(true);
+    });
+  });
+
+  describe('R-20: SideEffects, colunas, placeholders e rótulos de Value Help', () => {
+    it('R-20: as 4 actions de status declaram SideEffects e Core.OperationAvailable pelo binding', async () => {
+      const modelo = (await cds.load(['srv', 'app'])) as unknown as { definitions: Record<string, DefinicaoCSN> };
+      const acoes = modelo.definitions['TratativaAppService.Tratativas']?.actions ?? {};
+
+      const alvosDeStatus = [
+        'in/status', 'in/podeIniciar', 'in/podeEncerrar', 'in/podeCancelar', 'in/podeReabrir',
+        'in/ocultaIniciar', 'in/ocultaEncerrar', 'in/ocultaCancelar', 'in/ocultaReabrir',
+      ];
+      const status: Array<[string, string]> = [
+        ['iniciarTratativa', 'podeIniciar'],
+        ['encerrarTratativa', 'podeEncerrar'],
+        ['cancelarTratativa', 'podeCancelar'],
+        ['reabrirTratativa', 'podeReabrir'],
+      ];
+
+      const faltando: string[] = [];
+      for (const [nome, flag] of status) {
+        const acao = acoes[nome];
+        if (!acao) {
+          faltando.push(`${nome} (sem action)`);
+          continue;
+        }
+        const alvos = (acao['@Common.SideEffects.TargetProperties'] as string[] | undefined) ?? [];
+        for (const alvo of alvosDeStatus) {
+          if (!alvos.includes(alvo)) faltando.push(`${nome} sem SideEffect ${alvo}`);
+        }
+        const disponibilidade = acao['@Core.OperationAvailable'] as Record<string, unknown> | undefined;
+        if (disponibilidade?.['='] !== `in.${flag}`) {
+          faltando.push(`${nome} OperationAvailable=${JSON.stringify(disponibilidade)}`);
+        }
+      }
+
+      const alvosCriticidade = (acoes.mudarCriticidade?.['@Common.SideEffects.TargetProperties'] as string[] | undefined) ?? [];
+      for (const alvo of ['in/criticidade', 'in/dataPrevistaConclusao']) {
+        if (!alvosCriticidade.includes(alvo)) faltando.push(`mudarCriticidade sem SideEffect ${alvo}`);
+      }
+
+      expect(faltando).toEqual([]);
+    });
+
+    it('R-20: todas as colunas de UI.LineItem de Tratativas têm @UI.Importance #High', async () => {
+      const modelo = (await cds.load(['srv', 'app'])) as unknown as { definitions: Record<string, DefinicaoCSN> };
+      const linha = (modelo.definitions['TratativaAppService.Tratativas']?.['@UI.LineItem'] ?? []) as Array<Record<string, unknown>>;
+      expect(Array.isArray(linha)).toBe(true);
+
+      const semImportancia: string[] = [];
+      for (const entrada of linha) {
+        if (!entrada['Value']) continue; // colunas; o botão de action não tem largura de coluna
+        const coluna = String((entrada['Value'] as Record<string, unknown>)['='] ?? '?');
+        if ((entrada['@UI.Importance'] as Record<string, unknown> | undefined)?.['#'] !== 'High') {
+          semImportancia.push(coluna);
+        }
+      }
+      expect(semImportancia).toEqual([]);
+    });
+
+    it('R-20: os parâmetros de texto livre têm @UI.Placeholder contra dados sensíveis', async () => {
+      const modelo = (await cds.load(['srv', 'app'])) as unknown as { definitions: Record<string, DefinicaoCSN> };
+      const parametros: Array<[string, string]> = [
+        ['cancelarTratativa', 'justificativa'],
+        ['reabrirTratativa', 'justificativa'],
+        ['delegarAcao', 'justificativa'],
+        ['criarTratativaAvulsa', 'descricao'],
+        ['criarAcao', 'descricao'],
+        ['criarSubacao', 'descricao'],
+        ['comentarTratativa', 'texto'],
+        ['comentarAcao', 'texto'],
+      ];
+
+      const semPlaceholder: string[] = [];
+      for (const [acao, parametro] of parametros) {
+        const vinculada = modelo.definitions['TratativaAppService.Tratativas']?.actions?.[acao]?.params?.[parametro];
+        const naoVinculada = modelo.definitions[`TratativaAppService.${acao}`]?.params?.[parametro];
+        const placeholder = (vinculada ?? naoVinculada ?? {})['@UI.Placeholder'];
+        if (typeof placeholder !== 'string' || !/dados sensíveis/i.test(placeholder)) {
+          semPlaceholder.push(`${acao}(${parametro})`);
+        }
+      }
+      expect(semPlaceholder).toEqual([]);
+    });
+
+    it('R-20: as entidades de Value Help têm rótulo pt-BR em todos os elementos', async () => {
+      const modelo = (await cds.load(['srv', 'app'])) as unknown as { definitions: Record<string, DefinicaoCSN> };
+      const colecoes = new Set<string>();
+
+      for (const [nome, definicao] of Object.entries(modelo.definitions)) {
+        const servico = nome.split('.')[0];
+        if (!SERVICOS_DE_UI.includes(servico)) continue;
+        const coleta = (anotado: Record<string, unknown>) => {
+          const valor = anotado['@Common.ValueList.CollectionPath'];
+          if (typeof valor === 'string') colecoes.add(`${servico}.${valor}`);
+        };
+        for (const elemento of Object.values(definicao.elements ?? {})) coleta(elemento);
+        for (const parametro of Object.values(definicao.params ?? {})) coleta(parametro);
+        for (const acao of Object.values(definicao.actions ?? {})) {
+          for (const parametro of Object.values(acao.params ?? {})) coleta(parametro);
+        }
+      }
+
+      const semRotulo: string[] = [];
+      for (const qualificado of colecoes) {
+        const colecao = qualificado.split('.').pop() as string;
+        const nome = Object.keys(modelo.definitions).find(
+          (chave) => chave === qualificado || chave.endsWith(`.${colecao}`),
+        );
+        const definicao = nome ? modelo.definitions[nome] : undefined;
+        if (!definicao) {
+          semRotulo.push(`${qualificado} (sem entidade)`);
+          continue;
+        }
+        for (const [elemento, info] of Object.entries(definicao.elements ?? {})) {
+          if (!rotuloPtBr(info)) semRotulo.push(`${nome}.${elemento}`);
+        }
+      }
+      expect(semRotulo).toEqual([]);
     });
   });
 
