@@ -13,6 +13,7 @@
 - `app/launchpad/webapp/manifest.json` (Manifest v2, id br.com.calazanstec.actionplan.launchpad, contentDensities)
 - `app/launchpad/webapp/index.html` (Fiori Launchpad Sandbox UShell com bootstrap kebab-case, resources/sap-ui-core.js provido pelo plugin, sem inline script)
 - `app/launchpad/webapp/sandbox.js` (configuração desacoplada de window["sap-ushell-config"] mapeando os 3 intents para as URLs de montagem do cds-plugin-ui5)
+- `app/launchpad/webapp/init.js` (R-15: módulo do data-sap-ui-on-init que cria o renderer fiori2 do sandbox2 e o coloca em #content)
 - `test/apoio/auth-dev.js` (implementação de Custom Authentication para [development] via cds.requires.auth.impl, injetando persona fixa dos usuários mocked padrão gestor, configurável por DEV_USER/CDS_DEV_USER, sem pedido de login e fora do pacote de produção)
 - `app/tratativas/webapp/Component.js`
 - `app/tratativas/webapp/index.html` (sandbox individual com resources/sap-ui-core.js local, ComponentSupport, bootstrap kebab-case, sem CDN e sem script inline)
