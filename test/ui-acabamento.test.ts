@@ -160,8 +160,9 @@ describe('Acabamento da UI: robustez do backend e contratos de serviço', () => 
     }
 
     const anotacoes = textoDo(ANOTACOES);
+    expect(anotacoes).not.toMatch(/^\s*\/\/.*@Core\.OperationAvailable\b.*$/m);
     for (const flag of ['podeIniciar', 'podeEncerrar', 'podeCancelar', 'podeReabrir']) {
-      expect(anotacoes).toContain(`@Core.OperationAvailable: ${flag}`);
+      expect(anotacoes).toContain(`@Core.OperationAvailable: in.${flag}`);
     }
 
     const tratativa = await criarAvulsa(enviar, { titulo: `Status ${sufixoUnico()}`, criticidade: 'Alta' });
@@ -669,6 +670,15 @@ describe('Acabamento da UI: robustez do backend e contratos de serviço', () => 
             for (const [parametro, info] of Object.entries(definicao.params ?? {})) {
               if (parametro === 'in') continue;
               if (!rotuloPtBr(info)) faltando.add(`${nome}(${parametro})`);
+            }
+          }
+
+          if (definicao.kind === 'entity') {
+            for (const [acao, detalhe] of Object.entries(definicao.actions ?? {})) {
+              for (const [parametro, info] of Object.entries(detalhe.params ?? {})) {
+                if (parametro === 'in') continue;
+                if (!rotuloPtBr(info)) faltando.add(`${nome}.${acao}(${parametro})`);
+              }
             }
           }
         }

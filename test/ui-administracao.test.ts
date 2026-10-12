@@ -143,7 +143,8 @@ describe('Administração da Plataforma: leitura OData administrada e escrita pe
     expect(anotacoes).toContain('annotate AdministracaoService.ParametrosIntegracaoSF');
     expect(anotacoes).toContain('nivelUnidadeSF');
     expect(anotacoes).toContain('nivelAreaSF');
-    expect(anotacoes).toContain("Action: 'AdministracaoService.atualizarParametrosIntegracaoSF'");
+    expect(anotacoes).toContain("Action: 'AdministracaoService.EntityContainer/atualizarParametrosIntegracaoSF'");
+    expect(anotacoes).not.toContain("Action: 'AdministracaoService.atualizarParametrosIntegracaoSF'");
   });
 
   it('CA17: Gestor de Tratativa e usuário comum sem papel de Administrador recebem 403', async () => {
