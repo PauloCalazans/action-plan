@@ -6,6 +6,7 @@ framework:
   name: SAPUI5
   version: "1.136.23"
   libraries:
+    - name: sap.fe.templates
     - name: sap.m
     - name: sap.ui.core
     - name: sap.ushell

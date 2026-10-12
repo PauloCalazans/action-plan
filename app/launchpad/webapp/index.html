@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Action Plan - Launchpad</title>
   <script src="sandbox.js"></script>
+  <script id="sap-ushell-bootstrap" src="resources/sap/ushell/bootstrap/sandbox2.js"></script>
   <script
     id="sap-ui-bootstrap"
     src="resources/sap-ui-core.js"
@@ -14,8 +15,9 @@
     data-sap-ui-compat-version="edge"
     data-sap-ui-async="true"
     data-sap-ui-frame-options="allow"
-    data-sap-ui-on-init="module:sap/ushell/shells/sandbox/fioriSandbox">
+    data-sap-ui-resource-roots='{"br.com.calazanstec.actionplan.launchpad": "./"}'
+    data-sap-ui-on-init="module:br/com/calazanstec/actionplan/launchpad/init">
   </script>
 </head>
-<body class="sapUiBody" id="canvas"></body>
+<body class="sapUiBody" id="content"></body>
 </html>

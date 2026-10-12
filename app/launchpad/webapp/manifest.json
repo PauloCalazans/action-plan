@@ -3,6 +3,7 @@
   "sap.app": {
     "id": "br.com.calazanstec.actionplan.launchpad",
     "type": "application",
+    "title": "Plataforma de Ação",
     "applicationVersion": {
       "version": "1.0.0"
     }
@@ -16,6 +17,10 @@
     }
   },
   "sap.ui5": {
+    "contentDensities": {
+      "compact": true,
+      "cozy": true
+    },
     "dependencies": {
       "minUI5Version": "1.136.23",
       "libs": {
