@@ -89,6 +89,16 @@ export default class TratativaAppService extends cds.ApplicationService {
       if (req.user.is('AplicativoOrigem')) req.reject(403, 'Acesso negado.');
     });
 
+    // As flags dependem de `status`; o Fiori elements só pede os caminhos das anotações, então garantimos a coluna.
+    this.before('READ', 'Tratativas', (req) => {
+      const select = (req.query as unknown as { SELECT?: { columns?: { ref?: string[] }[] } }).SELECT;
+      const colunas = select?.columns;
+      if (!colunas) return;
+      const pedeFlag = colunas.some((c) => /^(pode|oculta)(Iniciar|Encerrar|Cancelar|Reabrir)$/.test(c.ref?.[0] ?? ''));
+      const temStatus = colunas.some((c) => c.ref?.[0] === 'status' || c.ref?.[0] === '*');
+      if (pedeFlag && !temStatus) colunas.push({ ref: ['status'] });
+    });
+
     this.after('READ', 'Tratativas', (resultado, req) => {
       const gestor = req.user.is('GestorTratativa');
       const linhas = Array.isArray(resultado) ? resultado : [resultado];

@@ -3,7 +3,13 @@
   "sap.app": {
     "id": "br.com.calazanstec.actionplan.minhaspendencias",
     "type": "application",
-    "i18n": "i18n/i18n.properties",
+    "i18n": {
+      "bundleUrl": "i18n/i18n.properties",
+      "supportedLocales": [
+        ""
+      ],
+      "fallbackLocale": ""
+    },
     "title": "{{appTitle}}",
     "description": "{{appDescription}}",
     "applicationVersion": {
@@ -62,7 +68,11 @@
       "i18n": {
         "type": "sap.ui.model.resource.ResourceModel",
         "settings": {
-          "bundleName": "br.com.calazanstec.actionplan.minhaspendencias.i18n.i18n"
+          "bundleName": "br.com.calazanstec.actionplan.minhaspendencias.i18n.i18n",
+          "supportedLocales": [
+            ""
+          ],
+          "fallbackLocale": ""
         }
       }
     },
@@ -86,15 +96,13 @@
                 "paths": [
                   {
                     "key": "MinhasAcoes",
-                    "label": "{{minhasAcoesTab}}",
                     "entitySet": "MinhasAcoes",
-                    "annotationPath": "com.sap.vocabularies.UI.v1.LineItem"
+                    "annotationPath": "com.sap.vocabularies.UI.v1.SelectionPresentationVariant#MinhasAcoes"
                   },
                   {
                     "key": "MinhasTratativas",
-                    "label": "{{minhasTratativasTab}}",
                     "entitySet": "MinhasTratativas",
-                    "annotationPath": "com.sap.vocabularies.UI.v1.LineItem"
+                    "annotationPath": "com.sap.vocabularies.UI.v1.SelectionPresentationVariant#MinhasTratativas"
                   }
                 ]
               }

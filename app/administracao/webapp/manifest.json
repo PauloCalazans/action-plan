@@ -3,7 +3,13 @@
   "sap.app": {
     "id": "br.com.calazanstec.actionplan.administracao",
     "type": "application",
-    "i18n": "i18n/i18n.properties",
+    "i18n": {
+      "bundleUrl": "i18n/i18n.properties",
+      "supportedLocales": [
+        ""
+      ],
+      "fallbackLocale": ""
+    },
     "title": "{{appTitle}}",
     "description": "{{appDescription}}",
     "applicationVersion": {
@@ -62,7 +68,11 @@
       "i18n": {
         "type": "sap.ui.model.resource.ResourceModel",
         "settings": {
-          "bundleName": "br.com.calazanstec.actionplan.administracao.i18n.i18n"
+          "bundleName": "br.com.calazanstec.actionplan.administracao.i18n.i18n",
+          "supportedLocales": [
+            ""
+          ],
+          "fallbackLocale": ""
         }
       }
     },
@@ -118,21 +128,18 @@
                 "paths": [
                   {
                     "key": "Templates",
-                    "label": "{{templatesTab}}",
                     "entitySet": "Templates",
-                    "annotationPath": "com.sap.vocabularies.UI.v1.LineItem"
+                    "annotationPath": "com.sap.vocabularies.UI.v1.SelectionPresentationVariant#Templates"
                   },
                   {
                     "key": "ParametrosAlertas",
-                    "label": "{{alertasTab}}",
                     "entitySet": "ParametrosAlertas",
-                    "annotationPath": "com.sap.vocabularies.UI.v1.LineItem"
+                    "annotationPath": "com.sap.vocabularies.UI.v1.SelectionPresentationVariant#ParametrosAlertas"
                   },
                   {
                     "key": "ParametrosIntegracaoSF",
-                    "label": "{{estruturaOrganizacionalTab}}",
                     "entitySet": "ParametrosIntegracaoSF",
-                    "annotationPath": "com.sap.vocabularies.UI.v1.LineItem"
+                    "annotationPath": "com.sap.vocabularies.UI.v1.SelectionPresentationVariant#ParametrosIntegracaoSF"
                   }
                 ]
               }

@@ -238,9 +238,114 @@ annotate TratativaAppService.Historico with @(
   ]
 );
 
-annotate TratativaAppService with actions {
-  criarTratativaAvulsa(
+annotate TratativaAppService.Tratativas with {
+  origem                @title: 'Origem';
+  criticidade           @title: 'Criticidade';
+  status                @title: 'Status';
+  unidade               @title: 'Unidade';
+  area                  @title: 'Área';
+  codigo                @title: 'Código';
+  titulo                @title: 'Título';
+  idOrigem              @title: 'Registro de origem';
+  dataPrevistaConclusao @title: 'Data prevista';
+  descricao             @title: 'Descrição';
+  solicitante           @title: 'Solicitante';
+  responsavelPrincipal  @title: 'Responsável principal';
+};
+
+annotate TratativaAppService.Acoes with {
+  codigo               @title: 'Código';
+  descricao            @title: 'Descrição';
+  prioridade           @title: 'Prioridade';
+  status               @title: 'Status';
+  prazo                @title: 'Prazo';
+  evidenciaObrigatoria @title: 'Evidência obrigatória';
+  dataConclusao        @title: 'Data de conclusão';
+  responsavel          @title: 'Responsável';
+};
+
+annotate TratativaAppService.Participantes with {
+  matricula @title: 'Matrícula';
+  sequencia @title: 'Sequência';
+  criadoEm  @title: 'Criado em';
+};
+
+annotate TratativaAppService.Evidencias with {
+  codigo       @title: 'Código';
+  nomeArquivo  @title: 'Nome do arquivo';
+  mimeType     @title: 'Tipo do arquivo';
+  tamanho      @title: 'Tamanho';
+  descricao    @title: 'Descrição';
+  autorAnexo   @title: 'Anexado por';
+  criadoEm     @title: 'Criado em';
+};
+
+annotate TratativaAppService.Comentarios with {
+  codigo   @title: 'Código';
+  texto    @title: 'Comentário';
+  autor    @title: 'Autor';
+  criadoEm @title: 'Criado em';
+};
+
+annotate TratativaAppService.Historico with {
+  ID            @title: 'Identificador';
+  evento        @title: 'Evento';
+  campo         @title: 'Campo';
+  valorAnterior @title: 'Valor anterior';
+  valorNovo     @title: 'Valor novo';
+  justificativa @title: 'Justificativa';
+  autor         @title: 'Autor';
+  tipoAutor     @title: 'Tipo de autor';
+  quando        @title: 'Quando';
+};
+
+annotate TratativaAppService.Tratativas with actions {
+  cancelarTratativa(justificativa @title: 'Justificativa');
+  reabrirTratativa(justificativa @title: 'Justificativa');
+  mudarStatus(status @title: 'Status', justificativa @title: 'Justificativa');
+  editar(
+    titulo @title: 'Título',
+    descricao @title: 'Descrição',
+    unidade @title: 'Unidade',
+    area @title: 'Área',
+    solicitante @title: 'Solicitante'
+  );
+  aplicarTemplate(templateId @title: 'Template');
+  criarAcao(
+    descricao @title: 'Descrição',
+    responsavel @title: 'Responsável',
+    prazo @title: 'Prazo',
+    prioridade @title: 'Prioridade',
+    evidenciaObrigatoria @title: 'Evidência obrigatória'
+  );
+  criarSubacao(
+    acaoMae @title: 'Ação mãe',
+    descricao @title: 'Descrição',
+    responsavel @title: 'Responsável',
+    prazo @title: 'Prazo',
+    prioridade @title: 'Prioridade',
+    evidenciaObrigatoria @title: 'Evidência obrigatória'
+  );
+  delegarAcao(acao @title: 'Ação', novoResponsavel @title: 'Novo responsável', justificativa @title: 'Justificativa');
+  anexarEvidencia(
+    acao @title: 'Ação',
+    nomeArquivo @title: 'Nome do arquivo',
+    mimeType @title: 'Tipo do arquivo',
+    conteudo @title: 'Conteúdo',
+    descricao @title: 'Descrição'
+  );
+  removerEvidencia(acao @title: 'Ação', evidencia @title: 'Evidência');
+  comentarTratativa(texto @title: 'Comentário', mencoes @title: 'Menções');
+  comentarAcao(acao @title: 'Ação', texto @title: 'Comentário', mencoes @title: 'Menções');
+};
+
+annotate TratativaAppService.criarTratativaAvulsa with (
+    titulo      @title: 'Título',
+    descricao   @title: 'Descrição',
+    unidade     @title: 'Unidade',
+    area        @title: 'Área',
     criticidade @(
+      title: 'Criticidade',
       Common.ValueListWithFixedValues: true,
       Common.ValueList: {
         CollectionPath: 'ValoresCriticidade',
@@ -251,6 +356,7 @@ annotate TratativaAppService with actions {
       }
     ),
     solicitante @(
+      title: 'Solicitante',
       Common.ValueList: {
         CollectionPath: 'Colaboradores',
         Parameters: [
@@ -260,8 +366,7 @@ annotate TratativaAppService with actions {
         ]
       }
     )
-  );
-};
+);
 
 annotate TratativaAppService.Tratativas with actions {
   iniciarTratativa @Core.OperationAvailable: podeIniciar;

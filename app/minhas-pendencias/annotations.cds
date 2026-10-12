@@ -1,6 +1,11 @@
 using TratativaAppService from '../../srv/tratativa-app-service';
 
 annotate TratativaAppService.MinhasAcoes with @(
+  UI.SelectionPresentationVariant #MinhasAcoes: {
+    Text: 'Minhas Ações',
+    SelectionVariant: { SelectOptions: [] },
+    PresentationVariant: { Visualizations: ['@UI.LineItem'] }
+  },
   UI.HeaderInfo: {
     TypeName: 'Minha Ação',
     TypeNamePlural: 'Minhas Ações'
@@ -36,6 +41,11 @@ annotate TratativaAppService.MinhasAcoes with @(
 );
 
 annotate TratativaAppService.MinhasTratativas with @(
+  UI.SelectionPresentationVariant #MinhasTratativas: {
+    Text: 'Minhas Tratativas',
+    SelectionVariant: { SelectOptions: [] },
+    PresentationVariant: { Visualizations: ['@UI.LineItem'] }
+  },
   UI.HeaderInfo: {
     TypeName: 'Minha Tratativa',
     TypeNamePlural: 'Minhas Tratativas'
@@ -59,3 +69,29 @@ annotate TratativaAppService.MinhasTratativas with @(
     { $Type: 'UI.DataField', Value: dataPrevistaConclusao }
   ]
 );
+
+annotate TratativaAppService.MinhasAcoes with {
+  statusAcao           @title: 'Status da ação';
+  codigoAcao           @title: 'Código da ação';
+  codigoTratativa      @title: 'Código da tratativa';
+  tituloTratativa      @title: 'Título da tratativa';
+  statusTratativa      @title: 'Status da tratativa';
+  descricao            @title: 'Descrição';
+  prioridade           @title: 'Prioridade';
+  prazo                @title: 'Prazo';
+  evidenciaObrigatoria @title: 'Evidência obrigatória';
+  dataConclusao        @title: 'Data de conclusão';
+};
+
+annotate TratativaAppService.MinhasTratativas with {
+  statusTratativa       @title: 'Status da tratativa';
+  codigoTratativa       @title: 'Código da tratativa';
+  tituloTratativa       @title: 'Título da tratativa';
+  origem                @title: 'Origem';
+  idOrigem              @title: 'Registro de origem';
+  criticidade           @title: 'Criticidade';
+  meuPapel              @title: 'Meu papel';
+  unidade               @title: 'Unidade';
+  area                  @title: 'Área';
+  dataPrevistaConclusao @title: 'Data prevista';
+};
