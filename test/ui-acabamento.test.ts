@@ -679,10 +679,10 @@ describe('Acabamento da UI: robustez do backend e contratos de serviço', () => 
       expect(acao?.kind).toBe('action');
       const criticidade = acao?.params?.criticidade ?? {};
       expect(criticidade['@Common.ValueListWithFixedValues']).toBe(true);
-      expect(criticidade).toHaveProperty('@Common.ValueList.CollectionPath');
+      expect(criticidade['@Common.ValueList.CollectionPath']).toBeDefined();
 
       const solicitante = acao?.params?.solicitante ?? {};
-      expect(solicitante).toHaveProperty('@Common.ValueList.CollectionPath');
+      expect(solicitante['@Common.ValueList.CollectionPath']).toBeDefined();
     });
 
     it('R-18: as flags pode/oculta são corretas mesmo sem status no $select', async () => {
