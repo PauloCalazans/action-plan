@@ -21,10 +21,10 @@
 - `app/administracao/webapp/Component.js`
 - `app/administracao/webapp/index.html` (sandbox individual com resources/sap-ui-core.js local, ComponentSupport, bootstrap kebab-case, sem CDN e sem script inline)
 - `test/ui-acabamento.test.ts`
-- `test/publicacao-descritores.test.ts` (014; Ruling R-09: o build dos apps passa do '--archive', inexistente no UI5 CLI 4, para o ui5-task-zipper)
-- `test/publicacao-seguranca-destinations.test.ts` (014; Ruling R-11/R-12: [development] passa a autenticação customizada com impl apontando para test/apoio/auth-dev; mocked em [test])
 
 ### Modificados
+- `test/publicacao-descritores.test.ts` (014; Ruling R-09: o build dos apps passa do '--archive', inexistente no UI5 CLI 4, para o ui5-task-zipper)
+- `test/publicacao-seguranca-destinations.test.ts` (014; Ruling R-11/R-12: [development] passa a autenticação customizada com impl apontando para test/apoio/auth-dev; mocked em [test])
 - `package.json` (raiz: inclusão da devDependency cds-plugin-ui5: "0.17.4" e configuração de perfis de autenticação em cds.requires.auth: [development] com impl: "test/apoio/auth-dev", [test] como kind: "mocked" com os 7 usuários mocked, [papeis] como kind: "mocked", e [production] como kind: "xsuaa")
 - `package-lock.json` (devDependencies novas da execução local — cds-plugin-ui5 0.17.4 e ui5-task-zipper —, atualizado pelo npm; Rulings R-10/R-11)
 - `app/tratativas/ui5.yaml` (projeto UI5 Tooling: framework SAPUI5 1.136.23, bibliotecas incluindo sap.ushell e custom task ui5-task-zipper gerando brcomcalazanstecactionplantratativas.zip)
@@ -47,6 +47,10 @@
 - `app/administracao/webapp/i18n/i18n.properties` (textos, abas e rótulos pt-BR)
 - `test/ui-tratativas.test.ts` (atualização de asserções textuais de Action Import com EntityContainer/ e ações dedicadas de status)
 - `test/ui-administracao.test.ts` (atualização de asserções textuais de Action Import com EntityContainer/)
+
+### Removidos
+- `app/index.html` (o sandbox na raiz impedia a página inicial do CAP de listar os apps; substituído por app/launchpad/)
+- `app/sandbox.js` (substituído por app/launchpad/webapp/sandbox.js)
 
 > **Substituição de testes legados e desativação de index na raiz:** Os testes estruturais existentes da etapa 2 em `test/ui-acabamento.test.ts` e `test/publicacao-seguranca-destinations.test.ts` são alinhados para validar: (1) autenticação customizada em `[development]` via `test/apoio/auth-dev.js` (eliminando o dummy superuser que gerava 403); (2) ausência de `app/index.html` e `app/sandbox.js` na raiz de `app/` para que o CAP sirva sua página de boas-vindas padrão injetando os links dos apps via `cds-plugin-ui5` 0.17.4; (3) Fiori Launchpad Sandbox isolado em `app/launchpad/` com `ui5.yaml` e `sandbox.js` apontando para as URLs de montagem do plugin; (4) manifestos em Manifest Version 2 (`_version: "2.0.0"`, `minUI5Version: "1.136.23"`, `contentDensities: { compact: true, cozy: true }` e sem `synchronizationMode`); e (5) parâmetros de bootstrap em grafia kebab-case (`data-sap-ui-resource-roots`, `data-sap-ui-compat-version`, `data-sap-ui-frame-options`).
 
