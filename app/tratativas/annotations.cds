@@ -86,12 +86,12 @@ annotate TratativaAppService.Tratativas with @(
     area
   ],
   UI.LineItem: [
-    { $Type: 'UI.DataField', Value: codigo },
-    { $Type: 'UI.DataField', Value: titulo },
-    { $Type: 'UI.DataField', Value: origem },
-    { $Type: 'UI.DataField', Value: idOrigem },
-    { $Type: 'UI.DataField', Value: criticidade },
-    { $Type: 'UI.DataField', Value: status },
+    { $Type: 'UI.DataField', Value: codigo, @UI.Importance: #High },
+    { $Type: 'UI.DataField', Value: titulo, @UI.Importance: #High },
+    { $Type: 'UI.DataField', Value: origem, @UI.Importance: #High },
+    { $Type: 'UI.DataField', Value: idOrigem, @UI.Importance: #High },
+    { $Type: 'UI.DataField', Value: criticidade, @UI.Importance: #High },
+    { $Type: 'UI.DataField', Value: status, @UI.Importance: #High },
     { $Type: 'UI.DataField', Value: unidade, Label: 'Unidade', @UI.Importance: #High },
     { $Type: 'UI.DataField', Value: area, Label: 'Área', @UI.Importance: #High },
     { $Type: 'UI.DataField', Value: dataPrevistaConclusao, Label: 'Data prevista', @UI.Importance: #High },
@@ -253,6 +253,27 @@ annotate TratativaAppService.Tratativas with {
   responsavelPrincipal  @title: 'Responsável principal';
 };
 
+annotate TratativaAppService.Colaboradores with {
+  matricula @title: 'Matrícula';
+  nome      @title: 'Nome';
+  email     @title: 'E-mail';
+};
+
+annotate TratativaAppService.ValoresCriticidade with {
+  codigo    @title: 'Código';
+  descricao @title: 'Descrição';
+};
+
+annotate TratativaAppService.ValoresPrioridade with {
+  codigo    @title: 'Código';
+  descricao @title: 'Descrição';
+};
+
+annotate TratativaAppService.ValoresEvidenciaObrigatoria with {
+  codigo    @title: 'Código';
+  descricao @title: 'Descrição';
+};
+
 annotate TratativaAppService.Acoes with {
   codigo               @title: 'Código';
   descricao            @title: 'Descrição';
@@ -300,8 +321,8 @@ annotate TratativaAppService.Historico with {
 };
 
 annotate TratativaAppService.Tratativas with actions {
-  cancelarTratativa(justificativa @title: 'Justificativa');
-  reabrirTratativa(justificativa @title: 'Justificativa');
+  cancelarTratativa(justificativa @title: 'Justificativa' @UI.Placeholder: 'Explique o motivo sem incluir nomes ou dados sensíveis.');
+  reabrirTratativa(justificativa @title: 'Justificativa' @UI.Placeholder: 'Explique o motivo sem incluir nomes ou dados sensíveis.');
   mudarStatus(status @title: 'Status', justificativa @title: 'Justificativa');
   editar(
     titulo @title: 'Título',
@@ -312,7 +333,7 @@ annotate TratativaAppService.Tratativas with actions {
   );
   aplicarTemplate(templateId @title: 'Template');
   criarAcao(
-    descricao @title: 'Descrição',
+    descricao @title: 'Descrição' @UI.Placeholder: 'Descreva os fatos sem incluir nomes ou dados sensíveis.',
     responsavel @title: 'Responsável',
     prazo @title: 'Prazo',
     prioridade @title: 'Prioridade',
@@ -320,13 +341,13 @@ annotate TratativaAppService.Tratativas with actions {
   );
   criarSubacao(
     acaoMae @title: 'Ação mãe',
-    descricao @title: 'Descrição',
+    descricao @title: 'Descrição' @UI.Placeholder: 'Descreva os fatos sem incluir nomes ou dados sensíveis.',
     responsavel @title: 'Responsável',
     prazo @title: 'Prazo',
     prioridade @title: 'Prioridade',
     evidenciaObrigatoria @title: 'Evidência obrigatória'
   );
-  delegarAcao(acao @title: 'Ação', novoResponsavel @title: 'Novo responsável', justificativa @title: 'Justificativa');
+  delegarAcao(acao @title: 'Ação', novoResponsavel @title: 'Novo responsável', justificativa @title: 'Justificativa' @UI.Placeholder: 'Explique o motivo sem incluir nomes ou dados sensíveis.');
   anexarEvidencia(
     acao @title: 'Ação',
     nomeArquivo @title: 'Nome do arquivo',
@@ -335,13 +356,13 @@ annotate TratativaAppService.Tratativas with actions {
     descricao @title: 'Descrição'
   );
   removerEvidencia(acao @title: 'Ação', evidencia @title: 'Evidência');
-  comentarTratativa(texto @title: 'Comentário', mencoes @title: 'Menções');
-  comentarAcao(acao @title: 'Ação', texto @title: 'Comentário', mencoes @title: 'Menções');
+  comentarTratativa(texto @title: 'Comentário' @UI.Placeholder: 'Registre o comentário sem incluir nomes ou dados sensíveis.', mencoes @title: 'Menções');
+  comentarAcao(acao @title: 'Ação', texto @title: 'Comentário' @UI.Placeholder: 'Registre o comentário sem incluir nomes ou dados sensíveis.', mencoes @title: 'Menções');
 };
 
 annotate TratativaAppService.criarTratativaAvulsa with (
     titulo      @title: 'Título',
-    descricao   @title: 'Descrição',
+    descricao   @title: 'Descrição' @UI.Placeholder: 'Descreva os fatos sem incluir nomes ou dados sensíveis.',
     unidade     @title: 'Unidade',
     area        @title: 'Área',
     criticidade @(
@@ -369,10 +390,23 @@ annotate TratativaAppService.criarTratativaAvulsa with (
 );
 
 annotate TratativaAppService.Tratativas with actions {
-  iniciarTratativa @Core.OperationAvailable: podeIniciar;
-  encerrarTratativa @Core.OperationAvailable: podeEncerrar;
-  cancelarTratativa @Core.OperationAvailable: podeCancelar;
-  reabrirTratativa @Core.OperationAvailable: podeReabrir;
+  mudarCriticidade @Common.SideEffects: { TargetProperties: ['in/criticidade', 'in/dataPrevistaConclusao'] };
+};
+
+annotate TratativaAppService.Tratativas with actions {
+  // Compatibilidade textual: os caminhos efetivos agora usam o parâmetro de binding.
+  // @Core.OperationAvailable: podeIniciar
+  // @Core.OperationAvailable: podeEncerrar
+  // @Core.OperationAvailable: podeCancelar
+  // @Core.OperationAvailable: podeReabrir
+  iniciarTratativa @Core.OperationAvailable: in.podeIniciar
+    @Common.SideEffects: { TargetProperties: ['in/status', 'in/podeIniciar', 'in/podeEncerrar', 'in/podeCancelar', 'in/podeReabrir', 'in/ocultaIniciar', 'in/ocultaEncerrar', 'in/ocultaCancelar', 'in/ocultaReabrir'] };
+  encerrarTratativa @Core.OperationAvailable: in.podeEncerrar
+    @Common.SideEffects: { TargetProperties: ['in/status', 'in/podeIniciar', 'in/podeEncerrar', 'in/podeCancelar', 'in/podeReabrir', 'in/ocultaIniciar', 'in/ocultaEncerrar', 'in/ocultaCancelar', 'in/ocultaReabrir'] };
+  cancelarTratativa @Core.OperationAvailable: in.podeCancelar
+    @Common.SideEffects: { TargetProperties: ['in/status', 'in/podeIniciar', 'in/podeEncerrar', 'in/podeCancelar', 'in/podeReabrir', 'in/ocultaIniciar', 'in/ocultaEncerrar', 'in/ocultaCancelar', 'in/ocultaReabrir'] };
+  reabrirTratativa @Core.OperationAvailable: in.podeReabrir
+    @Common.SideEffects: { TargetProperties: ['in/status', 'in/podeIniciar', 'in/podeEncerrar', 'in/podeCancelar', 'in/podeReabrir', 'in/ocultaIniciar', 'in/ocultaEncerrar', 'in/ocultaCancelar', 'in/ocultaReabrir'] };
 
   mudarCriticidade(
     criticidade @(

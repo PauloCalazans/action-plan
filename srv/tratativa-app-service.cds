@@ -36,19 +36,19 @@ service TratativaAppService {
         historico     : Association to many Historico on historico.tratativa = $self
   } actions {
     @requires: 'GestorTratativa'
-    @Core.OperationAvailable: podeIniciar
+    @Core.OperationAvailable: in.podeIniciar
     action iniciarTratativa();
 
     @requires: 'GestorTratativa'
-    @Core.OperationAvailable: podeEncerrar
+    @Core.OperationAvailable: in.podeEncerrar
     action encerrarTratativa();
 
     @requires: 'GestorTratativa'
-    @Core.OperationAvailable: podeCancelar
+    @Core.OperationAvailable: in.podeCancelar
     action cancelarTratativa(justificativa : String(500));
 
     @requires: 'GestorTratativa'
-    @Core.OperationAvailable: podeReabrir
+    @Core.OperationAvailable: in.podeReabrir
     action reabrirTratativa(justificativa : String(500));
 
     @requires: 'GestorTratativa'

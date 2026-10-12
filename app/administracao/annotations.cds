@@ -30,6 +30,10 @@ annotate AdministracaoService.atualizarParametrosIntegracaoSF with (
   nivelAreaSF    @title: 'Nível da área no SF'
 );
 
+annotate AdministracaoService.atualizarParametrosAlertas with @Common.SideEffects: {
+  TargetEntities: ['/AdministracaoService.EntityContainer/ParametrosAlertas']
+};
+
 annotate AdministracaoService.atualizarParametrosAlertas with (
   diasAntecedenciaPrazoProximo @title: 'Dias de antecedência do prazo',
   diasInatividade              @title: 'Dias de inatividade',
