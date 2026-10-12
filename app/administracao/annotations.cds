@@ -183,7 +183,7 @@ annotate AdministracaoService.ParametrosIntegracaoSF with @(
     {
       $Type: 'UI.DataFieldForAction',
       Label: 'Salvar Mapeamento',
-      Action: 'AdministracaoService.atualizarParametrosIntegracaoSF'
+      Action: 'AdministracaoService.EntityContainer/atualizarParametrosIntegracaoSF'
     }
   ],
   UI.Facets: [

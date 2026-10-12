@@ -394,11 +394,6 @@ annotate TratativaAppService.Tratativas with actions {
 };
 
 annotate TratativaAppService.Tratativas with actions {
-  // Compatibilidade textual: os caminhos efetivos agora usam o parâmetro de binding.
-  // @Core.OperationAvailable: podeIniciar
-  // @Core.OperationAvailable: podeEncerrar
-  // @Core.OperationAvailable: podeCancelar
-  // @Core.OperationAvailable: podeReabrir
   iniciarTratativa @Core.OperationAvailable: in.podeIniciar
     @Common.SideEffects: { TargetProperties: ['in/status', 'in/podeIniciar', 'in/podeEncerrar', 'in/podeCancelar', 'in/podeReabrir', 'in/ocultaIniciar', 'in/ocultaEncerrar', 'in/ocultaCancelar', 'in/ocultaReabrir'] };
   encerrarTratativa @Core.OperationAvailable: in.podeEncerrar
@@ -410,6 +405,7 @@ annotate TratativaAppService.Tratativas with actions {
 
   mudarCriticidade(
     criticidade @(
+      title: 'Nova criticidade',
       Common.ValueListWithFixedValues: true,
       Common.ValueList: {
         CollectionPath: 'ValoresCriticidade',
