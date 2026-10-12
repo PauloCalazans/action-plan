@@ -463,7 +463,9 @@ describe('Acabamento da UI: robustez do backend e contratos de serviço', () => 
       const anotacoes = textoDo(ANOTACOES);
 
       expect(anotacoes).toMatch(/annotate TratativaAppService(\.Tratativas)? with actions\s*\{/);
-      for (const acao of ['criarTratativaAvulsa', 'mudarCriticidade', 'criarAcao', 'criarSubacao', 'delegarAcao']) {
+      // R-19/R-17: a action não vinculada é anotada diretamente (`annotate ...criarTratativaAvulsa with (`).
+      expect(anotacoes).toMatch(/annotate\s+TratativaAppService\.criarTratativaAvulsa\s+with\s*\(/);
+      for (const acao of ['mudarCriticidade', 'criarAcao', 'criarSubacao', 'delegarAcao']) {
         expect(anotacoes).toContain(`${acao}(`);
       }
       for (const colecao of ['ValoresCriticidade', 'ValoresPrioridade', 'ValoresEvidenciaObrigatoria', 'Colaboradores']) {
