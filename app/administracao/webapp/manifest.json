@@ -1,5 +1,5 @@
 {
-  "_version": "1.65.0",
+  "_version": "2.0.0",
   "sap.app": {
     "id": "br.com.calazanstec.actionplan.administracao",
     "type": "application",
@@ -40,20 +40,23 @@
   },
   "sap.ui5": {
     "dependencies": {
-      "minUI5Version": "1.120.0",
+      "minUI5Version": "1.136.23",
       "libs": {
         "sap.fe.templates": {},
         "sap.m": {},
         "sap.ui.core": {}
       }
     },
+    "contentDensities": {
+      "compact": true,
+      "cozy": true
+    },
     "models": {
       "": {
         "dataSource": "mainService",
         "settings": {
           "operationMode": "Server",
-          "autoExpandSelect": true,
-          "synchronizationMode": "None"
+          "autoExpandSelect": true
         }
       },
       "i18n": {

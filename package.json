@@ -21,7 +21,7 @@
     "requires": {
       "auth": {
         "[development]": {
-          "kind": "dummy"
+          "impl": "test/apoio/auth-dev"
         },
         "[test]": {
           "kind": "mocked",
