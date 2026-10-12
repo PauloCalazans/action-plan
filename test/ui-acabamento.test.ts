@@ -10,6 +10,7 @@ const enviar = POST as unknown as Envia;
 const BASE = '/api/app/v1';
 const RAIZ = join(__dirname, '..');
 const ANOTACOES = join(RAIZ, 'app', 'tratativas', 'annotations.cds');
+const I18N_TRATATIVAS = join(RAIZ, 'app', 'tratativas', 'webapp', 'i18n', 'i18n.properties');
 const PACOTE = join(RAIZ, 'package.json');
 const DEPCRUISER = join(RAIZ, '.dependency-cruiser.cjs');
 const MTA = join(RAIZ, 'mta.yaml');
@@ -381,6 +382,47 @@ describe('Acabamento da UI: robustez do backend e contratos de serviço', () => 
         };
         expect(pacoteApp.scripts?.build).toContain('ui5 build --config=ui5.yaml');
       }
+    });
+  });
+
+  describe('Etapa 3: rótulos pt-BR e acabamento das anotações de app/tratativas', () => {
+    it('CA3: as anotações de app/tratativas/ não expõem identificadores técnicos como rótulos', () => {
+      const anotacoes = textoDo(ANOTACOES);
+
+      const tecnicos = [
+        'codigo', 'titulo', 'origem', 'idOrigem', 'criticidade', 'status', 'unidade', 'area',
+        'dataPrevistaConclusao', 'descricao', 'solicitante', 'responsavelPrincipal', 'responsavel',
+      ];
+      for (const tecnico of tecnicos) {
+        expect(anotacoes).not.toContain(`Label: '${tecnico}'`);
+      }
+      for (const ocorrencia of anotacoes.matchAll(/Label:\s*'([^']*)'/g)) {
+        expect(ocorrencia[1]).toMatch(/^[A-ZÀ-Ý]/);
+        expect(ocorrencia[1]).not.toMatch(/[a-zà-ÿ][A-ZÀ-Ý]/);
+      }
+    });
+
+    it('CA7: as ações declaram Value List canônica para os parâmetros (dropdowns e Value Help)', () => {
+      const anotacoes = textoDo(ANOTACOES);
+
+      expect(anotacoes).toMatch(/annotate TratativaAppService(\.Tratativas)? with actions\s*\{/);
+      for (const acao of ['criarTratativaAvulsa', 'mudarCriticidade', 'criarAcao', 'criarSubacao', 'delegarAcao']) {
+        expect(anotacoes).toContain(`${acao}(`);
+      }
+      for (const colecao of ['ValoresCriticidade', 'ValoresPrioridade', 'ValoresEvidenciaObrigatoria', 'Colaboradores']) {
+        expect(anotacoes).toContain(`CollectionPath: '${colecao}'`);
+      }
+      expect((anotacoes.match(/Common\.ValueListWithFixedValues/g) ?? []).length).toBeGreaterThanOrEqual(5);
+    });
+
+    it('CA15: o catálogo i18n orienta contra dados sensíveis nos campos livres', () => {
+      const textos = textoDo(I18N_TRATATIVAS);
+
+      for (const chave of ['titlePlaceholder', 'descriptionPlaceholder', 'commentPlaceholder']) {
+        expect(textos).toContain(`${chave}=`);
+      }
+      expect(textos).toMatch(/dados sensíveis/i);
+      expect(textos).toMatch(/nomes/i);
     });
   });
 
