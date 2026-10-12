@@ -1113,3 +1113,18 @@ Medido com `cds watch` no worktree e no pacote `@sapui5/sap.ushell` 1.136.23 (ca
 6. **Comportamento padrão aceito do sandbox SAP:** a página "My Home" também mostra a seção "Sample Applications" do site padrão do `sandbox2` (o site padrão sobrescreve a configuração); os 404 de `sap/ushell/preload-bundles/*` em desenvolvimento são esperados (os bundles só existem no build). Nenhum dos dois é contornado.
 
 Verificado na sondagem: home com os 3 tiles; `#Tratativa-manage`, `#MinhasPendencias-display` e `#AdministracaoPlataforma-manage` abrem os apps dentro do shell, sem login, com OData 200 pela persona.
+
+## Correção R-16 (abas "undefined" e locale do i18n, medido em execução, 2026-10-12)
+
+Fundamento: parecer da Vigia com o MCP do UI5 (`agentic/.estado/execucao/2026-10-11-acabamento-ui-fiori/r16-vigia-parecer.md`: `get_api_reference` de `sap.ui.model.resource.ResourceModel`, `sap.base.i18n.ResourceBundle` e `sap.ui.core.Manifest`; `run_manifest_validation` válido). Entra na Etapa 4; os arquivos já estão no ## Arquivos da task.
+
+1. **Abas do List Report multi-tabela** (`app/minhas-pendencias`, `app/administracao`): o texto da aba vem do `Text` da anotação apontada em `annotationPath`; `UI.LineItem` não tem `Text`, então a aba sai "undefined". Cada entrada de `views.paths` passa a ter `"entitySet"` e `"annotationPath": "com.sap.vocabularies.UI.v1.SelectionPresentationVariant#<Qualificador>"` (qualificadores `MinhasAcoes`, `MinhasTratativas`, `Templates`, `ParametrosAlertas`, `ParametrosIntegracaoSF`), sem a propriedade `label`. Cada entidade recebe no `annotations.cds` do app:
+   ```cds
+   UI.SelectionPresentationVariant #MinhasAcoes: {
+     Text: 'Minhas Ações',
+     SelectionVariant: { SelectOptions: [] },
+     PresentationVariant: { Visualizations: ['@UI.LineItem'] }
+   },
+   ```
+   `Text` é LITERAL em pt-BR (ajuste do orquestrador ao parecer): no CDS, `'{i18n>chave}'` é resolvido pelo CAP a partir de `_i18n/` do servidor, que o projeto não tem — não do `webapp/i18n` do app. Textos: "Minhas Ações", "Minhas Tratativas", "Templates de Ações", "Parâmetros de Alertas", "Estrutura Organizacional".
+2. **i18n com um único `i18n.properties` pt-BR** (os 3 apps): `sap.app.i18n` em sintaxe de objeto `{ "bundleUrl": "i18n/i18n.properties", "supportedLocales": [""], "fallbackLocale": "" }` e `sap.ui5.models.i18n.settings` com `bundleName` atual + `"supportedLocales": [""]`, `"fallbackLocale": ""`. Elimina o aviso "fallback locale 'en' is not contained in the list of supported locales ['']".
