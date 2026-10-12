@@ -73,9 +73,9 @@ describe('Destinations declarativas, perfis de execução e governança de segre
     const authResolvido = (cds.env.requires as Record<string, unknown>).auth as { kind?: string } | undefined;
     expect(authResolvido?.kind).toBe('mocked');
 
-    // R-06/R-11: em desenvolvimento a autenticação é 'dummy' (abre sem login via cds-plugin-ui5).
+    // R-12: em desenvolvimento a autenticação é customizada via test/apoio/auth-dev (persona fixa, sem login).
     const desenvolvimento = auth['[development]'];
-    expect(desenvolvimento?.kind).toBe('dummy');
+    expect(desenvolvimento?.impl).toBe('test/apoio/auth-dev');
 
     // Preservação integral dos usuários mockados e seus papéis no perfil de teste.
     const teste = auth['[test]'];

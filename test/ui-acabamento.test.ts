@@ -25,6 +25,8 @@ beforeEach(() => fixarInstante('2026-10-26T12:00:00-03:00'));
 afterEach(liberarRelogio);
 
 type Erro = { error?: { message?: string; target?: string } };
+type UsuarioInjetado = { id?: string; is: (papel: string) => boolean };
+type Middleware = (req: { user?: UsuarioInjetado }, res: unknown, next: (erro?: unknown) => void) => void;
 
 function textoDo(arquivo: string): string {
   expect(existsSync(arquivo)).toBe(true);
@@ -171,55 +173,157 @@ describe('Acabamento da UI: robustez do backend e contratos de serviço', () => 
       }
     });
 
-    it('CA1: o webapp/index.html de cada app usa UI5 local (sem CDN), ComponentSupport e sem script inline', () => {
+    it('CA1: o webapp/index.html de cada app usa UI5 local, bootstrap kebab-case, sem CDN e sem script inline', () => {
       for (const app of APPS) {
         const html = textoDo(join(RAIZ, 'app', app.dir, 'webapp', 'index.html'));
-        expect(html).toContain('resources/sap-ui-core.js');
+        expect(html).toContain('src="resources/sap-ui-core.js"');
         expect(html).toContain('module:sap/ui/core/ComponentSupport');
         expect(html).toContain('sap_horizon');
         expect(html).toContain('data-sap-ui-component');
+        for (const parametro of ['data-sap-ui-resource-roots', 'data-sap-ui-compat-version', 'data-sap-ui-frame-options']) {
+          expect(html).toContain(parametro);
+        }
         expect(html).not.toContain('ui5.sap.com');
         expect(html).not.toContain('sapui5.hana.ondemand.com');
         expect(html).not.toMatch(/<script(?![^>]*\bsrc=)[^>]*>[\s\S]*?<\/script>/i);
       }
     });
 
-    it('CA1: o sandbox do launchpad (app/index.html e app/sandbox.js) publica os 3 apps por intent', () => {
-      const sandboxHtml = textoDo(join(RAIZ, 'app', 'index.html'));
-      expect(sandboxHtml).toContain('sandbox.js');
-      expect(sandboxHtml).toContain('resources/sap-ui-core.js');
-      expect(sandboxHtml).toContain('module:sap/ushell/shells/sandbox/fioriSandbox');
-      expect(sandboxHtml).not.toContain('ui5.sap.com');
-      expect(sandboxHtml).not.toContain('sapui5.hana.ondemand.com');
-      expect(sandboxHtml).not.toMatch(/<script(?![^>]*\bsrc=)[^>]*>[\s\S]*?<\/script>/i);
+    it('CA1: cada manifest.json está em Manifest Version 2 (LTS 1.136.23, contentDensities, sem synchronizationMode)', () => {
+      for (const app of APPS) {
+        const bruto = textoDo(join(RAIZ, 'app', app.dir, 'webapp', 'manifest.json'));
+        expect(bruto).not.toContain('synchronizationMode');
 
-      const sandbox = textoDo(join(RAIZ, 'app', 'sandbox.js'));
+        const manifesto = JSON.parse(bruto) as {
+          _version?: string;
+          'sap.ui5'?: {
+            dependencies?: { minUI5Version?: string };
+            contentDensities?: { compact?: boolean; cozy?: boolean };
+          };
+        };
+        expect(manifesto._version).toMatch(/^2\./);
+        expect(manifesto['sap.ui5']?.dependencies?.minUI5Version).toBe('1.136.23');
+        expect(manifesto['sap.ui5']?.contentDensities).toEqual({ compact: true, cozy: true });
+      }
+    });
+
+    it('CA1: o Fiori Launchpad Sandbox isolado em app/launchpad/ publica os 3 apps por intent', () => {
+      const ui5 = textoDo(join(RAIZ, 'app', 'launchpad', 'ui5.yaml'));
+      expect(ui5).toContain('SAPUI5');
+      expect(ui5).toContain('1.136.23');
+      for (const biblioteca of ['sap.m', 'sap.ui.core', 'sap.ushell', 'themelib_sap_horizon']) {
+        expect(ui5).toContain(biblioteca);
+      }
+
+      const pacote = JSON.parse(textoDo(join(RAIZ, 'app', 'launchpad', 'package.json'))) as { private?: boolean };
+      expect(pacote.private).toBe(true);
+
+      const manifesto = JSON.parse(textoDo(join(RAIZ, 'app', 'launchpad', 'webapp', 'manifest.json'))) as {
+        _version?: string;
+        'sap.app'?: { id?: string };
+      };
+      expect(manifesto._version).toMatch(/^2\./);
+      expect(manifesto['sap.app']?.id).toBe('br.com.calazanstec.actionplan.launchpad');
+
+      const html = textoDo(join(RAIZ, 'app', 'launchpad', 'webapp', 'index.html'));
+      expect(html).toContain('src="sandbox.js"');
+      expect(html).toContain('src="resources/sap-ui-core.js"');
+      expect(html).toContain('module:sap/ushell/shells/sandbox/fioriSandbox');
+      for (const parametro of ['data-sap-ui-compat-version', 'data-sap-ui-frame-options']) {
+        expect(html).toContain(parametro);
+      }
+      expect(html).not.toContain('ui5.sap.com');
+      expect(html).not.toContain('sapui5.hana.ondemand.com');
+      expect(html).not.toMatch(/<script(?![^>]*\bsrc=)[^>]*>[\s\S]*?<\/script>/i);
+
+      const sandbox = textoDo(join(RAIZ, 'app', 'launchpad', 'webapp', 'sandbox.js'));
       expect(sandbox).toContain('sap-ushell-config');
       for (const intent of ['Tratativa-manage', 'MinhasPendencias-display', 'AdministracaoPlataforma-manage']) {
         expect(sandbox).toContain(intent);
       }
       for (const app of APPS) {
-        expect(sandbox).toContain(app.id);
+        expect(sandbox).toContain(`/${app.id}`);
       }
     });
 
-    it('CA1: o package.json raiz declara cds-plugin-ui5 e os perfis de auth (dummy em dev, mocked em teste e papéis)', () => {
+    it('CA1: a raiz de app/ não publica sandbox próprio (o CAP serve a página inicial padrão)', () => {
+      expect(existsSync(join(RAIZ, 'app', 'index.html'))).toBe(false);
+      expect(existsSync(join(RAIZ, 'app', 'sandbox.js'))).toBe(false);
+    });
+
+    it('CA1: o package.json raiz declara cds-plugin-ui5 e a autenticação de dev customizada', () => {
       const raiz = JSON.parse(textoDo(PACOTE)) as {
         devDependencies?: Record<string, string>;
-        cds?: { requires?: { auth?: Record<string, { kind?: string; users?: Record<string, unknown> }> } };
+        cds?: {
+          requires?: {
+            auth?: Record<string, { kind?: string; impl?: string; users?: Record<string, unknown> }>;
+          };
+        };
       };
       expect(raiz.devDependencies?.['cds-plugin-ui5']).toBe('0.17.4');
 
       const auth = raiz.cds?.requires?.auth ?? {};
-      expect(auth['[development]']?.kind).toBe('dummy');
+      expect(auth['[development]']?.impl).toBe('test/apoio/auth-dev');
       expect(auth['[test]']?.kind).toBe('mocked');
       expect(auth['[papeis]']?.kind).toBe('mocked');
+      expect(auth['[production]']?.kind).toBe('xsuaa');
       expect(Object.keys(auth['[test]']?.users ?? {}).sort()).toEqual([
         'admin', 'app-origem-a', 'app-origem-b', 'app-revogado', 'gestor', 'leitor-analitico', 'usuario',
       ]);
+      expect(JSON.stringify(auth['[production]'] ?? {})).not.toContain('auth-dev');
     });
 
-    it('CA1 e CA16: cada app empacota via ui5-task-zipper (SAPUI5 1.120.0) sem --archive', () => {
+    it('CA1: o middleware de dev injeta a persona escolhida (padrão gestor) e não vaza para produção', async () => {
+      const caminho = join(RAIZ, 'test', 'apoio', 'auth-dev.js');
+      expect(existsSync(caminho)).toBe(true);
+
+      const carregado = (await import(caminho)) as unknown;
+      const middleware = (typeof carregado === 'function'
+        ? carregado
+        : (carregado as { default?: unknown }).default) as Middleware;
+      expect(typeof middleware).toBe('function');
+
+      const aplicar = (valores: { dev?: string; cds?: string }) => {
+        const anteriorDev = process.env.DEV_USER;
+        const anteriorCds = process.env.CDS_DEV_USER;
+        try {
+          if (valores.dev === undefined) delete process.env.DEV_USER;
+          else process.env.DEV_USER = valores.dev;
+          if (valores.cds === undefined) delete process.env.CDS_DEV_USER;
+          else process.env.CDS_DEV_USER = valores.cds;
+          const req: { user?: UsuarioInjetado } = {};
+          let seguiu = false;
+          middleware(req, {}, () => {
+            seguiu = true;
+          });
+          return { usuario: req.user, seguiu };
+        } finally {
+          if (anteriorDev === undefined) delete process.env.DEV_USER;
+          else process.env.DEV_USER = anteriorDev;
+          if (anteriorCds === undefined) delete process.env.CDS_DEV_USER;
+          else process.env.CDS_DEV_USER = anteriorCds;
+        }
+      };
+
+      const padrao = aplicar({});
+      expect(padrao.seguiu).toBe(true);
+      expect(padrao.usuario?.id).toBe('gestor');
+      expect(padrao.usuario?.is('GestorTratativa')).toBe(true);
+      expect(padrao.usuario?.is('AplicativoOrigem')).toBe(false);
+
+      const porDev = aplicar({ dev: 'admin' });
+      expect(porDev.usuario?.id).toBe('admin');
+      expect(porDev.usuario?.is('Administrador')).toBe(true);
+
+      const porCds = aplicar({ cds: 'leitor-analitico' });
+      expect(porCds.usuario?.id).toBe('leitor-analitico');
+      expect(porCds.usuario?.is('LeitorAnalitico')).toBe(true);
+
+      const desconhecida = aplicar({ dev: 'persona-inexistente' });
+      expect(desconhecida.usuario?.id).toBe('gestor');
+    });
+
+    it('CA1 e CA16: cada app empacota via ui5-task-zipper (SAPUI5 LTS 1.136.23) sem --archive', () => {
       const zips: Record<string, string> = {
         tratativas: 'brcomcalazanstecactionplantratativas.zip',
         'minhas-pendencias': 'brcomcalazanstecactionplanminhaspendencias.zip',
@@ -229,7 +333,7 @@ describe('Acabamento da UI: robustez do backend e contratos de serviço', () => 
       for (const app of APPS) {
         const ui5 = textoDo(join(RAIZ, 'app', app.dir, 'ui5.yaml'));
         expect(ui5).toContain('SAPUI5');
-        expect(ui5).toContain('1.120.0');
+        expect(ui5).toContain('1.136.23');
         expect(ui5).toContain('sap.ushell');
         expect(ui5).toContain('themelib_sap_horizon');
         expect(ui5).toContain('ui5-task-zipper');
