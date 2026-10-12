@@ -25,6 +25,7 @@
         },
         "[test]": {
           "kind": "mocked",
+          "impl": null,
           "users": {
             "app-origem-a": {
               "password": "",
