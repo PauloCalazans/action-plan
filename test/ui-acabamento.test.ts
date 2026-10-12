@@ -44,6 +44,35 @@ function blocoAnotacao(anotacoes: string, alvo: string): string {
 
 type CaminhoDeView = { entitySet?: string; annotationPath?: string };
 
+// Entidades cujos rótulos pt-BR são verificados no modelo compilado (R-17).
+const SERVICOS_DE_UI = ['TratativaAppService', 'AdministracaoService'];
+const ANOTACOES_DE_PROPRIEDADE = /^@UI\.(LineItem|SelectionFields|Identification)$|^@UI\.FieldGroup#[\w-]+\.Data$/;
+
+type DefinicaoCSN = {
+  kind?: string;
+  elements?: Record<string, Record<string, unknown>>;
+  params?: Record<string, Record<string, unknown>>;
+  [chave: string]: unknown;
+};
+
+// Caminhos de propriedade (`{ '=': 'campo' }`) referenciados numa anotação de UI.
+function caminhosDeValor(valor: unknown, acumulado: string[] = []): string[] {
+  if (Array.isArray(valor)) {
+    for (const item of valor) caminhosDeValor(item, acumulado);
+  } else if (valor && typeof valor === 'object') {
+    const objeto = valor as Record<string, unknown>;
+    if (typeof objeto['='] === 'string') acumulado.push(objeto['=']);
+    if (objeto['Value']) caminhosDeValor(objeto['Value'], acumulado);
+  }
+  return acumulado;
+}
+
+// Rótulo em pt-BR: inicial maiúscula e sem identificador camelCase.
+function rotuloPtBr(anotado: Record<string, unknown>): boolean {
+  const rotulo = anotado['@title'] ?? anotado['@Common.Label'];
+  return typeof rotulo === 'string' && /^[A-ZÀ-Ý]/.test(rotulo) && !/[a-zà-ÿ][A-ZÀ-Ý]/.test(rotulo);
+}
+
 // Entradas de views.paths de todos os targets do List Report de um manifest.
 function caminhosDeViews(dir: string): CaminhoDeView[] {
   const manifesto = JSON.parse(textoDo(join(RAIZ, 'app', dir, 'webapp', 'manifest.json'))) as {
@@ -608,6 +637,74 @@ describe('Acabamento da UI: robustez do backend e contratos de serviço', () => 
         expect(settings?.fallbackLocale).toBe('');
         expect(String(settings?.bundleName)).toContain('i18n.i18n');
       }
+    });
+  });
+
+  describe('R-17 e R-18: rótulos no modelo compilado e flags independentes do $select', () => {
+    it('R-17: todas as propriedades de UI e parâmetros de ação têm rótulo pt-BR no modelo compilado', async () => {
+      const modelo = (await cds.load(['srv', 'app'])) as unknown as { definitions: Record<string, DefinicaoCSN> };
+      const faltando = new Set<string>();
+
+      for (const servico of SERVICOS_DE_UI) {
+        for (const [nome, definicao] of Object.entries(modelo.definitions)) {
+          if (!nome.startsWith(`${servico}.`)) continue;
+
+          if (definicao.kind === 'entity') {
+            const elementos = definicao.elements ?? {};
+            for (const chave of Object.keys(definicao)) {
+              if (!ANOTACOES_DE_PROPRIEDADE.test(chave)) continue;
+              for (const caminho of caminhosDeValor(definicao[chave])) {
+                if (!elementos[caminho]) faltando.add(`${nome}.${caminho} (sem propriedade)`);
+                else if (!rotuloPtBr(elementos[caminho])) faltando.add(`${nome}.${caminho}`);
+              }
+            }
+          }
+
+          if (definicao.kind === 'action' || definicao.kind === 'function') {
+            for (const [parametro, info] of Object.entries(definicao.params ?? {})) {
+              if (parametro === 'in') continue;
+              if (!rotuloPtBr(info)) faltando.add(`${nome}(${parametro})`);
+            }
+          }
+        }
+      }
+
+      expect([...faltando]).toEqual([]);
+    });
+
+    it('R-17: a action não vinculada tem Value Help em criticidade e solicitante no modelo compilado', async () => {
+      const modelo = (await cds.load(['srv', 'app'])) as unknown as { definitions: Record<string, DefinicaoCSN> };
+      const acao = modelo.definitions['TratativaAppService.criarTratativaAvulsa'];
+
+      expect(acao?.kind).toBe('action');
+      const criticidade = acao?.params?.criticidade ?? {};
+      expect(criticidade['@Common.ValueListWithFixedValues']).toBe(true);
+      expect(criticidade).toHaveProperty('@Common.ValueList.CollectionPath');
+
+      const solicitante = acao?.params?.solicitante ?? {};
+      expect(solicitante).toHaveProperty('@Common.ValueList.CollectionPath');
+    });
+
+    it('R-18: as flags pode/oculta são corretas mesmo sem status no $select', async () => {
+      const criada = await criarAvulsa(enviar, { titulo: `Flags sem status ${sufixoUnico()}`, criticidade: 'Alta' });
+      expect(criada.status).toBe(200);
+
+      const campos = [
+        'ocultaIniciar', 'podeIniciar', 'podeEncerrar', 'ocultaEncerrar',
+        'podeCancelar', 'ocultaCancelar', 'podeReabrir', 'ocultaReabrir',
+      ];
+      const resposta = await GET(`${BASE}/Tratativas(${criada.data.codigo})?$select=${campos.join(',')}`, comoGestor);
+      expect(resposta.status).toBe(200);
+      const linha = resposta.data as Record<string, unknown>;
+
+      expect(linha.podeIniciar).toBe(true);
+      expect(linha.podeEncerrar).toBe(true);
+      expect(linha.podeCancelar).toBe(true);
+      expect(linha.podeReabrir).toBe(false);
+      expect(linha.ocultaIniciar).toBe(false);
+      expect(linha.ocultaEncerrar).toBe(false);
+      expect(linha.ocultaCancelar).toBe(false);
+      expect(linha.ocultaReabrir).toBe(true);
     });
   });
 
