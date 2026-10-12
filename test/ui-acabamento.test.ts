@@ -34,6 +34,34 @@ function textoDo(arquivo: string): string {
   return readFileSync(arquivo, 'utf8');
 }
 
+// Bloco de um `annotate <alvo> ... ;` (até o próximo annotate) para inspeção textual.
+function blocoAnotacao(anotacoes: string, alvo: string): string {
+  const inicio = anotacoes.indexOf(`annotate ${alvo}`);
+  expect(inicio).toBeGreaterThan(-1);
+  const proximo = anotacoes.indexOf('annotate ', inicio + 1);
+  return anotacoes.slice(inicio, proximo === -1 ? anotacoes.length : proximo);
+}
+
+type CaminhoDeView = { entitySet?: string; annotationPath?: string };
+
+// Entradas de views.paths de todos os targets do List Report de um manifest.
+function caminhosDeViews(dir: string): CaminhoDeView[] {
+  const manifesto = JSON.parse(textoDo(join(RAIZ, 'app', dir, 'webapp', 'manifest.json'))) as {
+    'sap.ui5'?: {
+      routing?: {
+        targets?: Record<string, { options?: { settings?: { views?: { paths?: CaminhoDeView[] } } } }>;
+      };
+    };
+  };
+  const alvos = manifesto['sap.ui5']?.routing?.targets ?? {};
+  const caminhos: CaminhoDeView[] = [];
+  for (const alvo of Object.values(alvos)) {
+    const paths = alvo?.options?.settings?.views?.paths;
+    if (Array.isArray(paths)) caminhos.push(...paths);
+  }
+  return caminhos;
+}
+
 async function metadados(como: unknown): Promise<string> {
   const resposta = await GET(`${BASE}/$metadata`, como);
   expect(resposta.status).toBe(200);
@@ -499,6 +527,86 @@ describe('Acabamento da UI: robustez do backend e contratos de serviço', () => 
         const i18n = textoDo(join(RAIZ, 'app', dir, 'webapp', 'i18n', 'i18n.properties'));
         expect(i18n).toContain(texto);
         expect(i18n).toMatch(/[áàâãéêíóôõúç]/i);
+      }
+    });
+
+    it('CA11: a aba Parâmetros de Alertas declara os botões via EntityContainer na LineItem e na Identification', () => {
+      const bloco = blocoAnotacao(textoDo(join(RAIZ, 'app', 'administracao', 'annotations.cds')), 'AdministracaoService.ParametrosAlertas');
+      const inicioLinha = bloco.indexOf('UI.LineItem');
+      const inicioIdentificacao = bloco.indexOf('UI.Identification');
+      const inicioFacets = bloco.indexOf('UI.Facets');
+      expect(inicioLinha).toBeGreaterThan(-1);
+      expect(inicioIdentificacao).toBeGreaterThan(inicioLinha);
+      expect(inicioFacets).toBeGreaterThan(inicioIdentificacao);
+      const linhaItem = bloco.slice(inicioLinha, inicioIdentificacao);
+      const identificacao = bloco.slice(inicioIdentificacao, inicioFacets);
+
+      for (const acao of ['atualizarParametrosAlertas', 'executarProcessamentoAlertas']) {
+        expect(bloco).toContain(`Action: 'AdministracaoService.EntityContainer/${acao}'`);
+        expect(linhaItem).toContain(`Action: 'AdministracaoService.EntityContainer/${acao}'`);
+        expect(identificacao).toContain(`Action: 'AdministracaoService.EntityContainer/${acao}'`);
+      }
+      expect(linhaItem).toContain('Salvar Parâmetros');
+      expect(linhaItem).toContain('Executar Processamento Manual');
+    });
+
+    it('R-16: as abas do List Report usam SelectionPresentationVariant com o qualificador certo', () => {
+      const esperado: Array<[string, string[]]> = [
+        ['minhas-pendencias', ['MinhasAcoes', 'MinhasTratativas']],
+        ['administracao', ['Templates', 'ParametrosAlertas', 'ParametrosIntegracaoSF']],
+      ];
+
+      for (const [dir, qualificadores] of esperado) {
+        const caminhos = caminhosDeViews(dir);
+        for (const qualificador of qualificadores) {
+          const entrada = caminhos.find(
+            (caminho) => caminho.annotationPath === `com.sap.vocabularies.UI.v1.SelectionPresentationVariant#${qualificador}`,
+          );
+          expect(entrada).toBeDefined();
+          expect(entrada?.entitySet).toBe(qualificador);
+        }
+        for (const caminho of caminhos) {
+          expect(caminho).not.toHaveProperty('label');
+          expect(String(caminho.annotationPath)).not.toContain('UI.v1.LineItem');
+        }
+      }
+    });
+
+    it('R-16: cada entidade declara a SelectionPresentationVariant com Text em pt-BR e Visualizations', () => {
+      const esperado: Array<[string, string, string, string]> = [
+        ['minhas-pendencias', 'TratativaAppService.MinhasAcoes', 'MinhasAcoes', 'Minhas Ações'],
+        ['minhas-pendencias', 'TratativaAppService.MinhasTratativas', 'MinhasTratativas', 'Minhas Tratativas'],
+        ['administracao', 'AdministracaoService.Templates', 'Templates', 'Templates de Ações'],
+        ['administracao', 'AdministracaoService.ParametrosAlertas', 'ParametrosAlertas', 'Parâmetros de Alertas'],
+        ['administracao', 'AdministracaoService.ParametrosIntegracaoSF', 'ParametrosIntegracaoSF', 'Estrutura Organizacional'],
+      ];
+
+      for (const [dir, alvo, qualificador, texto] of esperado) {
+        const bloco = blocoAnotacao(textoDo(join(RAIZ, 'app', dir, 'annotations.cds')), alvo);
+        expect(bloco).toContain(`UI.SelectionPresentationVariant #${qualificador}`);
+        expect(bloco).toContain(`Text: '${texto}'`);
+        expect(bloco).toContain("Visualizations: ['@UI.LineItem']");
+      }
+    });
+
+    it('R-16: os manifestos declaram o i18n como objeto com supportedLocales e fallbackLocale', () => {
+      for (const app of APPS) {
+        const manifesto = JSON.parse(textoDo(join(RAIZ, 'app', app.dir, 'webapp', 'manifest.json'))) as {
+          'sap.app'?: { i18n?: { bundleUrl?: string; supportedLocales?: string[]; fallbackLocale?: string } };
+          'sap.ui5'?: {
+            models?: { i18n?: { settings?: { bundleName?: string; supportedLocales?: string[]; fallbackLocale?: string } } };
+          };
+        };
+
+        const i18n = manifesto['sap.app']?.i18n;
+        expect(i18n?.bundleUrl).toBe('i18n/i18n.properties');
+        expect(i18n?.supportedLocales).toEqual(['']);
+        expect(i18n?.fallbackLocale).toBe('');
+
+        const settings = manifesto['sap.ui5']?.models?.i18n?.settings;
+        expect(settings?.supportedLocales).toEqual(['']);
+        expect(settings?.fallbackLocale).toBe('');
+        expect(String(settings?.bundleName)).toContain('i18n.i18n');
       }
     });
   });

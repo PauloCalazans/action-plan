@@ -101,8 +101,8 @@ describe('Administração da Plataforma: leitura OData administrada e escrita pe
     for (const campo of ['diasAntecedenciaPrazoProximo', 'diasInatividade', 'emailHabilitado', 'teamsHabilitado', 'horaExecucaoUtc']) {
       expect(anotacoes).toContain(campo);
     }
-    expect(anotacoes).toContain("Action: 'AdministracaoService.atualizarParametrosAlertas'");
-    expect(anotacoes).toContain("Action: 'AdministracaoService.executarProcessamentoAlertas'");
+    expect(anotacoes).toContain("Action: 'AdministracaoService.EntityContainer/atualizarParametrosAlertas'");
+    expect(anotacoes).toContain("Action: 'AdministracaoService.EntityContainer/executarProcessamentoAlertas'");
   });
 
   it('CA16b: a aba Estrutura Organizacional lê os mapeamentos vigentes e persiste a atualização', async () => {
