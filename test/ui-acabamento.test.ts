@@ -482,6 +482,27 @@ describe('Acabamento da UI: robustez do backend e contratos de serviço', () => 
     });
   });
 
+  describe('Etapa 4: rótulos pt-BR e abas de minhas-pendencias e administracao', () => {
+    it('CA3: as anotações e o i18n dos apps estão em pt-BR e sem rótulos camelCase', () => {
+      const esperado: Array<[string, string]> = [
+        ['minhas-pendencias', 'Minhas Pendências'],
+        ['administracao', 'Administração'],
+      ];
+
+      for (const [dir, texto] of esperado) {
+        const anotacoes = textoDo(join(RAIZ, 'app', dir, 'annotations.cds'));
+        for (const ocorrencia of anotacoes.matchAll(/Label:\s*'([^']*)'/g)) {
+          expect(ocorrencia[1]).toMatch(/^[A-ZÀ-Ý]/);
+          expect(ocorrencia[1]).not.toMatch(/[a-zà-ÿ][A-ZÀ-Ý]/);
+        }
+
+        const i18n = textoDo(join(RAIZ, 'app', dir, 'webapp', 'i18n', 'i18n.properties'));
+        expect(i18n).toContain(texto);
+        expect(i18n).toMatch(/[áàâãéêíóôõúç]/i);
+      }
+    });
+  });
+
   // Último teste do arquivo: esvazia PrazosCriticidade (o OData bloqueia POST/DELETE da lista fixa, R7).
   it('CA13: base sem PrazosCriticidade recusa 400 sem TypeError e mantém o servidor ativo', async () => {
     await cds.db.run(DELETE.from('br.com.calazanstec.PrazosCriticidade'));
