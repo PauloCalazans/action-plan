@@ -424,6 +424,62 @@ describe('Acabamento da UI: robustez do backend e contratos de serviço', () => 
       expect(textos).toMatch(/dados sensíveis/i);
       expect(textos).toMatch(/nomes/i);
     });
+
+    it('CA5: o botão "Criar Tratativa Avulsa" usa o Action Import do EntityContainer', () => {
+      const anotacoes = textoDo(ANOTACOES);
+
+      expect(anotacoes).toContain('Criar Tratativa Avulsa');
+      expect(anotacoes).toContain("Action: 'TratativaAppService.EntityContainer/criarTratativaAvulsa'");
+    });
+
+    it('CA9: os botões de transição usam as ações dedicadas com @UI.Hidden: oculta<Acao> (sem @Core.OperationAvailable no DataField)', () => {
+      const anotacoes = textoDo(ANOTACOES);
+
+      for (const acao of ['iniciarTratativa', 'encerrarTratativa', 'cancelarTratativa', 'reabrirTratativa']) {
+        expect(anotacoes).toContain(`Action: 'TratativaAppService.${acao}'`);
+      }
+      for (const flag of ['ocultaIniciar', 'ocultaEncerrar', 'ocultaCancelar', 'ocultaReabrir']) {
+        expect(anotacoes).toContain(`@UI.Hidden: ${flag}`);
+      }
+      expect(anotacoes).not.toContain("Action: 'TratativaAppService.mudarStatus'");
+
+      const inicio = anotacoes.indexOf('UI.Identification: [');
+      const fim = anotacoes.indexOf('UI.SelectionFields');
+      expect(inicio).toBeGreaterThan(-1);
+      expect(fim).toBeGreaterThan(inicio);
+      expect(anotacoes.slice(inicio, fim)).not.toContain('Core.OperationAvailable');
+    });
+
+    it('CA11: o FieldGroup#DadosGerais rotula todos os campos', () => {
+      const anotacoes = textoDo(ANOTACOES);
+      const inicio = anotacoes.indexOf('UI.FieldGroup #DadosGerais');
+      const fim = anotacoes.indexOf('UI.FieldGroup #ResponsavelPrincipal');
+      expect(inicio).toBeGreaterThan(-1);
+      expect(fim).toBeGreaterThan(inicio);
+      const bloco = anotacoes.slice(inicio, fim);
+
+      const campos = [...bloco.matchAll(/Value:\s*(\w+)/g)].map((ocorrencia) => ocorrencia[1]);
+      expect(campos).toEqual(
+        expect.arrayContaining(['titulo', 'descricao', 'unidade', 'area', 'solicitante', 'dataPrevistaConclusao']),
+      );
+      const rotulos = bloco.match(/Label:\s*'/g) ?? [];
+      expect(rotulos.length).toBeGreaterThanOrEqual(campos.length);
+    });
+
+    it('CA11: as colunas Unidade, Área e Data prevista usam @UI.Importance: #High', () => {
+      const anotacoes = textoDo(ANOTACOES);
+      const inicio = anotacoes.indexOf('UI.LineItem: [');
+      const fim = anotacoes.indexOf('UI.Facets:');
+      expect(inicio).toBeGreaterThan(-1);
+      expect(fim).toBeGreaterThan(inicio);
+      const linha = anotacoes.slice(inicio, fim);
+
+      for (const campo of ['unidade', 'area', 'dataPrevistaConclusao']) {
+        const entrada = linha.split('{').find((parte) => new RegExp(`Value:\\s*${campo}\\b`).test(parte)) ?? '';
+        expect(entrada).toContain('@UI.Importance: #High');
+        expect(entrada).toContain('Label:');
+      }
+    });
   });
 
   // Último teste do arquivo: esvazia PrazosCriticidade (o OData bloqueia POST/DELETE da lista fixa, R7).
