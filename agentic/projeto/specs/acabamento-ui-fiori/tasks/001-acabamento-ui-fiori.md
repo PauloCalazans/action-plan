@@ -2,7 +2,7 @@
 
 **Spec:** agentic/projeto/specs/acabamento-ui-fiori/spec.md
 **Design:** agentic/projeto/specs/acabamento-ui-fiori/design.md
-**Status:** em-andamento
+**Status:** publicada
 **Branch:** acabamento-ui-fiori/001-acabamento-ui-fiori
 
 ## Arquivos
