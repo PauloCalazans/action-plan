@@ -39,6 +39,7 @@
 - `app/administracao/webapp/manifest.json` (Manifest Version 2: _version: "2.0.0", minUI5Version: "1.136.23", contentDensities: { compact: true, cozy: true }, remoção de synchronizationMode obsoleto no modelo OData v4)
 - `srv/tratativa/prazo.ts` (tratamento defensivo de ausência de prazos com recusa 400 sem TypeError)
 - `srv/tratativa-app-service.cds` (remoção de data discricionária em criarTratativaAvulsa, tipagem Date em prazos de ações, ações dedicadas de status com flags pode<Acao> e oculta<Acao>, @Core.OperationAvailable, projeção Colaboradores e domínios fixos)
+- `srv/administracao-service.ts` (R-21: mensagens req.info nas actions atualizarParametrosAlertas e executarProcessamentoAlertas)
 - `srv/tratativa-app-service.ts` (handlers das ações dedicadas de transição, resolução de flags de status e visibilidade, compatibilidade de Date com validação de string, leitura de Colaboradores e listas de valores fixos)
 - `app/tratativas/annotations.cds` (Action Import EntityContainer/criarTratativaAvulsa, botões dedicados de status com @UI.Hidden: oculta<Acao>, labels em Dados Gerais, colunas com @UI.Importance: #High, anotações canônicas de ações e Value Helps/dropdowns em criarTratativaAvulsa, mudarCriticidade, criarAcao, criarSubacao e delegarAcao)
 - `app/tratativas/webapp/i18n/i18n.properties` (catálogo completo de textos pt-BR e placeholders LGPD)
