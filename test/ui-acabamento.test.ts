@@ -211,7 +211,7 @@ describe('Acabamento da UI: robustez do backend e contratos de serviço', () => 
       const ui5 = textoDo(join(RAIZ, 'app', 'launchpad', 'ui5.yaml'));
       expect(ui5).toContain('SAPUI5');
       expect(ui5).toContain('1.136.23');
-      for (const biblioteca of ['sap.m', 'sap.ui.core', 'sap.ushell', 'themelib_sap_horizon']) {
+      for (const biblioteca of ['sap.m', 'sap.ui.core', 'sap.ushell', 'sap.fe.templates', 'themelib_sap_horizon']) {
         expect(ui5).toContain(biblioteca);
       }
 
@@ -220,26 +220,47 @@ describe('Acabamento da UI: robustez do backend e contratos de serviço', () => 
 
       const manifesto = JSON.parse(textoDo(join(RAIZ, 'app', 'launchpad', 'webapp', 'manifest.json'))) as {
         _version?: string;
-        'sap.app'?: { id?: string };
+        'sap.app'?: { id?: string; title?: string };
+        'sap.ui5'?: { contentDensities?: { compact?: boolean; cozy?: boolean } };
       };
       expect(manifesto._version).toMatch(/^2\./);
       expect(manifesto['sap.app']?.id).toBe('br.com.calazanstec.actionplan.launchpad');
+      expect((manifesto['sap.app']?.title ?? '').length).toBeGreaterThan(0);
+      expect(manifesto['sap.ui5']?.contentDensities).toEqual({ compact: true, cozy: true });
 
       const html = textoDo(join(RAIZ, 'app', 'launchpad', 'webapp', 'index.html'));
+      // R-15: o módulo sap/ushell/shells/sandbox/fioriSandbox não existe no SAPUI5 1.136.23; o sandbox
+      // oficial é o sandbox2, carregado antes do sap-ui-core.js, com o shell criado por init.js.
+      expect(html).not.toContain('module:sap/ushell/shells/sandbox/fioriSandbox');
       expect(html).toContain('src="sandbox.js"');
+      expect(html).toContain('id="sap-ushell-bootstrap"');
+      expect(html).toContain('src="resources/sap/ushell/bootstrap/sandbox2.js"');
       expect(html).toContain('src="resources/sap-ui-core.js"');
-      expect(html).toContain('module:sap/ushell/shells/sandbox/fioriSandbox');
-      for (const parametro of ['data-sap-ui-compat-version', 'data-sap-ui-frame-options']) {
+      expect(html).toContain('module:br/com/calazanstec/actionplan/launchpad/init');
+      expect(html).toContain('id="content"');
+      expect(html.indexOf('src="sandbox.js"')).toBeLessThan(html.indexOf('src="resources/sap-ui-core.js"'));
+      expect(html.indexOf('src="resources/sap/ushell/bootstrap/sandbox2.js"')).toBeLessThan(
+        html.indexOf('src="resources/sap-ui-core.js"'),
+      );
+      for (const parametro of ['data-sap-ui-resource-roots', 'data-sap-ui-compat-version', 'data-sap-ui-frame-options']) {
         expect(html).toContain(parametro);
       }
       expect(html).not.toContain('ui5.sap.com');
       expect(html).not.toContain('sapui5.hana.ondemand.com');
       expect(html).not.toMatch(/<script(?![^>]*\bsrc=)[^>]*>[\s\S]*?<\/script>/i);
 
+      const init = textoDo(join(RAIZ, 'app', 'launchpad', 'webapp', 'init.js'));
+      expect(init).toContain('sap/ushell/Container');
+      expect(init).toContain('createRendererInternal');
+      expect(init).toMatch(/placeAt\(\s*["']content["']\s*\)/);
+
       const sandbox = textoDo(join(RAIZ, 'app', 'launchpad', 'webapp', 'sandbox.js'));
       expect(sandbox).toContain('sap-ushell-config');
       for (const intent of ['Tratativa-manage', 'MinhasPendencias-display', 'AdministracaoPlataforma-manage']) {
         expect(sandbox).toContain(intent);
+      }
+      for (const titulo of ['Gestão de Tratativas', 'Minhas Pendências', 'Administração da Plataforma']) {
+        expect(sandbox).toContain(titulo);
       }
       for (const app of APPS) {
         expect(sandbox).toContain(`/${app.id}`);
