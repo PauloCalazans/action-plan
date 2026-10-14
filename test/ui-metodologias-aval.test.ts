@@ -64,7 +64,7 @@ async function afirmarAcao(resposta: Resposta, status: number): Promise<string> 
 }
 
 // Cenário rico da Etapa 1: metodologia 5 Porquês do gestor, Aval aprovado do validador, Ação derivada
-// para M1001 (com a causa vinculada), uma Subação dela para M2002 e M2002 como Participante.
+// para M1001 (com a causa vinculada), uma Subação dela para M3003 e M2002 apenas como Participante (sem Ação/Subação).
 async function cenario(): Promise<{ codigo: string; acao: string; subacao: string }> {
   const codigo = await nova();
   await iniciar(codigo);
@@ -90,7 +90,7 @@ async function cenario(): Promise<{ codigo: string; acao: string; subacao: strin
   const subacao = await afirmarAcao(await criarSubacao(
     enviar,
     codigo,
-    { acaoMae: acao, descricao: 'Subação de evidência', responsavel: 'M2002', prazo: '2026-11-02', prioridade: 'Média', evidenciaObrigatoria: 'não' },
+    { acaoMae: acao, descricao: 'Subação de evidência', responsavel: 'M3003', prazo: '2026-11-02', prioridade: 'Média', evidenciaObrigatoria: 'não' },
     comoGestor,
   ), 200);
   expect((await incluirParticipante(enviar, codigo, { participante: 'M2002' }, comoGestor)).status).toBe(204);
@@ -140,8 +140,9 @@ describe('Contrato do app para metodologia e Aval (task 007, Etapa 1)', () => {
 
     const validador = await consultar(`${APP}/Tratativas(${codigo})?$select=podeEmitirAval,ocultaEmitirAval`, comoValidador);
     expect(validador.status).toBe(200);
-    expect(validador.data.podeEmitirAval).toBe(true);
-    expect(validador.data.ocultaEmitirAval).toBe(false);
+    // Com Ação aberta a Tratativa não está apta para emissão (task 007: Validador habilitado E aptaParaEmissao).
+    expect(validador.data.podeEmitirAval).toBe(false);
+    expect(validador.data.ocultaEmitirAval).toBe(true);
 
     const gestor = await consultar(`${APP}/Tratativas(${codigo})?$select=podeEmitirAval,ocultaEmitirAval`, comoGestor);
     expect(gestor.status).toBe(200);
@@ -161,6 +162,13 @@ describe('Contrato do app para metodologia e Aval (task 007, Etapa 1)', () => {
     // Concluir a Ação deixa a etapa de verificação ativa (sem Ação aberta) e permite emitir o Aval.
     const conclusao = await mudarStatusAcao(enviar, codigo, { acao: criada.data.codigo, status: 'Concluída' }, comoGestor);
     expect(conclusao.status).toBe(204);
+    const validadorApto = await consultar(`${APP}/Tratativas(${codigo})?$select=podeEmitirAval,ocultaEmitirAval`, comoValidador);
+    expect(validadorApto.status).toBe(200);
+    expect(validadorApto.data.podeEmitirAval).toBe(true);
+    expect(validadorApto.data.ocultaEmitirAval).toBe(false);
+    const gestorApto = await consultar(`${APP}/Tratativas(${codigo})?$select=podeEmitirAval,ocultaEmitirAval`, comoGestor);
+    expect(gestorApto.data.podeEmitirAval).toBe(false);
+    expect(gestorApto.data.ocultaEmitirAval).toBe(true);
     expect((await emitirAval(enviar, codigo, PARECER, comoValidador)).status).toBe(204);
     const avaliacoes = await consultar(`${APP}/AvalesTecnicos?$filter=tratativa_codigo eq ${codigo}`, comoGestor);
     expect(avaliacoes.status).toBe(200);
@@ -179,7 +187,8 @@ describe('Contrato do app para metodologia e Aval (task 007, Etapa 1)', () => {
     const navAcoesUsuario = await consultar(`${APP}/Tratativas(${codigo})/acoes`, comoUsuario);
     expect((itens(navAcoesUsuario.data)[0] as Record<string, unknown> | undefined)?.causaDescricao).toBeNull();
     const navAcoesValidador = await consultar(`${APP}/Tratativas(${codigo})/acoes`, comoValidador);
-    expect((itens(navAcoesValidador.data)[0] as Record<string, unknown> | undefined)?.causaDescricao).toBeNull();
+    // O Validador habilitado (sem lista = habilitado) tem vínculo diagnóstico (DC-15).
+    expect((itens(navAcoesValidador.data)[0] as Record<string, unknown> | undefined)?.causaDescricao).toBe('Checklist incompleto');
 
     // (b) $expand
     const expandido = await consultar(`${APP}/Tratativas(${codigo})?$expand=avalesTecnicos,acoes`, comoUsuario);
@@ -418,19 +427,23 @@ describe('Seção customizada da metodologia (task 007, Etapa 2)', () => {
     const manifesto = JSON.parse(textoDo(MANIFESTO)) as {
       'sap.ui5'?: {
         dependencies?: { libs?: Record<string, unknown> };
-        content?: { body?: { sections?: Record<string, { template?: string; position?: { anchor?: string } }> } };
+        routing?: {
+          targets?: Record<string, {
+            options?: { settings?: { content?: { body?: { sections?: Record<string, { template?: string; position?: { anchor?: string } }> } } } };
+          }>;
+        };
       };
     };
     const sapUi5 = manifesto['sap.ui5'] ?? {};
     expect(sapUi5.dependencies?.libs?.['sap.ui.layout']).toBeDefined();
 
-    const secao = sapUi5.content?.body?.sections?.MetodologiaSection;
+    const secao = sapUi5.routing?.targets?.TratativasObjectPage?.options?.settings?.content?.body?.sections?.MetodologiaSection;
     expect(secao?.template).toBe('br.com.calazanstec.actionplan.tratativas.ext.fragment.MetodologiaSection');
     expect(secao?.position?.anchor).toBe('PlanoAcaoFacet');
 
     const serializado = JSON.stringify(manifesto);
     expect(serializado).toContain('MetodologiaExtension');
-    expect(contemChave(manifesto, 'controllerExtensions')).toBe(true);
+    expect(contemChave(manifesto, 'sap.ui.controllerExtensions')).toBe(true);
 
     expect(textoDo(UI5)).toContain('sap.ui.layout');
   });
