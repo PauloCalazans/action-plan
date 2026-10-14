@@ -112,9 +112,14 @@ export default class TratativaAppService extends cds.ApplicationService {
       const gestor = req.user.is('GestorTratativa');
       const linhas = (Array.isArray(resultado) ? resultado : [resultado]) as LinhaTratativa[];
       const codigos = linhas.flatMap((linha) => typeof linha?.codigo === 'string' ? [linha.codigo] : []);
-      const colunas = (req.query as unknown as { SELECT?: { columns?: { ref?: string[] }[] } }).SELECT?.columns;
-      const pedeFlag = !colunas || colunas.some((c) =>
-        c.ref?.[0] === '*' || /^(pode|oculta)(Iniciar|Encerrar|Cancelar|Reabrir)$/.test(c.ref?.[0] ?? ''));
+      const colunas = (req.query as unknown as { SELECT?: { columns?: unknown } }).SELECT?.columns;
+      // Só dispensa a situação quando a projeção é explícita e sem '*' (string ou ref) nem flags; ausência ou formas inesperadas calculam.
+      const projecaoExplicitaSemFlags = Array.isArray(colunas) && colunas.length > 0 && colunas.every((c) => {
+        if (typeof c !== 'object' || c === null) return false;
+        const ref = (c as { ref?: string[] }).ref?.[0];
+        return typeof ref === 'string' && ref !== '*' && !/^(pode|oculta)(Iniciar|Encerrar|Cancelar|Reabrir)$/.test(ref);
+      });
+      const pedeFlag = !projecaoExplicitaSemFlags;
       const situacoes = pedeFlag ? await lerSituacaoAval(codigos) : new Map<string, never>();
       for (const linha of linhas) {
         if (!linha) continue;
