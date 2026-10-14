@@ -143,6 +143,19 @@
         }
       },
       "db": {
+        "[development]": {
+          "data": [
+            "db/data",
+            "test/demo"
+          ]
+        },
+        "[test]": {
+          "data": [
+            "db/data",
+            "db/csv",
+            "test/data"
+          ]
+        },
         "[production]": {
           "kind": "hana"
         }
@@ -166,7 +179,7 @@
       "ArmazenamentoEvidencias": {
         "impl": "srv/tratativa/armazenamento-evidencias",
         "[development]": {
-          "impl": "test/apoio/armazenamento-espiao"
+          "impl": "test/apoio/armazenamento-demo"
         },
         "[test]": {
           "impl": "test/apoio/armazenamento-espiao"

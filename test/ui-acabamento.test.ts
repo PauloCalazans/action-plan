@@ -357,7 +357,7 @@ describe('Acabamento da UI: robustez do backend e contratos de serviço', () => 
       expect(JSON.stringify(auth['[production]'] ?? {})).not.toContain('auth-dev');
     });
 
-    it('CA1: o middleware de dev injeta a persona escolhida (padrão gestor) e não vaza para produção', async () => {
+    it('CA1: o middleware de dev injeta a persona escolhida (padrão superusuario) e não vaza para produção', async () => {
       const caminho = join(RAIZ, 'test', 'apoio', 'auth-dev.js');
       expect(existsSync(caminho)).toBe(true);
 
@@ -391,7 +391,7 @@ describe('Acabamento da UI: robustez do backend e contratos de serviço', () => 
 
       const padrao = aplicar({});
       expect(padrao.seguiu).toBe(true);
-      expect(padrao.usuario?.id).toBe('gestor');
+      expect(padrao.usuario?.id).toBe('superusuario');
       expect(padrao.usuario?.is('GestorTratativa')).toBe(true);
       expect(padrao.usuario?.is('AplicativoOrigem')).toBe(false);
 
@@ -404,7 +404,7 @@ describe('Acabamento da UI: robustez do backend e contratos de serviço', () => 
       expect(porCds.usuario?.is('LeitorAnalitico')).toBe(true);
 
       const desconhecida = aplicar({ dev: 'persona-inexistente' });
-      expect(desconhecida.usuario?.id).toBe('gestor');
+      expect(desconhecida.usuario?.id).toBe('superusuario');
     });
 
     it('CA1 e CA16: cada app empacota via ui5-task-zipper (SAPUI5 LTS 1.136.23) sem --archive', () => {

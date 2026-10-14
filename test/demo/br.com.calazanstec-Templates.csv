@@ -1,0 +1,5 @@
+id;nome;descricao;ativo
+b1000000-0000-4000-8000-000001000000;Bloqueio e etiquetagem (LOTO);Plano padrão para desvios de energia perigosa em intervenções de manutenção (NR-10/NR-12).;true
+b1000000-0000-4000-8000-000002000000;Resposta a quase-acidente;Ações imediatas e de contenção após o registro de um quase-acidente.;true
+b1000000-0000-4000-8000-000003000000;Tratamento de não conformidade de auditoria;Fluxo PDCA para constatações de auditoria interna (ISO 9001/14001/45001).;true
+b1000000-0000-4000-8000-000004000000;Checklist de inspeção legado;"Modelo antigo substituído pelo app de Inspeções de Segurança; mantido apenas para consulta.";false
