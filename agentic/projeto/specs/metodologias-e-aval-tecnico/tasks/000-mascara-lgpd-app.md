@@ -4,6 +4,25 @@
 **Status:** em-andamento
 **Branch:** metodologias-e-aval-tecnico/000-mascara-lgpd-app
 
+> **Grupo 1 (decisão do humano, 2026-10-13):** esta task e a(s) task(s) 001 são executadas num único ciclo (um RED, um GREEN, uma revisão de diff) e publicadas num único PR, nesta branch. O escopo do grupo é a união dos "## Arquivos" abaixo; RED, GREEN e critérios de cada task incorporada continuam no documento dela.
+
+
+### Incorporado da task 001 (001-modelo-seguranca-base)
+### Criados
+- `db/data/br.com.calazanstec-ParametrosOrigem.csv`
+- `test/metodologias-modelo-seguranca.test.ts`
+
+### Modificados
+- `db/tratativa.cds`
+- `srv/tratativa/historico-catalogo.ts`
+- `xs-security.json`
+- `package.json`
+- `test/apoio/auth-dev.js`
+- `test/ui-acabamento.test.ts` (lista exata de usuários mocked em `:353-355` ganha `validador` e `validador-b`)
+
+### Removidos
+- Nenhum.
+
 ## Objetivo
 Trocar as máscaras LGPD por entidade do `TratativaAppService` por uma máscara genérica (`after('READ', '*')`). Ela percorre a árvore do resultado em qualquer nível de `$expand` e a partir de qualquer entidade alvo, e corrige o vazamento pré-existente da 015 (`descricao`, `solicitante`, `responsavelPrincipal`, `participantes`, `Participantes.matricula`, `Acoes.responsavel`) antes de o 016 acrescentar campos (DC-17, R-10).
 

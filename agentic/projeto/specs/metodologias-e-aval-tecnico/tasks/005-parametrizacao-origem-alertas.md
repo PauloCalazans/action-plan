@@ -2,7 +2,41 @@
 
 **Spec:** agentic/projeto/specs/metodologias-e-aval-tecnico/spec.md
 **Status:** draft
-**Branch:** metodologias-e-aval-tecnico/005-parametrizacao-origem-alertas
+**Branch:** metodologias-e-aval-tecnico/005-admin-indicadores-ui
+
+> **Grupo 3 (decisão do humano, 2026-10-13):** esta task e a(s) task(s) 006, 007 são executadas num único ciclo (um RED, um GREEN, uma revisão de diff) e publicadas num único PR, nesta branch. O escopo do grupo é a união dos "## Arquivos" abaixo; RED, GREEN e critérios de cada task incorporada continuam no documento dela.
+
+
+### Incorporado da task 006 (006-indicadores-eficacia)
+### Criados
+- `srv/analitico/eficacia.cds` (view `ParetoCausasRaizesView`)
+- `test/metodologias-indicadores.test.ts`
+
+### Modificados
+- `srv/analitico-service.cds` (`using` da view; entidade `ParetoCausasRaizes`; tipos e functions `consultarTaxaEficacia`, `consultarTempoMedioVerificacaoEficacia`, `consultarAderenciaMetodologica`)
+- `srv/analitico-service.ts` (handlers das três functions; Taxa: duas consultas CQL agregadas no banco, `GROUP BY tratativa_codigo` com `min(emitidoEm)` (todas) e `min(emitidoEm)` de `parecer = 'Aprovado'`, comparação por Tratativa e divisão em TS; Tempo Médio: filtro por período no banco; diferença em dias corridos entre `dataCivil(emitidoEm)` e `dataCivil(dataBaseVerificacao)` no fuso da plataforma (`srv/lib/relogio.ts:2`, `:16-18`) e média em TS. `days_between` (portável) não é usado porque conta sobre os instantes UTC; de `consultarTempoMedioResolucao` (`srv/analitico-service.ts:221-236`, que usa ms) só se segue o padrão de filtrar no banco; DC-14)
+
+### Removidos
+- Nenhum.
+
+### Incorporado da task 007 (007-ui-fiori-metodologias-aval)
+### Criados
+- `app/tratativas/webapp/ext/fragment/MetodologiaSection.fragment.xml`
+- `app/tratativas/webapp/ext/controller/MetodologiaExtension.js`
+- `test/ui-metodologias-aval.test.ts`
+
+### Modificados
+- `srv/tratativa-app-service.cds` (r5, DC-19: a `@cds.search` da task 000 ganha `metodologiaAutor: false` e `metodologiaData: false` em `Tratativas`, `causaDescricao: false` em `Acoes` e `validador: false` e `fundamentacao: false` em `AvalesTecnicos`; edição da projeção `Tratativas` em `:9-37` e do bloco de actions em `:37-86`; colunas `causaIdentificador`/`causaDescricao` em `Acoes`; entidades `AvalesTecnicos`, `ValoresFerramentaMetodologia`, `ValoresMacrocausa`, `ValoresParecerAval`; Contrato §5)
+- `srv/tratativa-app-service.ts` (regex do before READ em `:97` e `status`/`origem`/`codigo` garantidos para as flags; `this.before('READ', '*', function garantirChaves(req) {...})`, registrado **depois** de `restringirLeitura` da task 000 (r6, I6-01: a varredura vê só a query do cliente), só para não-Gestor, que acrescenta `tratativa_codigo` nos níveis de `Acoes`/`AvalesTecnicos` e `codigo` no de `Tratativas` em `req.query.SELECT.columns` e nas colunas `{ ref, expand }` aninhadas (DC-17); `mascararLeitura` (task 000) passa a montar o contexto em lote com `tratativasComVinculoDiagnostico`, `tratativasComValidadorHabilitado` e `lerSituacaoAval`; flags novas no after READ de `Tratativas`; handlers das três actions delegando a `srv/tratativa/metodologia.ts` e `srv/tratativa/aval-tecnico.ts`; `valoresEnum` para as três listas)
+- `srv/tratativa/mascara-app.ts` (task 000; `ContextoMascara` ganha `vinculoDiagnostico`, `validadorHabilitado`, `situacaoAval`; `REGRAS_MASCARA` ganha `TratativaAppService.AvalesTecnicos` (`mascararAvalTecnico`) e os campos `metodologiaData`, `metodologiaAutor`, `Acoes.causaDescricao`; código da Tratativa do nó ausente → campo de vínculo `null` e `vigente` `null`, fail-closed; `filtroVinculo` de `TratativaAppService.Evidencias` ganha a disjunção do Validador Técnico habilitado, r4 I4-01; r5, DC-19: os campos novos entram em `campos` e ficam fora de `liberados` e de `filtraveis`, então a varredura da task 000 recusa com 403 o predicado, a ordenação e o agrupamento sobre eles para o não-Gestor, sem código novo de varredura; `AvalesTecnicos` não é `soGestor` nem `porVinculo`, e `avalesTecnicos/any(...)` só passa com campo não decidido)
+- `test/mascara-lgpd-app.test.ts` (task 000; a lista `DECIDIDOS` da guarda CSN ganha `metodologiaData`, `metodologiaAutor`, `causaDescricao`, `AvalesTecnicos.fundamentacao`, `AvalesTecnicos.validador`; `LIBERADOS` não muda, porque nenhum desses fica com valor por regra de leitura (o vínculo os libera por linha, não por entidade); mudança de contrato prevista pela guarda, no mesmo commit do RED; `FILTRAVEIS` não muda; a parte da guarda que confere `@cds.search.<campo> = false` passa a exigir os cinco campos novos de tipo `String`/`LargeString`, r5 DC-19)
+- `app/tratativas/annotations.cds` (`causaIdentificador` de `derivarAcaoDaMetodologia` com `@title: 'Causa de origem'` e `@Common.FieldControl: #ReadOnly`, DC-15; botão `Emitir Aval Técnico` em `UI.Identification` com `@UI.Hidden: ocultaEmitirAval`; facet `AvaliacoesTecnicasFacet`; `LineItem` e `@title` de `AvalesTecnicos`; `@title` das colunas novas de `Tratativas` e `Acoes`; parâmetros das três actions com `@title`, `@UI.Placeholder` LGPD e Value Lists; `@Core.OperationAvailable` e `@Common.SideEffects` das actions novas; flags novas nos SideEffects das quatro actions de status)
+- `app/tratativas/webapp/manifest.json` (`sap.ui.layout` em `libs`; `sap.ui.controllerExtensions`; `content.body.sections.MetodologiaSection`; Contrato §6)
+- `app/tratativas/ui5.yaml` (`sap.ui.layout` em `framework.libraries`)
+- `app/tratativas/webapp/i18n/i18n.properties` (título da seção, rótulos e os 12 placeholders da spec, com o texto literal da spec)
+
+### Removidos
+- Nenhum.
 
 ## Objetivo
 Expor a parametrização por Origem e a designação de Validadores (inclusive a lista padrão corporativa, linha `*`) no `AdministracaoService` e na tela de Administração, e gerar os alertas de prazo da verificação de eficácia (DC-02, DC-04, DC-11).

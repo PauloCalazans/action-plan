@@ -2,7 +2,59 @@
 
 **Spec:** agentic/projeto/specs/metodologias-e-aval-tecnico/spec.md
 **Status:** draft
-**Branch:** metodologias-e-aval-tecnico/002-aval-tecnico-emissao
+**Branch:** metodologias-e-aval-tecnico/002-aval-encerramento-metodologias
+
+> **Grupo 2 (decisão do humano, 2026-10-13):** esta task e a(s) task(s) 003, 004 são executadas num único ciclo (um RED, um GREEN, uma revisão de diff) e publicadas num único PR, nesta branch. O escopo do grupo é a união dos "## Arquivos" abaixo; RED, GREEN e critérios de cada task incorporada continuam no documento dela.
+
+
+### Incorporado da task 003 (003-encerramento-com-aval)
+### Criados
+- `test/apoio/encerramento.ts` (helper `encerrarComAval(enviar, codigo, opcoes)`: inicia se `Aberta`, emite Aval `Aprovado` como `validador`, encerra como `gestor`; devolve a resposta do encerramento; sem `expect(`)
+- `test/apoio/legado.ts` (helper `semearTratativaEncerradaLegada()` que grava por `cds.db` uma Tratativa `Encerrada` sem `AvalesTecnicos`; exceção nomeada DC-09 ao item 5 da CONVENCOES)
+- `test/metodologias-encerramento.test.ts`
+
+### Modificados
+- `srv/tratativa/ciclo-de-vida.ts` (remove `'Aberta|Encerrada'` de `TRANSICOES`; 409 próprio para encerrar de `Aberta` antes da tabela; após o 409 de Ações abertas, exige Aval aprovado vigente via `lerSituacaoAval`)
+- `srv/tratativa-app-service.ts` (`podeEncerrar`/`ocultaEncerrar` = Gestor, `Em andamento`, sem Ação aberta, Aval aprovado vigente; cálculo em lote)
+- `test/CONVENCOES.md` (item 15: encerrar exige `encerrarComAval`; item 5: registro da exceção DC-09 (CA32, só por `test/apoio/legado.ts`) e menção às exceções preexistentes, não migradas nesta task: `test/edicao-tratativa.test.ts:36`, `test/criticidade-gestor.test.ts:39`, `test/criacao-acoes.test.ts:52`, `test/edicao-acoes.test.ts:133-134`, `test/evidencias-consultas-download.test.ts:292`)
+- `test/ajustes-revisao-tratativa.test.ts`
+- `test/alertas-motor-regras.test.ts`
+- `test/analitico-correcao-revisao.test.ts`
+- `test/analitico-executivo-evidencias.test.ts`
+- `test/analitico-gestao-metricas.test.ts`
+- `test/analitico-operacional-lgpd.test.ts`
+- `test/autorizacao-execucao-acoes.test.ts`
+- `test/ciclo-de-vida-acoes.test.ts`
+- `test/comentarios-auditoria-concorrencia.test.ts`
+- `test/comentarios-tratativa.test.ts`
+- `test/criticidade-gestor.test.ts`
+- `test/delegacao-acoes.test.ts`
+- `test/edicao-tratativa.test.ts`
+- `test/evidencias-anexo.test.ts`
+- `test/evidencias-anexo-complemento.test.ts`
+- `test/evidencias-remocao.test.ts`
+- `test/historico-consulta-unificada.test.ts`
+- `test/historico-precedencia-imutabilidade.test.ts`
+- `test/responsaveis-tratativa.test.ts`
+- `test/transicoes-tratativa.test.ts` (encerramento direto de `Aberta` passa a esperar 409 com a mensagem da spec; `:70`, `:222-224`)
+- `test/ui-acabamento.test.ts` (`podeEncerrar`/`ocultaEncerrar` em `Aberta`: `:175`, `:716`, `:720`)
+
+### Removidos
+- Nenhum.
+
+### Incorporado da task 004 (004-metodologias-causa-raiz)
+### Criados
+- `srv/tratativa/metodologia-validacao.ts` (chaves e limites por ferramenta, decisão 1 do design; mensagens e `target`)
+- `srv/tratativa/metodologia.ts` (`definirMetodologia`, `consultarMetodologia`, `derivarAcaoDaMetodologia`; autoria R4; eventos DC-03; máscara R16 b; `tratativasComVinculoDiagnostico(req, codigos): Promise<Set<string>>` = Tratativas em que o usuário é Gestor, responsável de Ação/Subação ou Validador habilitado, lida no banco em lote, DC-15)
+- `test/metodologias-diagnostico.test.ts`
+
+### Modificados
+- `srv/tratativa-service.cds` (tipo `DetalheMetodologia`; function `consultarMetodologiaTratativa`; actions `definirMetodologia`, `derivarAcaoDaMetodologia`; grant `authenticated-user`)
+- `srv/tratativa-service.ts` (handlers)
+- `srv/tratativa/acoes-criacao.ts` (exporta `criarAcaoComCausa(codigoTratativa, dados, causa, autor)`, que reaproveita `criar` e grava `causaIdentificador`, `causaDescricao` e os eventos `Criacao` + `CriacaoAcaoComCausa`)
+
+### Removidos
+- Nenhum.
 
 ## Objetivo
 Implementar a emissão e a consulta do Aval Técnico no `TratativaService`, com vigência e prazo derivados (DC-04, DC-05), designação de Validador por Origem (DC-01), evento `EmissaoAvalTecnico` com fundamentação consultável (DC-03) e acesso do Validador às Evidências, sem mudar ainda a regra de encerramento.

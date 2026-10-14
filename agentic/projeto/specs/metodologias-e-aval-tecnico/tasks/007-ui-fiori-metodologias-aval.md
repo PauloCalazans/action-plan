@@ -1,8 +1,8 @@
 # Task 007: ui-fiori-metodologias-aval
 
 **Spec:** agentic/projeto/specs/metodologias-e-aval-tecnico/spec.md
-**Status:** draft
-**Branch:** metodologias-e-aval-tecnico/007-ui-fiori-metodologias-aval
+**Status:** agrupada (grupo 3, executada com a task 005)
+**Branch:** metodologias-e-aval-tecnico/005-admin-indicadores-ui
 
 ## Objetivo
 Levar metodologia, derivação de Ação e Aval Técnico à Object Page do app de Tratativas (Fiori elements v4): contrato do `TratativaAppService` com flags, máscaras e SideEffects, seção customizada do formulário da metodologia (`Form` + `ColumnLayout`) e diálogo padrão do Aval (decisão 8 do design).

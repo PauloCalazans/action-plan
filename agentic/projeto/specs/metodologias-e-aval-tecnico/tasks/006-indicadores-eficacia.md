@@ -1,8 +1,8 @@
 # Task 006: indicadores-eficacia
 
 **Spec:** agentic/projeto/specs/metodologias-e-aval-tecnico/spec.md
-**Status:** draft
-**Branch:** metodologias-e-aval-tecnico/006-indicadores-eficacia
+**Status:** agrupada (grupo 3, executada com a task 005)
+**Branch:** metodologias-e-aval-tecnico/005-admin-indicadores-ui
 
 ## Objetivo
 Publicar no `AnaliticoService` o Pareto de Causas Raízes, a Taxa de Eficácia, o Tempo Médio de Verificação de Eficácia e a Aderência Metodológica (R15, R20 e).

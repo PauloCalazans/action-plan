@@ -1,8 +1,8 @@
 # Task 003: encerramento-com-aval
 
 **Spec:** agentic/projeto/specs/metodologias-e-aval-tecnico/spec.md
-**Status:** draft
-**Branch:** metodologias-e-aval-tecnico/003-encerramento-com-aval
+**Status:** agrupada (grupo 2, executada com a task 002)
+**Branch:** metodologias-e-aval-tecnico/002-aval-encerramento-metodologias
 
 ## Objetivo
 Extinguir `Aberta → Encerrada`, exigir Aval aprovado vigente para encerrar (com a mensagem própria após reabertura), refletir a regra em `podeEncerrar` do App, provar o legado e migrar os testes existentes que encerram Tratativa.

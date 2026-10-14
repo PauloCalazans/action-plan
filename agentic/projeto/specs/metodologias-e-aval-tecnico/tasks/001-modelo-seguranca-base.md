@@ -1,8 +1,8 @@
 # Task 001: modelo-seguranca-base
 
 **Spec:** agentic/projeto/specs/metodologias-e-aval-tecnico/spec.md
-**Status:** draft
-**Branch:** metodologias-e-aval-tecnico/001-modelo-seguranca-base
+**Status:** agrupada (grupo 1, executada com a task 000)
+**Branch:** metodologias-e-aval-tecnico/000-mascara-lgpd-app
 
 ## Objetivo
 Criar o modelo persistido do 016 (tipos, colunas aditivas, `AvalesTecnicos`, `ParametrosOrigem`, `ValidadoresOrigem`, baseline `*`), catalogar os quatro eventos novos do histórico e formalizar o papel `ValidadorTecnico` (xs-security, mocked, persona de dev).

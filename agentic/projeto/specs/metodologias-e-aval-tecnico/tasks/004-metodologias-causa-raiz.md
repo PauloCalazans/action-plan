@@ -1,8 +1,8 @@
 # Task 004: metodologias-causa-raiz
 
 **Spec:** agentic/projeto/specs/metodologias-e-aval-tecnico/spec.md
-**Status:** draft
-**Branch:** metodologias-e-aval-tecnico/004-metodologias-causa-raiz
+**Status:** agrupada (grupo 2, executada com a task 002)
+**Branch:** metodologias-e-aval-tecnico/002-aval-encerramento-metodologias
 
 ## Objetivo
 Implementar no `TratativaService` a definição, edição e remoção da metodologia (3W, 5 Porquês, 5W2H, PDCA/8D), a consulta `consultarMetodologiaTratativa` e a derivação de Ação a partir de um item da análise, exclusiva do Gestor e com vínculo à causa.
