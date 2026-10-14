@@ -1,21 +1,21 @@
 import cds from '@sap/cds';
-import { join } from 'node:path';
-import { criarAvulsa, type Envia } from './tratativas';
+import { randomUUID } from 'node:crypto';
 
-const RAIZ = join(__dirname, '..', '..');
-const { POST } = cds.test(RAIZ);
-const enviar = POST as unknown as Envia;
-
+// Semeia direto no banco já servido pelo cds.test do arquivo de teste (sem segundo servidor).
+// Cenário: Tratativa já Encerrada antes do 016, sem Aval.
 export async function semearTratativaEncerradaLegada(): Promise<string> {
-  const criada = await criarAvulsa(enviar, { titulo: `Tratativa legada ${Date.now()}` });
-  if (criada.status !== 200) {
-    throw new Error(`Falha ao criar Tratativa legada: HTTP ${criada.status}.`);
-  }
-  const codigo = criada.data.codigo as string;
+  const codigo = randomUUID();
+  const hoje = new Date().toISOString();
   await cds.db.run(
-    UPDATE.entity('br.com.calazanstec.Tratativas')
-      .set({ status: 'Encerrada' })
-      .where({ codigo }),
+    INSERT.into('br.com.calazanstec.Tratativas').entries({
+      codigo,
+      titulo: `Tratativa legada ${Date.now()}`,
+      criticidade: 'Média',
+      status: 'Encerrada',
+      dataCriacao: hoje.slice(0, 10),
+      dataPrevistaConclusao: hoje.slice(0, 10),
+      criadoEm: hoje,
+    }),
   );
   return codigo;
 }
