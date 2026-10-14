@@ -2,6 +2,7 @@ import cds from '@sap/cds';
 import { criarAcao, mudarStatusAcao, type Consulta } from './apoio/acoes';
 import { linhas } from './apoio/banco';
 import { registrarCredenciais } from './apoio/credenciais';
+import { encerrarComAval } from './apoio/encerramento';
 import { fixarInstante, liberarRelogio } from './apoio/relogio';
 import { criarAvulsa, mudarStatus, sufixoUnico, type Envia } from './apoio/tratativas';
 import { comoAdmin, comoApp, comoGestor, comoUsuario, semAuth } from './apoio/usuarios';
@@ -41,12 +42,15 @@ async function novaTratativa(
   expect(criada.status).toBe(200);
   const codigo = criada.data.codigo as string;
   if (status) {
-    const transicao = await mudarStatus(
-      enviar,
-      codigo,
-      { status, ...(status === 'Cancelada' ? { justificativa: 'Cancelada para teste analítico' } : {}) },
-      comoGestor,
-    );
+    const transicao =
+      status === 'Encerrada'
+        ? await encerrarComAval(enviar, codigo)
+        : await mudarStatus(
+            enviar,
+            codigo,
+            { status, ...(status === 'Cancelada' ? { justificativa: 'Cancelada para teste analítico' } : {}) },
+            comoGestor,
+          );
     expect(transicao.status).toBe(204);
   }
   return codigo;

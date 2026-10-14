@@ -92,6 +92,7 @@ function mascararDetalhe(detalhe: DetalheEventoHistorico): DetalheEventoHistoric
     valorAnterior: campoEhMatricula ? null : detalhe.valorAnterior,
     valorNovo: campoEhMatricula ? null : detalhe.valorNovo,
     justificativa: null,
+    fundamentacao: null,
   };
 }
 

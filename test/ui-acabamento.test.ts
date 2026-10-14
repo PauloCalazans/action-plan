@@ -172,7 +172,7 @@ describe('Acabamento da UI: robustez do backend e contratos de serviço', () => 
 
     const linha = consulta.data as Record<string, unknown>;
     expect(linha.podeIniciar).toBe(true);
-    expect(linha.podeEncerrar).toBe(true);
+    expect(linha.podeEncerrar).toBe(false);
     expect(linha.podeCancelar).toBe(true);
     expect(linha.podeReabrir).toBe(false);
     expect(linha.ocultaIniciar).toBe(false);
@@ -714,11 +714,11 @@ describe('Acabamento da UI: robustez do backend e contratos de serviço', () => 
       const linha = resposta.data as Record<string, unknown>;
 
       expect(linha.podeIniciar).toBe(true);
-      expect(linha.podeEncerrar).toBe(true);
+      expect(linha.podeEncerrar).toBe(false);
       expect(linha.podeCancelar).toBe(true);
       expect(linha.podeReabrir).toBe(false);
       expect(linha.ocultaIniciar).toBe(false);
-      expect(linha.ocultaEncerrar).toBe(false);
+      expect(linha.ocultaEncerrar).toBe(true);
       expect(linha.ocultaCancelar).toBe(false);
       expect(linha.ocultaReabrir).toBe(true);
     });

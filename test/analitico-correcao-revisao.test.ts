@@ -2,6 +2,7 @@ import cds from '@sap/cds';
 import { criarAcao } from './apoio/acoes';
 import { linhas } from './apoio/banco';
 import { registrarCredenciais } from './apoio/credenciais';
+import { encerrarComAval } from './apoio/encerramento';
 import { fixarInstante, liberarRelogio } from './apoio/relogio';
 import { criarAvulsa, mudarStatus, sufixoUnico, type Envia } from './apoio/tratativas';
 import { comoGestor } from './apoio/usuarios';
@@ -34,6 +35,11 @@ async function criar(dados: Record<string, unknown> = {}): Promise<string> {
 
 async function mudar(codigo: string, status: 'Encerrada' | 'Em andamento' | 'Cancelada', instante: string): Promise<void> {
   fixarInstante(instante);
+  if (status === 'Encerrada') {
+    const encerramento = await encerrarComAval(enviar, codigo);
+    expect(encerramento.status).toBe(204);
+    return;
+  }
   const r = await mudarStatus(
     enviar,
     codigo,

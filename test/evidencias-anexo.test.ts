@@ -2,9 +2,10 @@ import cds from '@sap/cds';
 import { criarAcao, mudarStatusAcao } from './apoio/acoes';
 import { linhas } from './apoio/banco';
 import { registrarCredenciais } from './apoio/credenciais';
+import { encerrarComAval } from './apoio/encerramento';
 import { instalarEspiao, type Espiao } from './apoio/banco-espiao';
 import { fixarInstante, liberarRelogio } from './apoio/relogio';
-import { criarAvulsa, sufixoUnico, mudarStatus, type Envia } from './apoio/tratativas';
+import { criarAvulsa, sufixoUnico, type Envia } from './apoio/tratativas';
 import { comoApp, comoGestor, comoM1001, comoM2002 } from './apoio/usuarios';
 import {
   anexarEvidencia,
@@ -282,7 +283,7 @@ describe('Etapa 1: Inclusão e Armazenamento de Evidências (anexarEvidencia - R
     const a = await novaAcao(t);
     const rConcluir = await mudarStatusAcao(enviar, t, { acao: a, status: 'Concluída' }, comoGestor);
     expect(rConcluir.status).toBe(204);
-    const rEncerrar = await mudarStatus(enviar, t, { status: 'Encerrada' }, comoGestor);
+    const rEncerrar = await encerrarComAval(enviar, t);
     expect(rEncerrar.status).toBe(204);
     const r = await anexarEvidencia(enviar, t, { acao: a, ...evidenciaValida() }, comoGestor);
     expect(r.status).toBe(409);

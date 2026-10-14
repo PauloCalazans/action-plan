@@ -1,5 +1,6 @@
 import cds from '@sap/cds';
 import { registrarCredenciais } from './apoio/credenciais';
+import { encerrarComAval } from './apoio/encerramento';
 import { sufixoUnico, type Envia, criarAvulsa, abrirPorApp, mudarStatus } from './apoio/tratativas';
 import { comoApp, comoGestor, comoUsuario, semAuth } from './apoio/usuarios';
 import { delegarAcao } from './apoio/responsaveis';
@@ -239,7 +240,7 @@ describe('Etapa 2 - Delegação de Ações com justificativa obrigatória', () =
       expect(rConcluir.status).toBe(204);
       
       // Agora encerrar Tratativa
-      const rEncerrar = await mudarStatus(enviar, tratativa, { status: 'Encerrada' }, comoGestor);
+      const rEncerrar = await encerrarComAval(enviar, tratativa);
       expect(rEncerrar.status).toBe(204);
       
       const r = await delegarAcao(enviar, tratativa, {
@@ -433,7 +434,7 @@ describe('Etapa 2 - Delegação de Ações com justificativa obrigatória', () =
       expect(rConcluir.status).toBe(204);
       
       // Encerrar Tratativa
-      const rEncerrar = await mudarStatus(enviar, tratativa, { status: 'Encerrada' }, comoGestor);
+      const rEncerrar = await encerrarComAval(enviar, tratativa);
       expect(rEncerrar.status).toBe(204);
       
       // Tentativa em Tratativa Encerrada (será recusada)

@@ -1,7 +1,8 @@
 import cds from '@sap/cds';
 import { registrarCredenciais } from './apoio/credenciais';
+import { encerrarComAval } from './apoio/encerramento';
 import { fixarInstante, liberarRelogio } from './apoio/relogio';
-import { criarAvulsa, abrirPorApp, editar, mudarStatus, sufixoUnico, type Envia } from './apoio/tratativas';
+import { criarAvulsa, abrirPorApp, editar, sufixoUnico, type Envia } from './apoio/tratativas';
 import { comoGestor } from './apoio/usuarios';
 import { criarAcao, mudarStatusAcao } from './apoio/acoes';
 import { atribuirResponsavelPrincipal } from './apoio/responsaveis';
@@ -206,7 +207,7 @@ describe('Etapa 1: consulta unificada, catálogo de origens e ordenação determ
       expect(edicao.status).toBe(204);
 
       fixarInstante('2026-10-07T11:00:00-03:00');
-      const encerrar = await mudarStatus(enviar, tratativa, { status: 'Encerrada' }, comoGestor);
+      const encerrar = await encerrarComAval(enviar, tratativa);
       expect(encerrar.status).toBe(204);
 
       const r = await historicoComoGestor(tratativa);

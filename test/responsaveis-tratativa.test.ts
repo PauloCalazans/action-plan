@@ -6,6 +6,7 @@ import { comoApp, comoGestor, comoUsuario, semAuth } from './apoio/usuarios';
 import { atribuirResponsavelPrincipal, incluirParticipante, removerParticipante, consultarResponsaveis, consultarTratativa } from './apoio/responsaveis';
 import { linhas } from './apoio/banco';
 import { instalarEspiao } from './apoio/banco-espiao';
+import { encerrarComAval } from './apoio/encerramento';
 
 const { GET, POST } = cds.test(__dirname + '/..');
 const enviar = POST as unknown as Envia;
@@ -82,7 +83,7 @@ describe('Etapa 1 - Responsáveis e Participantes da Tratativa', () => {
       const tratativa = await criarTratativaAberta();
       const r1 = await mudarStatusTratativa(tratativa, 'Em andamento');
       expect(r1.status).toBe(204);
-      const r2 = await mudarStatusTratativa(tratativa, 'Encerrada');
+      const r2 = await encerrarComAval(enviar, tratativa);
       expect(r2.status).toBe(204);
     });
   });
@@ -426,7 +427,7 @@ describe('Etapa 1 - Responsáveis e Participantes da Tratativa', () => {
     it('atribuir em Tratativa Encerrada recusa com 409', async () => {
       const tratativa = await criarTratativaAberta();
       await mudarStatusTratativa(tratativa, 'Em andamento');
-      await mudarStatusTratativa(tratativa, 'Encerrada');
+      expect((await encerrarComAval(enviar, tratativa)).status).toBe(204);
       const r = await atribuirResponsavelPrincipal(enviar, tratativa, { responsavelPrincipal: 'M1001' }, comoGestor);
       expect(r.status).toBe(409);
       expect(r.data.error?.message).toBe('Tratativa Encerrada não pode ser alterada.');
@@ -448,7 +449,7 @@ describe('Etapa 1 - Responsáveis e Participantes da Tratativa', () => {
       const r1 = await atribuirResponsavelPrincipal(enviar, tratativa, { responsavelPrincipal: 'M1001' }, comoGestor);
       expect(r1.status).toBe(204);
       await mudarStatusTratativa(tratativa, 'Em andamento');
-      await mudarStatusTratativa(tratativa, 'Encerrada');
+      expect((await encerrarComAval(enviar, tratativa)).status).toBe(204);
       const rReabrir = await mudarStatusTratativa(tratativa, 'Em andamento', 'Justificativa para reabertura');
       expect(rReabrir.status).toBe(204); // Reabrir exige justificativa
       const r2 = await atribuirResponsavelPrincipal(enviar, tratativa, { responsavelPrincipal: 'M2002', justificativa: 'Mudança' }, comoGestor);

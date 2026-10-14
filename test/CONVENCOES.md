@@ -9,14 +9,14 @@ Leia antes de escrever ou ajustar qualquer teste. Cada item abaixo já causou re
 ## Banco e espião
 3. `linhas(entidade, where)` recebe o nome **sem** namespace (`'Acoes'`, `'Evidencias'`, `'HistoricoAcoes'`); o helper já põe `br.com.calazanstec.`.
 4. O espião recebe **evento primeiro** e entidade **qualificada**: `espiao.falharEm('CREATE', 'br.com.calazanstec.HistoricoAcoes')`.
-5. Testes **não gravam** no banco (`cds.db.run(UPDATE…)` é proibido). Estado de preparo só por OData.
+5. Testes **não gravam** no banco (`cds.db.run(UPDATE…)` é proibido), com a exceção nomeada de `semearTratativaEncerradaLegada()` em `test/apoio/legado.ts` para provar CA32/DC-09 (Tratativa encerrada antes da regra de Aval). Exceções preexistentes, fora da migração da task 003: `test/edicao-tratativa.test.ts:36`, `test/criticidade-gestor.test.ts:39`, `test/criacao-acoes.test.ts:52`, `test/edicao-acoes.test.ts:133-134` e `test/evidencias-consultas-download.test.ts:292`. Estado de preparo restante só por OData.
 6. Use o nome real das entidades e colunas do `db/tratativa.cds` (ex.: `ParticipantesTratativa`; coluna `evidencia`, não `evidencia_codigo`). O histórico usa o campo `evento`, não `tipo`.
 
 ## Contrato OData
 7. Action sem retorno com sucesso devolve **204** (sem corpo); function devolve **200** com corpo. Functions `many` devolvem `{ value: [...] }`.
 8. Erro OData: `r.data.error.message` e `r.data.error.target`, nunca `r.data.target`. Tipagem sem `any`: `(r.data as { error?: { message?: string; target?: string } }).error`.
 9. Parâmetros **String** de function vão na URL **entre aspas simples**, com `encodeURIComponent` e aspas internas duplicadas: `minhasAcoes(status='Em%20andamento',tamanhoPagina=50,pagina=1)`. Inteiros vão sem aspas; parâmetro omitido não entra na URL.
-10. Código mal formado: use `'xyz'` (caracteres válidos na URL). UUID de "inexistente" precisa ter **5 grupos** (`00000000-0000-4000-8000-000000000000`). Chave de action ligada mal formada dá 404; parâmetro de Código mal formado dá 400 `Código inválido.`.
+10. Código mal formado: use `'xyz'` (caracteres válidos na URL). UUID de "inexistente" precisa ter **5 grupos** (`00000000-0000-4000-8000-000000000000`). Chave de action ligada mal formada dá 404, exceto nas actions ligadas `emitirAvalTecnico`, `definirMetodologia` e `derivarAcaoDaMetodologia`, que dão 400 `Código inválido.` (CA34, R18 etapa 4; prevalece a especificidade da spec sobre a regra geral anterior). Parâmetro de Código mal formado dá 400 `Código inválido.`.
 11. Campos de negócio: `evidenciaObrigatoria` é texto `'sim'`/`'não'` (nunca booleano); Subação usa `acaoMae`; Prioridade é `Baixa`/`Média`/`Alta`; `criarTratativaAvulsa` não aceita `dataPrevistaConclusao`.
 
 ## Identidade e autorização
@@ -25,8 +25,8 @@ Leia antes de escrever ou ajustar qualquer teste. Cada item abaixo já causou re
 
 ## Preparo de cenários (003/004)
 14. Cancelar e reabrir exigem justificativa; reabrir é de `Encerrada` para `Em andamento` (não existe `'Reaberta'`).
-15. Não dá para encerrar uma Tratativa com Ação aberta (004 R16). Para testar "Tratativa Encerrada recusa X": conclua a Ação, inicie e encerre a Tratativa e só então peça X. Para Ação aberta numa Tratativa fechada, use Tratativa **Cancelada**.
-16. Confira o status de **cada** passo de preparo (ex.: `expect(r.status).toBe(204)` no teste, ou um wrapper local que lança erro). Preparo que falha em silêncio gera falso RED.
+15. Não dá para encerrar uma Tratativa com Ação aberta (004 R16), e agora o encerramento também exige Aval aprovado vigente (016 R8). Use `encerrarComAval(enviar, codigo)` para preparar uma Tratativa Encerrada: ele inicia se estiver Aberta, emite o Aval como `validador` e encerra como Gestor; confirme a resposta HTTP no teste. Para Ação aberta numa Tratativa fechada, use Tratativa **Cancelada**.
+16. Confira o status de **cada** passo de preparo (ex.: `expect(r.status).toBe(204)` no teste, ou um wrapper local que lança erro). O helper `encerrarComAval` lança erro explícito quando falham início ou emissão. Preparo que falha em silêncio gera falso RED.
 
 ## Proibido
 17. Teste que afirma que a operação **não existe** ("falha esperada no RED"); teste sem asserção real ou com `expect(true).toBe(true)`; asserção dentro de `if (status === 200)`; variáveis e imports sem uso (o lint faz parte do `verify`); arquivos soltos no worktree (`test-output.txt` etc.).

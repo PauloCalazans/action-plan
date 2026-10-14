@@ -2,6 +2,7 @@ import cds from '@sap/cds';
 import { agora } from '../lib/relogio';
 import type { Autor } from './abertura';
 import { bloquearTratativa } from './bloqueio';
+import { lerSituacaoAval } from './aval-tecnico';
 import { registrarHistorico, validarAutor } from './historico';
 import { validarJustificativa } from './justificativa';
 import { recusar } from './recusa';
@@ -13,7 +14,6 @@ interface Transicao { evento: string; justificativaObrigatoria: boolean }
 /** R2-R5, R9: tabela fixa de transições, chave `<de>|<para>` (design tratativa, decisão 8). */
 const TRANSICOES: Record<string, Transicao> = {
   'Aberta|Em andamento': { evento: 'MudancaStatus', justificativaObrigatoria: false },
-  'Aberta|Encerrada': { evento: 'Encerramento', justificativaObrigatoria: false },
   'Aberta|Cancelada': { evento: 'Cancelamento', justificativaObrigatoria: true },
   'Em andamento|Encerrada': { evento: 'Encerramento', justificativaObrigatoria: false },
   'Em andamento|Cancelada': { evento: 'Cancelamento', justificativaObrigatoria: true },
@@ -33,6 +33,13 @@ export async function mudarStatus(
   const destino = typeof pedido.status === 'string' ? pedido.status : '';
   if (!destino.trim()) recusar(400, 'O campo Status é obrigatório.', 'status');
 
+  if (tratativa.status === 'Aberta' && destino === 'Encerrada') {
+    recusar(
+      409,
+      'Tratativa em status Aberta não pode ser encerrada diretamente: deve transitar para Em andamento e receber Aval Técnico aprovado.',
+      'status',
+    );
+  }
   const transicao = TRANSICOES[`${tratativa.status}|${destino}`];
   if (!transicao) recusar(409, `Transição não permitida: de ${tratativa.status} para ${destino}.`, 'status');
 
@@ -43,6 +50,13 @@ export async function mudarStatus(
         .where({ tratativa_codigo: codigo, status: { 'not in': ['Concluída', 'Cancelada'] } }),
     );
     if (abertas) recusar(409, 'Tratativa não pode ser encerrada: há Ações não concluídas nem canceladas.');
+    const situacao = (await lerSituacaoAval([codigo])).get(codigo);
+    if (!situacao?.aprovadoVigente) {
+      const mensagem = situacao?.houveReabertura
+        ? 'Tratativa não pode ser encerrada: exige novo Aval Técnico aprovado emitido após a reabertura.'
+        : 'Tratativa não pode ser encerrada: exige Aval Técnico aprovado.';
+      recusar(409, mensagem);
+    }
   }
 
   const justificativa = validarJustificativa(pedido.justificativa, transicao.justificativaObrigatoria);

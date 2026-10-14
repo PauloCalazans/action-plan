@@ -2,6 +2,7 @@ import cds from '@sap/cds';
 import { linhas } from './apoio/banco';
 import { instalarEspiao, type Espiao } from './apoio/banco-espiao';
 import { registrarCredenciais } from './apoio/credenciais';
+import { encerrarComAval } from './apoio/encerramento';
 import { criarAvulsa, mudarStatus, sufixoUnico, type Envia } from './apoio/tratativas';
 import { comoApp, comoGestor, comoM9999, semAuth } from './apoio/usuarios';
 import { criarAcao, mudarStatusAcao } from './apoio/acoes';
@@ -113,7 +114,7 @@ describe('Etapa 4: precedência consolidada D10, imutabilidade absoluta e integr
   describe('CA6 (R3): requisição de negócio recusada nunca grava registro de histórico', () => {
     it('transição de Status recusada (409) não grava novo evento MudancaStatus', async () => {
       const tratativa = await criarTratativaAberta();
-      const encerrar = await mudarStatus(enviar, tratativa, { status: 'Encerrada' }, comoGestor);
+      const encerrar = await encerrarComAval(enviar, tratativa);
       expect(encerrar.status).toBe(204);
 
       const antes = await linhas('HistoricoTratativa', { tratativa_codigo: tratativa });
@@ -169,7 +170,7 @@ describe('Etapa 4: precedência consolidada D10, imutabilidade absoluta e integr
   describe('CA43 (R10): reabertura de Tratativa encerrada preserva o Encerramento e inclui a Reabertura', () => {
     it('histórico mantém Encerramento original e acrescenta Reabertura em sequência append-only', async () => {
       const tratativa = await criarTratativaAberta();
-      const encerrar = await mudarStatus(enviar, tratativa, { status: 'Encerrada' }, comoGestor);
+      const encerrar = await encerrarComAval(enviar, tratativa);
       expect(encerrar.status).toBe(204);
       const reabrir = await mudarStatus(
         enviar, tratativa, { status: 'Em andamento', justificativa: 'Reabertura por novo fato' }, comoGestor,
@@ -223,7 +224,7 @@ describe('Etapa 4: precedência consolidada D10, imutabilidade absoluta e integr
       expect(andamento.status).toBe(204);
       const concluir = await mudarStatusAcao(enviar, tratativa, { acao, status: 'Concluída' }, comoGestor);
       expect(concluir.status).toBe(204);
-      const encerrar = await mudarStatus(enviar, tratativa, { status: 'Encerrada' }, comoGestor);
+      const encerrar = await encerrarComAval(enviar, tratativa);
       expect(encerrar.status).toBe(204);
       const reabrir = await mudarStatus(
         enviar, tratativa, { status: 'Em andamento', justificativa: 'Reabertura da Tratativa' }, comoGestor,
@@ -250,7 +251,7 @@ describe('Etapa 4: precedência consolidada D10, imutabilidade absoluta e integr
   describe('CA46 (R11): dataHora de Criacao e Encerramento suporta cálculo analítico de tempo de resolução', () => {
     it('eventos Criacao e Encerramento trazem dataHora distintas e cronologicamente ordenadas', async () => {
       const tratativa = await criarTratativaAberta();
-      const encerrar = await mudarStatus(enviar, tratativa, { status: 'Encerrada' }, comoGestor);
+      const encerrar = await encerrarComAval(enviar, tratativa);
       expect(encerrar.status).toBe(204);
 
       const r = await historicoComoGestor(tratativa);

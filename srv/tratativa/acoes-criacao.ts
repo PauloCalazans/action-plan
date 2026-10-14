@@ -23,6 +23,16 @@ export function criarAcao(codigoTratativa: string, dados: DadosCriacaoAcao, auto
   return criar(codigoTratativa, null, dados, autor);
 }
 
+/** R6 b (016): cria uma Ação com vínculo persistido à causa que a originou. */
+export function criarAcaoComCausa(
+  codigoTratativa: string,
+  dados: DadosCriacaoAcao,
+  causa: { identificador: string; descricao: string; rotulo: string },
+  autor: Autor,
+): Promise<{ codigo: string }> {
+  return criar(codigoTratativa, null, dados, autor, causa);
+}
+
 /** R2 (004): Subação sob a Ação mãe da mesma Tratativa; Código da mãe inválido recusa antes de qualquer consulta. */
 export function criarSubacao(codigoTratativa: string, acaoMae: string, dados: DadosCriacaoAcao, autor: Autor): Promise<{ codigo: string }> {
   if (!codigoValido(acaoMae)) recusar(400, 'Código inválido.', 'acaoMae');
@@ -33,7 +43,13 @@ export function criarSubacao(codigoTratativa: string, acaoMae: string, dados: Da
  * Ordem da decisão 4 do design: autor, bloqueio D9 (404), existência da mãe (404), Tratativa alterável (409),
  * Subação de Subação (400), campos (400), persistência e histórico `Criacao` na mesma transação.
  */
-async function criar(codigoTratativa: string, acaoMae: string | null, dados: DadosCriacaoAcao, autor: Autor): Promise<{ codigo: string }> {
+async function criar(
+  codigoTratativa: string,
+  acaoMae: string | null,
+  dados: DadosCriacaoAcao,
+  autor: Autor,
+  causa?: { identificador: string; descricao: string; rotulo: string },
+): Promise<{ codigo: string }> {
   validarAutor(autor);
   const tratativa = await bloquearTratativa(codigoTratativa);
   const mae = acaoMae === null ? undefined : await localizarAcao(codigoTratativa, acaoMae);
@@ -66,13 +82,23 @@ async function criar(codigoTratativa: string, acaoMae: string | null, dados: Dad
       tratativa_codigo: codigoTratativa,
       acaoMae_codigo: acaoMae,
       ...campos,
+      causaIdentificador: causa?.identificador ?? null,
+      causaDescricao: causa?.descricao ?? null,
       status: 'Pendente',
       dataConclusao: null,
       criadoEm: instante.toISOString(),
     }),
   );
   // R23: o histórico registra o evento e o autor, nunca a Descrição.
-  await registrarHistorico(codigoTratativa, autor, [{ evento: 'Criacao' }], instante, codigo);
+  await registrarHistorico(
+    codigoTratativa,
+    autor,
+    [{ evento: 'Criacao' }, ...(causa
+      ? [{ evento: 'CriacaoAcaoComCausa', campo: 'causa', valorNovo: causa.identificador, justificativa: causa.rotulo }]
+      : [])],
+    instante,
+    codigo,
+  );
   return { codigo };
 }
 
