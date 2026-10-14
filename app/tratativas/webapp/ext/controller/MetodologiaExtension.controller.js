@@ -17,6 +17,9 @@ sap.ui.define([ // eslint-disable-line no-undef
     "porQue", "como", "planejar", "executar", "checar", "agir"
   ];
 
+  // ID real das subseções customizadas no Fiori elements (medido no navegador): fe::CustomSubSection::<seção>--<id>.
+  var PREFIXO_ID = "fe::CustomSubSection::MetodologiaSection--";
+
   function modeloVazio() {
     return {
       visivel: false,
@@ -64,20 +67,20 @@ sap.ui.define([ // eslint-disable-line no-undef
         return;
       }
       var api = this.base.getExtensionAPI();
-      var salvar = api.byId("metodologiaSalvar");
-      var remover = api.byId("metodologiaRemover");
+      var salvar = api.byId(PREFIXO_ID + "metodologiaSalvar");
+      var remover = api.byId(PREFIXO_ID + "metodologiaRemover");
       if (!salvar || !remover) {
         // Seção ainda não instanciada: a ligação é refeita no próximo onAfterBinding.
         return;
       }
-      var ferramenta = api.byId("metodologiaFerramenta");
+      var ferramenta = api.byId(PREFIXO_ID + "metodologiaFerramenta");
       if (ferramenta) {
         ferramenta.attachChange(this.onTrocarFerramenta, this);
       }
       salvar.attachPress(this.onSalvar, this);
       remover.attachPress(this.onRemover, this);
       CHAVES_DERIVAVEIS.forEach(function (chave) {
-        var botao = api.byId("metodologiaDerivar-" + chave);
+        var botao = api.byId(PREFIXO_ID + "metodologiaDerivar-" + chave);
         if (botao) {
           botao.attachPress(function () {
             this.onDerivar(chave);
@@ -121,7 +124,7 @@ sap.ui.define([ // eslint-disable-line no-undef
 
     _falhou: function (erro) {
       // Mensagens do servidor já são exibidas pelo Fiori elements; aqui só o aviso geral (cancelar o diálogo não é erro).
-      if (erro) {
+      if (erro && erro.message !== "Dialog cancelled") {
         MessageToast.show(this._texto("errorTitle"));
       }
     },
