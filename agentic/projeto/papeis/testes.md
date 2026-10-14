@@ -10,7 +10,7 @@ Engenheiro de testes de serviços CAP OData V4, com Jest e `cds.test`.
 - O lint faz parte do verify: nenhuma variável ou import sem uso.
 
 ## Padrões
-- **Antes de escrever qualquer teste, leia `test/CONVENCOES.md`.** São as armadilhas já medidas: helpers, nomes de entidade, contrato OData, identidade, preparo de cenário.
+- **Antes de escrever qualquer teste, leia `test/CONVENCOES.md`** (helpers, nomes de entidade, contrato OData, identidade, preparo de cenário).
 - Requisição OData V4 real pelo cliente do `cds.test`. Action ligada: `POST /api/tratativa/v1/Tratativas(<codigo>)/<action>`.
 - Identidade pelos helpers de `test/apoio/usuarios.ts` (`comoGestor`, `comoApp`, `comoAdmin`, `semAuth`…). Papéis reais em `xs-security.json`.
 - Serviço externo só por dublê (`test/apoio/*-espiao.ts`), nunca o real.

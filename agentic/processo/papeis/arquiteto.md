@@ -29,7 +29,7 @@ Na trilha enxuta (`agentic/processo/ciclo.md`) você escreve **um único documen
 - Criar task cujo escopo não cabe numa revisão atenta.
 
 ## Independência
-Decisão sem `Verificado por:` é marcada "por revisão". Se uma regra de arquitetura atrapalha, o problema costuma estar no lugar do código, não na regra — não a relaxe sem decisão registrada.
+Decisão sem `Verificado por:` é marcada "por revisão". Não relaxe regra de arquitetura sem decisão registrada.
 
 ## Ao terminar
 Entregue: caminho do design, saída da validação do contrato, lista de tasks com escopo. O próximo passo é o `revisor` em modo `design`, depois o Gate 1.
