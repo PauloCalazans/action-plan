@@ -1,4 +1,6 @@
 import cds from '@sap/cds';
+import { existsSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { criarAcao, criarSubacao, mudarStatusAcao } from './apoio/acoes';
 import { linhas } from './apoio/banco';
 import { instalarEspiao, type Espiao } from './apoio/banco-espiao';
@@ -1355,5 +1357,201 @@ describe('Contrato do serviço do aplicativo (CA29, CA32)', () => {
       colecao: 'Colaboradores',
       propriedades: ['matricula', 'nome', 'email'],
     });
+  });
+});
+
+// ---------------------------------------------------------------------------------------------------------------
+// Interface, parte estática: anotações, manifest, dependência de biblioteca e arquivos (decisões 5, 8, 10 e 12)
+// ---------------------------------------------------------------------------------------------------------------
+const RAIZ = join(__dirname, '..');
+const APP_TRATATIVAS = join(RAIZ, 'app', 'tratativas');
+const MANIFESTO = join(APP_TRATATIVAS, 'webapp', 'manifest.json');
+const UI5_YAML = join(APP_TRATATIVAS, 'ui5.yaml');
+const EXTENSAO = join(APP_TRATATIVAS, 'webapp', 'ext');
+const MODULO_DE_LINHA = /^br\.com\.calazanstec\.actionplan\.tratativas\.ext\.acoes\.OperacoesLinha\.\w+$/;
+const LISTA_DE_ACOES = 'acoes/@com.sap.vocabularies.UI.v1.LineItem';
+const LISTA_DE_EVIDENCIAS = 'evidencias/@com.sap.vocabularies.UI.v1.LineItem';
+const LISTA_DE_COMENTARIOS = 'comentarios/@com.sap.vocabularies.UI.v1.LineItem';
+
+type AcaoDoManifest = {
+  text?: string;
+  press?: string;
+  visible?: string | boolean;
+  enabled?: string | boolean;
+  requiresSelection?: boolean;
+  enableOnSelect?: string;
+};
+type ControlConfiguration = Record<string, { actions?: Record<string, AcaoDoManifest> }>;
+
+function textoDo(arquivo: string): string {
+  expect(existsSync(arquivo)).toBe(true);
+  return readFileSync(arquivo, 'utf8');
+}
+
+function manifesto(): Record<string, unknown> {
+  return JSON.parse(textoDo(MANIFESTO)) as Record<string, unknown>;
+}
+
+function controlConfiguration(): ControlConfiguration {
+  const ui5 = manifesto()['sap.ui5'] as {
+    routing?: {
+      targets?: {
+        TratativasObjectPage?: { options?: { settings?: { controlConfiguration?: ControlConfiguration } } };
+      };
+    };
+  };
+  return ui5.routing?.targets?.TratativasObjectPage?.options?.settings?.controlConfiguration ?? {};
+}
+
+const acoesDe = (lista: string): AcaoDoManifest[] => Object.values(controlConfiguration()[lista]?.actions ?? {});
+const semPontoFinal = (texto: unknown) => String(texto ?? '').replace(/\.$/, '');
+
+describe('Interface estática: cabeçalho, tabelas e anotações (CA1, CA2, CA6, CA7, CA36)', () => {
+  it('CA1: UI.Identification perde as 7 entradas e mantém transições, Emitir Aval, Alterar Criticidade e Aplicar Template', async () => {
+    const modelo = await carregarModelo();
+    const identificacao = (modelo.definitions['TratativaAppService.Tratativas']['@UI.Identification'] ?? []) as Array<{
+      Action?: string;
+    }>;
+    const acoes = identificacao.map((entrada) => String(entrada.Action));
+
+    for (const saiu of [
+      'criarAcao',
+      'criarSubacao',
+      'delegarAcao',
+      'anexarEvidencia',
+      'removerEvidencia',
+      'comentarTratativa',
+      'comentarAcao',
+    ]) {
+      expect(acoes).not.toContain(`TratativaAppService.${saiu}`);
+    }
+    expect(acoes).toEqual([
+      'TratativaAppService.iniciarTratativa',
+      'TratativaAppService.encerrarTratativa',
+      'TratativaAppService.cancelarTratativa',
+      'TratativaAppService.reabrirTratativa',
+      'TratativaAppService.emitirAvalTecnico',
+      'TratativaAppService.mudarCriticidade',
+      'TratativaAppService.aplicarTemplate',
+    ]);
+  });
+
+  it('A UI.LineItem de Acoes não declara mais Iniciar e Concluir e ganha a coluna "Ação mãe"', async () => {
+    const modelo = await carregarModelo();
+    const linha = (modelo.definitions['TratativaAppService.Acoes']['@UI.LineItem'] ?? []) as Array<{
+      $Type?: string;
+      Value?: { '='?: string };
+      Label?: string;
+    }>;
+
+    expect(linha.filter((entrada) => entrada.$Type === 'UI.DataFieldForAction')).toEqual([]);
+    const mae = linha.find((entrada) => entrada.Value?.['='] === 'acaoMae_codigo');
+    expect(mae?.Label).toBe('Ação mãe');
+  });
+
+  it('CA36: os placeholders de Comentário e Justificativa são os textos da spec e os de Descrição seguem os vigentes', async () => {
+    const modelo = await carregarModelo();
+    const acoes = modelo.definitions['TratativaAppService.Acoes'].actions ?? {};
+    const tratativas = modelo.definitions['TratativaAppService.Tratativas'].actions ?? {};
+    const comentario =
+      'Digite seu comentário sobre esta ocorrência ou ação (até 2.000 caracteres). Evite incluir nomes de pessoas ou dados sensíveis. Menções a participantes devem ser feitas no campo de menções';
+
+    expect(semPontoFinal(acoes.comentarAcao?.params?.texto?.['@UI.Placeholder'])).toBe(comentario);
+    expect(semPontoFinal(tratativas.comentarTratativa?.params?.texto?.['@UI.Placeholder'])).toBe(comentario);
+    expect(semPontoFinal(acoes.delegarAcao?.params?.justificativa?.['@UI.Placeholder'])).toBe(
+      'Explique o motivo sem incluir nomes ou dados sensíveis',
+    );
+    expect(acoes.criarSubacao?.params?.descricao?.['@UI.Placeholder']).toBe(
+      'Descreva os fatos sem incluir nomes ou dados sensíveis.',
+    );
+  });
+
+  it('SideEffects das transições do cabeçalho reavaliam Criar Ação, Comentar Tratativa e as tabelas sem recarregar (r1, I1)', async () => {
+    const modelo = await carregarModelo();
+    const acoes = modelo.definitions['TratativaAppService.Tratativas'].actions as Record<string, Record<string, unknown>>;
+
+    for (const transicao of ['iniciarTratativa', 'encerrarTratativa', 'cancelarTratativa', 'reabrirTratativa']) {
+      expect(acoes[transicao]['@Common.SideEffects.TargetProperties']).toEqual(
+        expect.arrayContaining([
+          'in/podeCriarAcao',
+          'in/podeComentarTratativa',
+          'in/ocultaComentarTratativa',
+          'in/ocultaOperacoesDeAcao',
+        ]),
+      );
+      expect(acoes[transicao]['@Common.SideEffects.TargetEntities']).toEqual(
+        expect.arrayContaining(['in/acoes', 'in/evidencias', 'in/comentarios']),
+      );
+    }
+  });
+
+  it('CA2, CA6, CA7: o manifest declara as 7 ações do Plano de Ação; Criar Ação usa binding e as 6 de linha exigem 1 seleção', () => {
+    const acoes = acoesDe(LISTA_DE_ACOES);
+    const dePagina = acoes.filter((acao) => typeof acao.visible === 'string' && acao.visible.startsWith('{='));
+    const deLinha = acoes.filter((acao) => !dePagina.includes(acao));
+
+    expect(acoes).toHaveLength(7);
+    expect(dePagina).toHaveLength(1);
+    expect(dePagina[0].visible).toBe('{= ${ocultaGestaoAcoes} !== true }');
+    expect(dePagina[0].enabled).toBe('{= ${podeCriarAcao} === true }');
+    expect(dePagina[0].press).toMatch(MODULO_DE_LINHA);
+    expect(deLinha).toHaveLength(6);
+    for (const acao of deLinha) {
+      expect(acao.requiresSelection).toBe(true);
+      expect(acao.enableOnSelect).toBe('single');
+      expect(acao.press).toMatch(MODULO_DE_LINHA);
+      expect(acao.visible).toMatch(MODULO_DE_LINHA);
+      expect(acao.enabled).toMatch(MODULO_DE_LINHA);
+    }
+    for (const acao of acoes) expect(String(acao.text ?? '').length).toBeGreaterThan(0);
+  });
+
+  it('CA6, CA7: Remover Evidência é a ação de linha da seção Evidências (1 seleção)', () => {
+    const evidencias = acoesDe(LISTA_DE_EVIDENCIAS);
+
+    expect(evidencias).toHaveLength(1);
+    expect(evidencias[0].requiresSelection).toBe(true);
+    expect(evidencias[0].enableOnSelect).toBe('single');
+    expect(evidencias[0].press).toMatch(MODULO_DE_LINHA);
+    expect(evidencias[0].visible).toMatch(MODULO_DE_LINHA);
+    expect(evidencias[0].enabled).toMatch(MODULO_DE_LINHA);
+    expect(String(evidencias[0].text ?? '').length).toBeGreaterThan(0);
+  });
+
+  it('CA2: Comentar Tratativa é a ação da seção Comentários, com binding exato de visibilidade e habilitação', () => {
+    const comentarios = acoesDe(LISTA_DE_COMENTARIOS);
+
+    expect(comentarios).toHaveLength(1);
+    expect(comentarios[0].visible).toBe('{= ${ocultaComentarTratativa} !== true }');
+    expect(comentarios[0].enabled).toBe('{= ${podeComentarTratativa} === true }');
+    expect(comentarios[0].press).toMatch(MODULO_DE_LINHA);
+    expect(String(comentarios[0].text ?? '').length).toBeGreaterThan(0);
+  });
+
+  it('as 7 ações de linha têm métodos de módulo distintos', () => {
+    const deLinha = [...acoesDe(LISTA_DE_ACOES), ...acoesDe(LISTA_DE_EVIDENCIAS)].filter(
+      (acao) => acao.enableOnSelect === 'single',
+    );
+    const metodos = deLinha.map((acao) => String(acao.press));
+
+    expect(metodos).toHaveLength(7);
+    expect(new Set(metodos).size).toBe(7);
+  });
+
+  it('N3-4: sap.ui.unified está declarada em sap.ui5.dependencies.libs e em framework.libraries do ui5.yaml', () => {
+    const ui5 = manifesto()['sap.ui5'] as { dependencies?: { libs?: Record<string, unknown> } };
+
+    expect(Object.keys(ui5.dependencies?.libs ?? {})).toContain('sap.ui.unified');
+    expect(textoDo(UI5_YAML)).toMatch(/^\s*-\s*name:\s*sap\.ui\.unified\s*$/m);
+  });
+
+  it('CA17: a extensão do app tem o módulo de handlers, o módulo puro e o fragmento do diálogo de anexo', () => {
+    const fragmento = textoDo(join(EXTENSAO, 'fragment', 'AnexarEvidencia.fragment.xml'));
+
+    expect(existsSync(join(EXTENSAO, 'acoes', 'OperacoesLinha.js'))).toBe(true);
+    expect(existsSync(join(EXTENSAO, 'acoes', 'pedidoAnexo.js'))).toBe(true);
+    expect(fragmento).toContain('FileUploader');
+    for (const id of ['arquivo', 'descricao', 'aviso']) expect(fragmento).toContain(`id="${id}"`);
+    for (const proibido of ['nomeArquivo', 'mimeType', 'conteudo']) expect(fragmento).not.toContain(`id="${proibido}"`);
   });
 });
