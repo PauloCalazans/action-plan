@@ -1,11 +1,12 @@
 import cds from '@sap/cds';
 import { linhas } from './apoio/banco';
-import { criarAvulsa, abrirPorApp, sufixoUnico, mudarStatus } from './apoio/tratativas';
+import { criarAvulsa, abrirPorApp, sufixoUnico, mudarStatus, type Envia } from './apoio/tratativas';
 import { comoGestor, comoUsuario, comoApp, semAuth, comoM1001, comoM2002, comoM9999 } from './apoio/usuarios';
 import { comentarTratativa, listarComentariosTratativa } from './apoio/comentarios';
 import { atribuirResponsavelPrincipal, incluirParticipante, consultarTratativa } from './apoio/responsaveis';
 import { criarAcao } from './apoio/acoes';
 import { registrarCredenciais } from './apoio/credenciais';
+import { encerrarComAval } from './apoio/encerramento';
 
 const { GET, POST, PUT, PATCH, DELETE } = cds.test(__dirname + '/..');
 
@@ -257,7 +258,7 @@ describe('Etapa 1: comentários na Tratativa (R1-R4, R7, R8, R13)', () => {
   // CA26: Tratativa Encerrada recusa com 409 'Tratativa Encerrada não pode ser alterada.'
   test('CA26: comentário em Tratativa Encerrada recusa com 409', async () => {
     const t = await criarAvulsa(POST, { titulo: `CA26-${sufixoUnico()}` });
-    await mudarStatus(POST, t.data.codigo, { status: 'Encerrada', justificativa: 'Concluída' }, comoGestor);
+    expect((await encerrarComAval(POST as unknown as Envia, t.data.codigo)).status).toBe(204);
 
     const r = await comentarTratativa(POST, t.data.codigo, { texto: 'teste' }, comoGestor);
 
@@ -372,7 +373,7 @@ describe('Etapa 1: comentários na Tratativa (R1-R4, R7, R8, R13)', () => {
   test('CA38: consulta permitida em Tratativa Encerrada', async () => {
     const t = await criarAvulsa(POST, { titulo: `CA38-${sufixoUnico()}` });
     await comentarTratativa(POST, t.data.codigo, { texto: 'Comentário antes' }, comoGestor);
-    await mudarStatus(POST, t.data.codigo, { status: 'Encerrada', justificativa: 'OK' }, comoGestor);
+    expect((await encerrarComAval(POST as unknown as Envia, t.data.codigo)).status).toBe(204);
 
     const r = await listarComentariosTratativa(GET, { tratativa: t.data.codigo }, comoGestor);
 

@@ -8,6 +8,7 @@ import { abrirPorApp, criarAvulsa, mudarStatus, type Envia } from './apoio/trata
 import { fixarInstante, liberarRelogio } from './apoio/relogio';
 import { comoAdmin, comoGestor, comoM2002 } from './apoio/usuarios';
 import { registrarCredenciais } from './apoio/credenciais';
+import { encerrarComAval } from './apoio/encerramento';
 import { limparEnviosEmail, obterEnviosEmail } from './apoio/email-espiao';
 import { limparEnviosTeams, obterEnviosTeams } from './apoio/teams-espiao';
 import { limparDiretorio } from './apoio/diretorio-espiao';
@@ -115,6 +116,11 @@ async function mudarAcao(tratativa: string, acao: string, status: string, justif
 }
 
 async function mudarTratativa(tratativa: string, status: string, justificativa?: string) {
+  if (status === 'Encerrada') {
+    const encerramento = await encerrarComAval(enviar, tratativa, { justificativa });
+    expect(encerramento.status).toBe(204);
+    return;
+  }
   const resposta = await mudarStatus(enviar, tratativa, {
     status,
     ...(justificativa ? { justificativa } : {}),

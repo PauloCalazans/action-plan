@@ -2,6 +2,8 @@ import cds from '@sap/cds';
 import { linhas } from './apoio/banco';
 import { bloqueiaAntesDeEscrever, instalarEspiao, type Espiao } from './apoio/banco-espiao';
 import { registrarCredenciais } from './apoio/credenciais';
+import { emitirAval, comoValidador } from './apoio/aval';
+import { encerrarComAval } from './apoio/encerramento';
 import { fixarInstante, liberarRelogio } from './apoio/relogio';
 import { abrirPorApp, criarAvulsa, mudarStatus, type Envia } from './apoio/tratativas';
 import { comoAdmin, comoApp, comoGestor, comoUsuario, semAuth } from './apoio/usuarios';
@@ -9,7 +11,6 @@ import { comoAdmin, comoApp, comoGestor, comoUsuario, semAuth } from './apoio/us
 const { GET, POST, PATCH, DELETE } = cds.test(__dirname + '/..');
 const enviar = POST as unknown as Envia;
 const BASE = '/api/tratativa/v1';
-const TRATATIVAS = 'br.com.calazanstec.Tratativas';
 const HISTORICO = 'br.com.calazanstec.HistoricoTratativa';
 
 jest.setTimeout(60000);
@@ -27,12 +28,20 @@ afterEach(() => {
 const mudar = (codigo: string, corpo: Record<string, unknown>, como: unknown = comoGestor) =>
   mudarStatus(enviar, codigo, corpo, como);
 
-// Cria uma avulsa Aberta e, se pedido, leva direto ao Status inicial do caso (setup, sem passar pelo mudarStatus).
+// Cria uma avulsa e prepara o Status solicitado pelo contrato OData.
 async function nova(status = 'Aberta', dados: Record<string, unknown> = {}): Promise<string> {
   const r = await criarAvulsa(enviar, dados);
   expect(r.status).toBe(200);
   const codigo = r.data.codigo as string;
-  if (status !== 'Aberta') await cds.db.run(UPDATE.entity(TRATATIVAS).set({ status }).where({ codigo }));
+  if (status === 'Encerrada') {
+    expect((await encerrarComAval(enviar, codigo)).status).toBe(204);
+  } else if (status !== 'Aberta') {
+    const transicao = await mudar(codigo, {
+      status,
+      ...(status === 'Cancelada' ? { justificativa: 'Cancelada no preparo do teste' } : {}),
+    });
+    expect(transicao.status).toBe(204);
+  }
   return codigo;
 }
 
@@ -67,15 +76,28 @@ describe('transições aceitas (R2, R5, R7)', () => {
   it.each([
     ['CA2/CA14: iniciar sem justificativa', 'Aberta', { status: 'Em andamento' }, 'Em andamento'],
     ['CA3: encerrar Em andamento', 'Em andamento', { status: 'Encerrada' }, 'Encerrada'],
-    ['CA4/CA16: encerrar Aberta direto', 'Aberta', { status: 'Encerrada' }, 'Encerrada'],
     ['CA6: cancelar Aberta com justificativa', 'Aberta', { status: 'Cancelada', justificativa: 'duplicada' }, 'Cancelada'],
     ['CA6: cancelar Em andamento com justificativa', 'Em andamento', { status: 'Cancelada', justificativa: 'duplicada' }, 'Cancelada'],
     ['CA5: reabrir Encerrada com justificativa', 'Encerrada', { status: 'Em andamento', justificativa: 'faltou ação' }, 'Em andamento'],
   ])('%s → 204 e Status novo no banco', async (_nome, inicial, corpo, esperado) => {
     const codigo = await nova(inicial);
-    const r = await mudar(codigo, corpo);
+    const r =
+      corpo.status === 'Encerrada'
+        ? await encerrarComAval(enviar, codigo)
+        : await mudar(codigo, corpo);
     expect(r.status).toBe(204);
     expect(await statusDe(codigo)).toBe(esperado);
+  });
+
+  it('CA42: encerrar diretamente de Aberta recusa com a mensagem específica da spec', async () => {
+    const codigo = await nova();
+    await recusa(
+      codigo,
+      { status: 'Encerrada' },
+      409,
+      'status',
+      'Tratativa em status Aberta não pode ser encerrada diretamente: deve transitar para Em andamento e receber Aval Técnico aprovado.',
+    );
   });
 });
 
@@ -137,7 +159,7 @@ describe('Criticidade e Data prevista na reabertura (R6)', () => {
     const codigo = await nova('Aberta', { criticidade: 'Alta' });
     expect((await linhas('Tratativas', { codigo }))[0].dataPrevistaConclusao).toBe('2026-10-14');
     expect((await mudar(codigo, { status: 'Em andamento' })).status).toBe(204);
-    expect((await mudar(codigo, { status: 'Encerrada' })).status).toBe(204);
+    expect((await encerrarComAval(enviar, codigo)).status).toBe(204);
     fixarInstante('2026-10-20T10:00:00-03:00');
     expect((await mudar(codigo, { status: 'Em andamento', justificativa: 'reaberta' })).status).toBe(204);
     const [t] = await linhas('Tratativas', { codigo });
@@ -213,19 +235,27 @@ describe('histórico da transição (R9)', () => {
     ['Em andamento', { status: 'Cancelada', justificativa: 'cancelar' }, 'Cancelamento'],
   ])('CA21: de %s com %j grava o evento %s', async (inicial, corpo, evento) => {
     const codigo = await nova(inicial);
-    expect((await mudar(codigo, corpo)).status).toBe(204);
+    const antes = await transicoes(codigo);
+    const resposta =
+      corpo.status === 'Encerrada'
+        ? await encerrarComAval(enviar, codigo)
+        : await mudar(codigo, corpo);
+    expect(resposta.status).toBe(204);
     const trans = await transicoes(codigo);
-    expect(trans).toHaveLength(1);
-    expect(trans[0].evento).toBe(evento);
+    const novas = trans.slice(antes.length);
+    expect(novas).toHaveLength(1);
+    expect(novas[0].evento).toBe(evento);
   });
 
-  it('CA77: Aberta → Encerrada sem justificativa é Encerramento; Aberta → Cancelada sem justificativa é recusada', async () => {
+  it('CA77/CA42: Aberta → Encerrada é recusada e Aberta → Cancelada sem justificativa também é recusada', async () => {
     const a = await nova();
-    expect((await mudar(a, { status: 'Encerrada' })).status).toBe(204);
-    const trans = await transicoes(a);
-    expect(trans).toHaveLength(1);
-    expect(trans[0].evento).toBe('Encerramento');
-    expect(trans[0].justificativa).toBeNull();
+    await recusa(
+      a,
+      { status: 'Encerrada' },
+      409,
+      'status',
+      'Tratativa em status Aberta não pode ser encerrada diretamente: deve transitar para Em andamento e receber Aval Técnico aprovado.',
+    );
 
     const b = await nova();
     await recusa(b, { status: 'Cancelada' }, 400, 'justificativa', /Justificativa/);
@@ -241,7 +271,11 @@ describe('histórico da transição (R9)', () => {
     ];
     for (const [iso, corpo] of passos) {
       fixarInstante(iso);
-      expect((await mudar(codigo, corpo)).status).toBe(204);
+      const resposta =
+        corpo.status === 'Encerrada'
+          ? await encerrarComAval(enviar, codigo)
+          : await mudar(codigo, corpo);
+      expect(resposta.status).toBe(204);
     }
     const trans = await transicoes(codigo);
     expect(trans.map((h) => h.evento)).toEqual(['MudancaStatus', 'Encerramento', 'Reabertura', 'Cancelamento']);
@@ -277,6 +311,14 @@ describe('sem exclusão nem escrita pelo entity set (R11)', () => {
 describe('serialização por Tratativa (D9)', () => {
   it('CA46: dois encerramentos simultâneos → [204, 409], um único Encerramento', async () => {
     const codigo = await nova('Em andamento');
+    expect(
+      (await emitirAval(
+        enviar,
+        codigo,
+        { parecer: 'Aprovado', fundamentacao: 'Eficacia confirmada em campo e evidencias revisadas.' },
+        comoValidador,
+      )).status,
+    ).toBe(204);
     const [a, b] = await Promise.all([
       mudar(codigo, { status: 'Encerrada' }),
       mudar(codigo, { status: 'Encerrada' }),
@@ -290,6 +332,14 @@ describe('serialização por Tratativa (D9)', () => {
 
   it('D9: num pedido isolado a primeira leitura de Tratativas é forUpdate e nada foi escrito antes', async () => {
     const codigo = await nova('Em andamento');
+    expect(
+      (await emitirAval(
+        enviar,
+        codigo,
+        { parecer: 'Aprovado', fundamentacao: 'Eficacia confirmada em campo e evidencias revisadas.' },
+        comoValidador,
+      )).status,
+    ).toBe(204);
     espiao.limpar();
     const r = await mudar(codigo, { status: 'Encerrada' });
     expect(r.status).toBe(204);
@@ -302,7 +352,7 @@ describe('aplicativo de origem e Origens (R29, R31)', () => {
     const aberta = await abrirPorApp(enviar);
     expect(aberta.status).toBe(200);
     const codigo = aberta.data.codigo as string;
-    expect((await mudar(codigo, { status: 'Encerrada' })).status).toBe(204);
+    expect((await encerrarComAval(enviar, codigo)).status).toBe(204);
     const r = await GET(`/api/integracao-origem/v1/consultarPorCodigo(codigo=${codigo})`, comoApp);
     expect(r.status).toBe(200);
     const chaves = Object.keys(r.data).filter((k) => !k.startsWith('@odata')).sort();
@@ -318,7 +368,7 @@ describe('aplicativo de origem e Origens (R29, R31)', () => {
     const avulsa = await nova();
     for (const codigo of [porApp.data.codigo as string, avulsa]) {
       expect((await mudar(codigo, { status: 'Em andamento' })).status).toBe(204);
-      expect((await mudar(codigo, { status: 'Encerrada' })).status).toBe(204);
+      expect((await encerrarComAval(enviar, codigo)).status).toBe(204);
     }
   });
 });

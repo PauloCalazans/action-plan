@@ -2,6 +2,7 @@ import cds from '@sap/cds';
 import { criarAcao, mudarStatusAcao } from './apoio/acoes';
 import { linhas } from './apoio/banco';
 import { registrarCredenciais } from './apoio/credenciais';
+import { encerrarComAval } from './apoio/encerramento';
 import { instalarEspiao, type Espiao } from './apoio/banco-espiao';
 import { fixarInstante, liberarRelogio } from './apoio/relogio';
 import { criarAvulsa, sufixoUnico, mudarStatus, type Envia } from './apoio/tratativas';
@@ -276,7 +277,7 @@ describe('Etapa 1: Complemento de Testes de Inclusão e Armazenamento de Evidên
     const a = await novaAcao(t);
     const rConcluir = await mudarStatusAcao(enviar, t, { acao: a, status: 'Concluída' }, comoGestor);
     expect(rConcluir.status).toBe(204);
-    const rEncerrar = await mudarStatus(enviar, t, { status: 'Encerrada' }, comoGestor);
+    const rEncerrar = await encerrarComAval(enviar, t);
     expect(rEncerrar.status).toBe(204);
     const r = await anexarEvidencia(
       enviar,
@@ -339,7 +340,7 @@ describe('Etapa 1: Complemento de Testes de Inclusão e Armazenamento de Evidên
     const a = await novaAcao(t);
     const rConcluir = await mudarStatusAcao(enviar, t, { acao: a, status: 'Concluída' }, comoGestor);
     expect(rConcluir.status).toBe(204);
-    const rEncerrar = await mudarStatus(enviar, t, { status: 'Encerrada' }, comoGestor);
+    const rEncerrar = await encerrarComAval(enviar, t);
     expect(rEncerrar.status).toBe(204);
     const r = await anexarEvidencia(
       enviar,

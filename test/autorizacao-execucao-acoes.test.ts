@@ -7,6 +7,7 @@ import { mudarStatusAcao, criarAcao, criarSubacao } from './apoio/acoes';
 import { delegarAcao } from './apoio/responsaveis';
 import { linhas } from './apoio/banco';
 import { instalarEspiao, type Espiao } from './apoio/banco-espiao';
+import { encerrarComAval } from './apoio/encerramento';
 
 const { POST } = cds.test(__dirname + '/..');
 const enviar = POST as unknown as Envia;
@@ -210,8 +211,8 @@ describe('Etapa 3 - Autorização Dinâmica para Iniciar e Concluir Ação (R11,
       const tratativa = await criarTratativaAberta();
       const acaoCodigo = await acao(tratativa, { responsavel: 'M1001' });
       await mudarStatusAcao(enviar, tratativa, { acao: acaoCodigo, status: 'Concluída' }, comoGestor);
-      await mudarStatusTratativa(tratativa, 'Em andamento', undefined, comoGestor);
-      await mudarStatusTratativa(tratativa, 'Encerrada', undefined, comoGestor);
+      expect((await mudarStatusTratativa(tratativa, 'Em andamento', undefined, comoGestor)).status).toBe(204);
+      expect((await encerrarComAval(enviar, tratativa)).status).toBe(204);
       await recusaAcao(tratativa, acaoCodigo, { status: 'Concluída' }, 409, undefined, TRATATIVA_ENCERRADA);
     });
   });
@@ -354,12 +355,12 @@ describe('Etapa 3 - Autorização Dinâmica para Iniciar e Concluir Ação (R11,
     });
   });
 
-  describe('CA110: Responsável de Ação em Tratativa Encerrada pedindo Cancelada', () => {
-    it('recebe 403 na etapa 6 antes do 409 de Tratativa Encerrada', async () => {
+  describe('CA110: Responsável de Ação em Tratativa Cancelada pedindo Cancelada', () => {
+    it('recebe 403 na etapa 6 antes do estado final da Tratativa', async () => {
       const tratativa = await criarTratativaAberta();
       const acaoCodigo = await acao(tratativa, { responsavel: 'M1001' });
-      await mudarStatusTratativa(tratativa, 'Em andamento', undefined, comoGestor);
-      await mudarStatusTratativa(tratativa, 'Encerrada', undefined, comoGestor);
+      expect((await mudarStatusTratativa(tratativa, 'Em andamento', undefined, comoGestor)).status).toBe(204);
+      expect((await mudarStatusTratativa(tratativa, 'Cancelada', 'Finalizar cenário', comoGestor)).status).toBe(204);
       const r = await mudar(tratativa, acaoCodigo, { status: 'Cancelada' }, comoM1001('m1001'));
       expect(r.status).toBe(403);
     });

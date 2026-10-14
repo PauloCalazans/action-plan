@@ -2,6 +2,7 @@ import cds from '@sap/cds';
 import { criarAcao, mudarStatusAcao } from './apoio/acoes';
 import { linhas } from './apoio/banco';
 import { registrarCredenciais } from './apoio/credenciais';
+import { encerrarComAval } from './apoio/encerramento';
 import { instalarEspiao, type Espiao } from './apoio/banco-espiao';
 import { fixarInstante, liberarRelogio } from './apoio/relogio';
 import { criarAvulsa, sufixoUnico, mudarStatus, type Envia } from './apoio/tratativas';
@@ -245,7 +246,7 @@ describe('Etapa 2: Remoção Lógica e Auditoria de Evidências (removerEvidenci
 
     const rConcluir = await mudarStatusAcao(enviar, t, { acao: a, status: 'Concluída' }, comoGestor);
     expect(rConcluir.status).toBe(204);
-    const rEncerrar = await mudarStatus(enviar, t, { status: 'Encerrada' }, comoGestor);
+    const rEncerrar = await encerrarComAval(enviar, t);
     expect(rEncerrar.status).toBe(204);
 
     const r = await removerEvidencia(enviar, t, { acao: a, evidencia: evId }, comoGestor);

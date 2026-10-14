@@ -5,6 +5,8 @@ import { criarAvulsa, sufixoUnico, mudarStatus, type Envia } from './apoio/trata
 import { comoGestor, comoM1001 } from './apoio/usuarios';
 import { comentarTratativa, comentarAcao, listarComentariosTratativa } from './apoio/comentarios';
 import { criarAcao } from './apoio/acoes';
+import { emitirAval, comoValidador } from './apoio/aval';
+import { encerrarComAval } from './apoio/encerramento';
 import { registrarCredenciais } from './apoio/credenciais';
 
 const { POST, GET } = cds.test(__dirname + '/..');
@@ -108,7 +110,7 @@ describe('Etapa 3: auditoria imutável, concorrência D9 e atividade recente der
   test('CA48: comentário recusado (Tratativa Encerrada) não grava histórico nem comentário', async () => {
     const t = await criarAvulsa(enviar, { titulo: `CA48b-${sufixoUnico()}` });
     const codigo = t.data.codigo as string;
-    expect((await mudarStatus(enviar, codigo, { status: 'Encerrada', justificativa: 'Fechamento CA48b' }, comoGestor)).status).toBe(204);
+    expect((await encerrarComAval(enviar, codigo, { justificativa: 'Fechamento CA48b' })).status).toBe(204);
 
     const antesHistorico = (await historicoTratativa(codigo)).filter((h) => h.evento === 'InclusaoComentario').length;
     const antesComentarios = (await comentariosDe(codigo)).length;
@@ -160,6 +162,15 @@ describe('Etapa 3: auditoria imutável, concorrência D9 e atividade recente der
   test('CA52a: comentário simultâneo ao encerramento é serializado (ambos vistos ou comentário recusado com 409)', async () => {
     const t = await criarAvulsa(enviar, { titulo: `CA52a-${sufixoUnico()}` });
     const codigo = t.data.codigo as string;
+    expect((await mudarStatus(enviar, codigo, { status: 'Em andamento' }, comoGestor)).status).toBe(204);
+    expect(
+      (await emitirAval(
+        enviar,
+        codigo,
+        { parecer: 'Aprovado', fundamentacao: 'Eficacia confirmada em campo e evidencias revisadas.' },
+        comoValidador,
+      )).status,
+    ).toBe(204);
 
     const [comentario, encerramento] = await Promise.all([
       comentarTratativa(enviar, codigo, { texto: 'Comentário concorrente ao encerramento' }, comoGestor),
@@ -202,7 +213,7 @@ describe('Etapa 3: auditoria imutável, concorrência D9 e atividade recente der
   test('CA60: Tratativa Encerrada recusa comentário com 409 antes de validar tamanho do texto', async () => {
     const t = await criarAvulsa(enviar, { titulo: `CA60-${sufixoUnico()}` });
     const codigo = t.data.codigo as string;
-    expect((await mudarStatus(enviar, codigo, { status: 'Encerrada', justificativa: 'Fechamento CA60' }, comoGestor)).status).toBe(204);
+    expect((await encerrarComAval(enviar, codigo, { justificativa: 'Fechamento CA60' })).status).toBe(204);
 
     const texto2001 = 'x'.repeat(2001);
     const r = await comentarTratativa(enviar, codigo, { texto: texto2001 }, comoGestor);
@@ -230,4 +241,3 @@ describe('Etapa 3: auditoria imutável, concorrência D9 e atividade recente der
     expect(eventosAcao).toContain('InclusaoComentario');
   });
 });
-

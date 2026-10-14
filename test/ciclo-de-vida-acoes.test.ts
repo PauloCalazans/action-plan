@@ -3,6 +3,7 @@ import { consultarAcao, criarAcao, criarSubacao, mudarStatusAcao, type Consulta 
 import { linhas } from './apoio/banco';
 import { bloqueiaAntesDeEscrever, instalarEspiao, type Espiao } from './apoio/banco-espiao';
 import { registrarCredenciais } from './apoio/credenciais';
+import { encerrarComAval } from './apoio/encerramento';
 import { fixarInstante, liberarRelogio } from './apoio/relogio';
 import { abrirPorApp, criarAvulsa, mudarStatus, sufixoUnico, type Envia } from './apoio/tratativas';
 import { comoApp, comoGestor, comoUsuario, semAuth } from './apoio/usuarios';
@@ -10,7 +11,6 @@ import { comoApp, comoGestor, comoUsuario, semAuth } from './apoio/usuarios';
 const { GET, POST } = cds.test(__dirname + '/..');
 const consultar = GET as unknown as Consulta;
 const enviar = POST as unknown as Envia;
-const TRATATIVAS = 'br.com.calazanstec.Tratativas';
 const UUID_INEXISTENTE = '00000000-0000-4000-8000-000000000000';
 const HOJE = '2026-10-08';
 const PRAZO = '2026-11-07';
@@ -39,12 +39,26 @@ const dados = (descricao: string, extra: Record<string, unknown> = {}) => ({
   ...extra,
 });
 
-// Tratativa avulsa; com status diferente de Aberta, leva direto ao status pedido (setup no banco).
+// Tratativa avulsa; status de preparo passa pelo contrato OData.
 async function nova(status = 'Aberta'): Promise<string> {
   const r = await criarAvulsa(enviar);
   expect(r.status).toBe(200);
   const codigo = r.data.codigo as string;
-  if (status !== 'Aberta') await cds.db.run(UPDATE.entity(TRATATIVAS).set({ status }).where({ codigo }));
+  if (status === 'Em andamento') {
+    const inicio = await mudarStatus(enviar, codigo, { status }, comoGestor);
+    expect(inicio.status).toBe(204);
+  } else if (status === 'Encerrada') {
+    const encerramento = await encerrarComAval(enviar, codigo);
+    expect(encerramento.status).toBe(204);
+  } else if (status === 'Cancelada') {
+    const cancelamento = await mudarStatus(
+      enviar,
+      codigo,
+      { status, justificativa: 'Cancelada no preparo do teste' },
+      comoGestor,
+    );
+    expect(cancelamento.status).toBe(204);
+  }
   return codigo;
 }
 
@@ -230,19 +244,20 @@ describe('transições de Status da Ação (R6-R10)', () => {
   });
 
   it('CA50/CA51/CA53: encerrar Tratativa com Ação ou Subação abertas → 409 e Tratativa inalterada', async () => {
-    const pendente = await nova();
+    const pendente = await nova('Em andamento');
     await acao(pendente);
     const r1 = await mudarStatus(enviar, pendente, { status: 'Encerrada' }, comoGestor);
     expect(r1.status).toBe(409);
     expect(r1.data.error.message).toBe('Tratativa não pode ser encerrada: há Ações não concluídas nem canceladas.');
-    expect(await statusTratativa(pendente)).toBe('Aberta');
+    expect(await statusTratativa(pendente)).toBe('Em andamento');
 
-    const emAndamento = await nova();
+    const emAndamento = await nova('Em andamento');
     const a = await acao(emAndamento);
     await leva(emAndamento, a, 'Em andamento');
     const r2 = await mudarStatus(enviar, emAndamento, { status: 'Encerrada' }, comoGestor);
     expect(r2.status).toBe(409);
     expect(r2.data.error.message).toBe('Tratativa não pode ser encerrada: há Ações não concluídas nem canceladas.');
+    expect(await statusTratativa(emAndamento)).toBe('Em andamento');
 
     const comSubacao = await nova('Em andamento');
     const mae = await acao(comSubacao);
@@ -255,16 +270,16 @@ describe('transições de Status da Ação (R6-R10)', () => {
   });
 
   it('CA52/CA54: encerrar Tratativa com todas as Ações finalizadas, ou sem nenhuma Ação → 204', async () => {
-    const finalizadas = await nova();
+    const finalizadas = await nova('Em andamento');
     const a = await acao(finalizadas);
     const b = await acao(finalizadas);
     await leva(finalizadas, a, 'Concluída');
     await leva(finalizadas, b, 'Cancelada', 'duplicada');
-    expect((await mudarStatus(enviar, finalizadas, { status: 'Encerrada' }, comoGestor)).status).toBe(204);
+    expect((await encerrarComAval(enviar, finalizadas)).status).toBe(204);
     expect(await statusTratativa(finalizadas)).toBe('Encerrada');
 
     const semAcoes = await nova();
-    expect((await mudarStatus(enviar, semAcoes, { status: 'Encerrada' }, comoGestor)).status).toBe(204);
+    expect((await encerrarComAval(enviar, semAcoes)).status).toBe(204);
     expect(await statusTratativa(semAcoes)).toBe('Encerrada');
   });
 
@@ -278,19 +293,28 @@ describe('transições de Status da Ação (R6-R10)', () => {
     expect(await statusAcao(a)).toBe('Em andamento');
   });
 
-  it('CA56 (transição)/CA58 (reabertura): Ação em Tratativa Encerrada ou Cancelada → 409; após reabrir a Tratativa, aceito', async () => {
-    const t = await nova();
-    const a = await acao(t);
-    const c = await nova();
-    const b = await acao(c);
-    await cds.db.run(UPDATE.entity(TRATATIVAS).set({ status: 'Encerrada' }).where({ codigo: t }));
-    await recusaAcao(t, a, { status: 'Em andamento' }, 409, undefined, TRATATIVA_ENCERRADA);
-    await cds.db.run(UPDATE.entity(TRATATIVAS).set({ status: 'Cancelada' }).where({ codigo: c }));
-    await recusaAcao(c, b, { status: 'Em andamento' }, 409, undefined, 'Tratativa Cancelada não pode ser alterada.');
-    const r = await mudarStatus(enviar, t, { status: 'Em andamento', justificativa: 'faltou ação' }, comoGestor);
-    expect(r.status).toBe(204);
-    await leva(t, a, 'Em andamento');
-    expect(await statusAcao(a)).toBe('Em andamento');
+  it('CA56/CA58: Tratativa Cancelada bloqueia Ação aberta; reabertura não reabre Ação concluída', async () => {
+    const encerrada = await nova('Em andamento');
+    const concluida = await acao(encerrada);
+    await leva(encerrada, concluida, 'Concluída');
+    expect((await encerrarComAval(enviar, encerrada)).status).toBe(204);
+
+    const cancelada = await nova('Em andamento');
+    const aberta = await acao(cancelada);
+    expect((await mudarStatus(enviar, cancelada, { status: 'Cancelada', justificativa: 'Finalizar cenário' }, comoGestor)).status).toBe(204);
+    await recusaAcao(cancelada, aberta, { status: 'Em andamento' }, 409, undefined, 'Tratativa Cancelada não pode ser alterada.');
+
+    const reabertura = await mudarStatus(
+      enviar,
+      encerrada,
+      { status: 'Em andamento', justificativa: 'Verificar nova causa' },
+      comoGestor,
+    );
+    expect(reabertura.status).toBe(204);
+    expect(await statusAcao(concluida)).toBe('Concluída');
+    const novaAcao = await acao(encerrada);
+    await leva(encerrada, novaAcao, 'Em andamento');
+    expect(await statusAcao(novaAcao)).toBe('Em andamento');
   });
 
   it('CA59 (transição)/CA60: usuário comum que não é o Responsável → 403 e nada muda', async () => {
@@ -375,7 +399,7 @@ describe('transições de Status da Ação (R6-R10)', () => {
   it('CA78 + D9: encerramento da Tratativa e criação de Ação simultâneos → Tratativa nunca encerra com Ação aberta', async () => {
     // Com uma Ação Pendente já existente, o encerramento é recusado por R16 em qualquer ordem de execução:
     // a criação concorrente só acrescenta outra Ação aberta. Determinístico, sem depender da ordem da corrida.
-    const t = await nova();
+    const t = await nova('Em andamento');
     await acao(t);
     const [encerrar, criar] = await Promise.all([
       mudarStatus(enviar, t, { status: 'Encerrada' }, comoGestor),
@@ -384,7 +408,7 @@ describe('transições de Status da Ação (R6-R10)', () => {
     expect(encerrar.status).toBe(409);
     expect(encerrar.data.error.message).toBe('Tratativa não pode ser encerrada: há Ações não concluídas nem canceladas.');
     expect(criar.status).toBe(200);
-    expect(await statusTratativa(t)).toBe('Aberta');
+    expect(await statusTratativa(t)).toBe('Em andamento');
   });
 
   it('CA87 (conclusão): conclusão funciona igualmente em Tratativa de aplicativo e em Tratativa avulsa', async () => {
@@ -439,17 +463,17 @@ describe('transições de Status da Ação (R6-R10)', () => {
     expect(r.data.error.message).toBe('Ação não encontrada.');
   });
 
-  it('CA91/CA93: Tratativa Encerrada → 409 "Tratativa Encerrada não pode ser alterada." antes do status de destino', async () => {
+  it('CA93: Tratativa Cancelada com Ação aberta → 409 antes do status de destino', async () => {
     const t = await nova();
     const a = await acao(t);
-    await cds.db.run(UPDATE.entity(TRATATIVAS).set({ status: 'Encerrada' }).where({ codigo: t }));
+    expect((await mudarStatus(enviar, t, { status: 'Cancelada', justificativa: 'Finalizar cenário' }, comoGestor)).status).toBe(204);
     const r = await mudar(t, a, { status: 'Em andamento' });
     expect(r.status).toBe(409);
-    expect(r.data.error.message).toBe(TRATATIVA_ENCERRADA);
+    expect(r.data.error.message).toBe('Tratativa Cancelada não pode ser alterada.');
   });
 
   it('CA93: status ausente, nulo ou só com espaços → 400 "O campo Status é obrigatório." com target status', async () => {
-    const t = await nova();
+    const t = await nova('Em andamento');
     const a = await acao(t);
     for (const status of [undefined, null, '   ']) {
       await recusaAcao(t, a, { status }, 400, 'status', 'O campo Status é obrigatório.');
@@ -465,7 +489,7 @@ describe('transições de Status da Ação (R6-R10)', () => {
   it('CA104: Tratativa Cancelada → Encerrada recusa com 409 de transição antes de R16 (mesmo com Ação aberta)', async () => {
     const t = await nova();
     await acao(t);
-    await cds.db.run(UPDATE.entity(TRATATIVAS).set({ status: 'Cancelada' }).where({ codigo: t }));
+    expect((await mudarStatus(enviar, t, { status: 'Cancelada', justificativa: 'Finalizar cenário' }, comoGestor)).status).toBe(204);
     const r = await mudarStatus(enviar, t, { status: 'Encerrada' }, comoGestor);
     expect(r.status).toBe(409);
     expect(r.data.error.message).toBe('Transição não permitida: de Cancelada para Encerrada.');
@@ -486,7 +510,7 @@ describe('transições de Status da Ação (R6-R10)', () => {
     for (const status of [undefined, '   ']) {
       await recusaAcao(t, a, { status }, 400, 'status', 'O campo Status é obrigatório.');
     }
-    await cds.db.run(UPDATE.entity(TRATATIVAS).set({ status: 'Encerrada' }).where({ codigo: t }));
+    expect((await encerrarComAval(enviar, t)).status).toBe(204);
     const r = await mudar(t, a, { status: undefined });
     expect(r.status).toBe(409);
     expect(r.data.error.message).toBe(TRATATIVA_ENCERRADA);

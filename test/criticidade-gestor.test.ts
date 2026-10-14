@@ -2,6 +2,7 @@ import cds from '@sap/cds';
 import { linhas } from './apoio/banco';
 import { bloqueiaAntesDeEscrever, instalarEspiao, type Espiao } from './apoio/banco-espiao';
 import { registrarCredenciais } from './apoio/credenciais';
+import { encerrarComAval } from './apoio/encerramento';
 import { fixarInstante, liberarRelogio } from './apoio/relogio';
 import { criarAvulsa, mudarCriticidade, mudarStatus, type Envia } from './apoio/tratativas';
 import { comoApp, comoGestor, comoUsuario, semAuth } from './apoio/usuarios';
@@ -227,7 +228,7 @@ describe('serialização e atomicidade (R10, R21)', () => {
 describe('fronteira com o ciclo de vida', () => {
   it('Tratativa encerrada pelo Gestor e depois reaberta aceita nova Criticidade', async () => {
     const codigo = await nova('Baixa');
-    expect((await mudarStatus(enviar, codigo, { status: 'Encerrada' }, comoGestor)).status).toBe(204);
+    expect((await encerrarComAval(enviar, codigo)).status).toBe(204);
     expect((await mudar(codigo, { criticidade: 'Alta' })).status).toBe(409);
     expect((await mudarStatus(enviar, codigo, { status: 'Em andamento', justificativa: 'reabrir' }, comoGestor)).status).toBe(204);
     expect((await mudar(codigo, { criticidade: 'Alta' })).status).toBe(204);

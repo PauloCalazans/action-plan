@@ -1,4 +1,5 @@
 import cds from '@sap/cds';
+import { emitirAval, comoValidador } from './apoio/aval';
 import { linhas } from './apoio/banco';
 import { bloqueiaAntesDeEscrever, instalarEspiao, type Espiao } from './apoio/banco-espiao';
 import { registrarCredenciais } from './apoio/credenciais';
@@ -209,6 +210,13 @@ describe('acesso (R8)', () => {
 describe('serialização e atomicidade (R10, R21)', () => {
   it('CA72: editar e encerrar simultâneos → (204, 204) com a edição antes, ou (409, 204) sem edição', async () => {
     const codigo = await nova({ titulo: 'Título antigo' }, 'Em andamento');
+    const aval = await emitirAval(
+      enviar,
+      codigo,
+      { parecer: 'Aprovado', fundamentacao: 'Eficacia confirmada por verificacao independente.' },
+      comoValidador,
+    );
+    expect(aval.status).toBe(204);
     const [ed, enc] = await Promise.all([
       editarComo(codigo, { titulo: 'Título novo' }),
       mudarStatus(enviar, codigo, { status: 'Encerrada' }, comoGestor),

@@ -2,6 +2,7 @@ import cds from '@sap/cds';
 import { linhas } from './apoio/banco';
 import { registrarCredenciais } from './apoio/credenciais';
 import { criarAvulsa, editar, mudarStatus, type Envia } from './apoio/tratativas';
+import { emitirAval, comoValidador } from './apoio/aval';
 import { comoGestor, comoUsuario } from './apoio/usuarios';
 
 const { GET, POST } = cds.test(__dirname + '/..');
@@ -31,6 +32,13 @@ describe('Menor 1 (CA72): Título e encerramento simultâneos', () => {
   it('(204, 204) grava Edicao antes de Encerramento; (409, 204) deixa o Título como estava', async () => {
     for (let i = 0; i < 5; i++) {
       const codigo = await nova({ titulo: 'Título antigo' }, 'Em andamento');
+      const aval = await emitirAval(
+        enviar,
+        codigo,
+        { parecer: 'Aprovado', fundamentacao: 'Eficacia confirmada em campo e evidencias revisadas.' },
+        comoValidador,
+      );
+      expect(aval.status).toBe(204);
       const [ed, enc] = await Promise.all([
         editar(enviar, codigo, { titulo: 'Título novo' }, comoGestor),
         mudarStatus(enviar, codigo, { status: 'Encerrada' }, comoGestor),
