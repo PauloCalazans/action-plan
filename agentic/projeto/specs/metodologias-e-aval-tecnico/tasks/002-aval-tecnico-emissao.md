@@ -7,6 +7,29 @@
 > **Grupo 2 (decisão do humano, 2026-10-13):** esta task e a(s) task(s) 003, 004 são executadas num único ciclo (um RED, um GREEN, uma revisão de diff) e publicadas num único PR, nesta branch. O escopo do grupo é a união dos "## Arquivos" abaixo; RED, GREEN e critérios de cada task incorporada continuam no documento dela.
 
 
+## Objetivo
+Implementar a emissão e a consulta do Aval Técnico no `TratativaService`, com vigência e prazo derivados (DC-04, DC-05), designação de Validador por Origem (DC-01), evento `EmissaoAvalTecnico` com fundamentação consultável (DC-03) e acesso do Validador às Evidências, sem mudar ainda a regra de encerramento.
+
+## Arquivos
+
+### Criados
+- `srv/tratativa/aval-tecnico.ts` (situação do Aval: vigente, aptidão, exigência pós-reprovação, `dataBase`/`dataLimite`; emissão; consulta)
+- `srv/tratativa/validador-tecnico.ts` (`validadoresEfetivos(origemNormalizada)`, `usuarioEhValidadorHabilitado(req, codigoTratativa)`, `tratativasComValidadorHabilitado(req, codigos)` em lote; lê `Tratativas.origemNormalizada` num SELECT próprio depois de `bloquearTratativa`, sem alterar `srv/tratativa/bloqueio.ts`; origem nula ou sem linha em `ParametrosOrigem` usa a linha `*`, DC-16)
+- `test/apoio/aval.ts` (helpers `comoValidador`, `comoValidadorB`, `emitirAval(enviar, tratativa, dados, como)`, `consultarAval(...)`; sem `expect(`)
+- `test/metodologias-aval-tecnico.test.ts`
+
+### Modificados
+- `srv/tratativa-service.cds` (tipos `ItemAvalTecnico`, `DetalheAvalTecnico`, `ResultadoAvalTecnico`; function `consultarAvalTecnicoTratativa`; action `emitirAvalTecnico`; grant `authenticated-user`; `fundamentacao` em `DetalheEventoHistorico`)
+- `srv/tratativa-service.ts` (handlers `emitirAvalTecnico` e `consultarAvalTecnicoTratativa`)
+- `srv/tratativa/historico.ts` (`LinhaHistorico.avalTecnico`)
+- `srv/tratativa/historico-consulta.ts` (coluna `avalTecnico`, `detalhe.fundamentacao` lida de `AvalesTecnicos`)
+- `srv/tratativa/historico-autorizacao.ts` (`mascararDetalhe` zera `fundamentacao` para não-Gestor)
+- `srv/tratativa/evidencias-consultas.ts` (`listarEvidenciasAcao`, `listarEvidenciasTratativa`, `baixarEvidencia` aceitam o Validador habilitado; `autorAnexo = null` para ele)
+- `test/CONVENCOES.md` (item 10: exceção do 016, "nas actions ligadas `emitirAvalTecnico`, `definirMetodologia` e `derivarAcaoDaMetodologia`, chave mal formada dá 400 `Código inválido.` (CA34, R18 etapa 4); as actions anteriores continuam 404"; DC-12)
+
+### Removidos
+- Nenhum.
+
 ### Incorporado da task 003 (003-encerramento-com-aval)
 ### Criados
 - `test/apoio/encerramento.ts` (helper `encerrarComAval(enviar, codigo, opcoes)`: inicia se `Aberta`, emite Aval `Aprovado` como `validador`, encerra como `gestor`; devolve a resposta do encerramento; sem `expect(`)
@@ -52,29 +75,6 @@
 - `srv/tratativa-service.cds` (tipo `DetalheMetodologia`; function `consultarMetodologiaTratativa`; actions `definirMetodologia`, `derivarAcaoDaMetodologia`; grant `authenticated-user`)
 - `srv/tratativa-service.ts` (handlers)
 - `srv/tratativa/acoes-criacao.ts` (exporta `criarAcaoComCausa(codigoTratativa, dados, causa, autor)`, que reaproveita `criar` e grava `causaIdentificador`, `causaDescricao` e os eventos `Criacao` + `CriacaoAcaoComCausa`)
-
-### Removidos
-- Nenhum.
-
-## Objetivo
-Implementar a emissão e a consulta do Aval Técnico no `TratativaService`, com vigência e prazo derivados (DC-04, DC-05), designação de Validador por Origem (DC-01), evento `EmissaoAvalTecnico` com fundamentação consultável (DC-03) e acesso do Validador às Evidências, sem mudar ainda a regra de encerramento.
-
-## Arquivos
-
-### Criados
-- `srv/tratativa/aval-tecnico.ts` (situação do Aval: vigente, aptidão, exigência pós-reprovação, `dataBase`/`dataLimite`; emissão; consulta)
-- `srv/tratativa/validador-tecnico.ts` (`validadoresEfetivos(origemNormalizada)`, `usuarioEhValidadorHabilitado(req, codigoTratativa)`, `tratativasComValidadorHabilitado(req, codigos)` em lote; lê `Tratativas.origemNormalizada` num SELECT próprio depois de `bloquearTratativa`, sem alterar `srv/tratativa/bloqueio.ts`; origem nula ou sem linha em `ParametrosOrigem` usa a linha `*`, DC-16)
-- `test/apoio/aval.ts` (helpers `comoValidador`, `comoValidadorB`, `emitirAval(enviar, tratativa, dados, como)`, `consultarAval(...)`; sem `expect(`)
-- `test/metodologias-aval-tecnico.test.ts`
-
-### Modificados
-- `srv/tratativa-service.cds` (tipos `ItemAvalTecnico`, `DetalheAvalTecnico`, `ResultadoAvalTecnico`; function `consultarAvalTecnicoTratativa`; action `emitirAvalTecnico`; grant `authenticated-user`; `fundamentacao` em `DetalheEventoHistorico`)
-- `srv/tratativa-service.ts` (handlers `emitirAvalTecnico` e `consultarAvalTecnicoTratativa`)
-- `srv/tratativa/historico.ts` (`LinhaHistorico.avalTecnico`)
-- `srv/tratativa/historico-consulta.ts` (coluna `avalTecnico`, `detalhe.fundamentacao` lida de `AvalesTecnicos`)
-- `srv/tratativa/historico-autorizacao.ts` (`mascararDetalhe` zera `fundamentacao` para não-Gestor)
-- `srv/tratativa/evidencias-consultas.ts` (`listarEvidenciasAcao`, `listarEvidenciasTratativa`, `baixarEvidencia` aceitam o Validador habilitado; `autorAnexo = null` para ele)
-- `test/CONVENCOES.md` (item 10: exceção do 016, "nas actions ligadas `emitirAvalTecnico`, `definirMetodologia` e `derivarAcaoDaMetodologia`, chave mal formada dá 400 `Código inválido.` (CA34, R18 etapa 4); as actions anteriores continuam 404"; DC-12)
 
 ### Removidos
 - Nenhum.

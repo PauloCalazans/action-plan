@@ -7,6 +7,28 @@
 > **Grupo 3 (decisão do humano, 2026-10-13):** esta task e a(s) task(s) 006, 007 são executadas num único ciclo (um RED, um GREEN, uma revisão de diff) e publicadas num único PR, nesta branch. O escopo do grupo é a união dos "## Arquivos" abaixo; RED, GREEN e critérios de cada task incorporada continuam no documento dela.
 
 
+## Objetivo
+Expor a parametrização por Origem e a designação de Validadores (inclusive a lista padrão corporativa, linha `*`) no `AdministracaoService` e na tela de Administração, e gerar os alertas de prazo da verificação de eficácia (DC-02, DC-04, DC-11).
+
+## Arquivos
+
+### Criados
+- `srv/administracao/parametros-origem.ts` (`atualizarParametrosOrigem`, `incluirValidadorOrigem`, `removerValidadorOrigem`; validações e mensagens)
+- `srv/alertas/regra-verificacao-eficacia.ts` (regra de `PrazoProximo`/`PrazoVencido` com `entidade = 'VerificacaoEficacia'`; destinatários por `validadoresEfetivos`: com lista, Validadores (+ `responsavelPrincipal` no `PrazoVencido`); `fonte = 'Nenhuma'`, só `responsavelPrincipal` nos dois tipos, DC-11/DV-05)
+- `test/metodologias-parametros-alertas.test.ts`
+
+### Modificados
+- `srv/administracao-service.cds` (tipo `DetalheParametrosOrigem`; actions; projeções `ParametrosOrigem` e `ValidadoresOrigem`)
+- `srv/administracao-service.ts` (handlers)
+- `srv/alertas/motor-regras.ts` (`AlertaGerado.entidade` aceita `VerificacaoEficacia`, `prazo?`; `avaliarAlertas` chama a regra nova)
+- `srv/alertas/processamento.ts` (prazo da mensagem vem de `alerta.prazo` quando presente; rótulo do tipo indica verificação de eficácia)
+- `app/administracao/annotations.cds` (`@title` dos parâmetros novos; `SelectionPresentationVariant#ParametrosOrigem`, `LineItem`, `Identification`, `Facets` e `FieldGroup`; LineItem de `ValidadoresOrigem`; `@title` dos elementos)
+- `app/administracao/webapp/manifest.json` (visão `ParametrosOrigem` em `views.paths`, navegação, rota e target `ParametrosOrigemObjectPage`)
+- `test/alertas-motor-regras.test.ts` e `test/alertas-despacho-idempotencia.test.ts` (só se a regra nova gerar alerta extra num cenário com asserção exata; o ajuste é filtrar por `entidade`)
+
+### Removidos
+- Nenhum.
+
 ### Incorporado da task 006 (006-indicadores-eficacia)
 ### Criados
 - `srv/analitico/eficacia.cds` (view `ParetoCausasRaizesView`)
@@ -34,28 +56,6 @@
 - `app/tratativas/webapp/manifest.json` (`sap.ui.layout` em `libs`; `sap.ui.controllerExtensions`; `content.body.sections.MetodologiaSection`; Contrato §6)
 - `app/tratativas/ui5.yaml` (`sap.ui.layout` em `framework.libraries`)
 - `app/tratativas/webapp/i18n/i18n.properties` (título da seção, rótulos e os 12 placeholders da spec, com o texto literal da spec)
-
-### Removidos
-- Nenhum.
-
-## Objetivo
-Expor a parametrização por Origem e a designação de Validadores (inclusive a lista padrão corporativa, linha `*`) no `AdministracaoService` e na tela de Administração, e gerar os alertas de prazo da verificação de eficácia (DC-02, DC-04, DC-11).
-
-## Arquivos
-
-### Criados
-- `srv/administracao/parametros-origem.ts` (`atualizarParametrosOrigem`, `incluirValidadorOrigem`, `removerValidadorOrigem`; validações e mensagens)
-- `srv/alertas/regra-verificacao-eficacia.ts` (regra de `PrazoProximo`/`PrazoVencido` com `entidade = 'VerificacaoEficacia'`; destinatários por `validadoresEfetivos`: com lista, Validadores (+ `responsavelPrincipal` no `PrazoVencido`); `fonte = 'Nenhuma'`, só `responsavelPrincipal` nos dois tipos, DC-11/DV-05)
-- `test/metodologias-parametros-alertas.test.ts`
-
-### Modificados
-- `srv/administracao-service.cds` (tipo `DetalheParametrosOrigem`; actions; projeções `ParametrosOrigem` e `ValidadoresOrigem`)
-- `srv/administracao-service.ts` (handlers)
-- `srv/alertas/motor-regras.ts` (`AlertaGerado.entidade` aceita `VerificacaoEficacia`, `prazo?`; `avaliarAlertas` chama a regra nova)
-- `srv/alertas/processamento.ts` (prazo da mensagem vem de `alerta.prazo` quando presente; rótulo do tipo indica verificação de eficácia)
-- `app/administracao/annotations.cds` (`@title` dos parâmetros novos; `SelectionPresentationVariant#ParametrosOrigem`, `LineItem`, `Identification`, `Facets` e `FieldGroup`; LineItem de `ValidadoresOrigem`; `@title` dos elementos)
-- `app/administracao/webapp/manifest.json` (visão `ParametrosOrigem` em `views.paths`, navegação, rota e target `ParametrosOrigemObjectPage`)
-- `test/alertas-motor-regras.test.ts` e `test/alertas-despacho-idempotencia.test.ts` (só se a regra nova gerar alerta extra num cenário com asserção exata; o ajuste é filtrar por `entidade`)
 
 ### Removidos
 - Nenhum.
