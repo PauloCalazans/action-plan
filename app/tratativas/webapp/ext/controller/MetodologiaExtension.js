@@ -22,9 +22,11 @@ sap.ui.define([ // eslint-disable-line no-undef
       visivel: false,
       podeVer: false,
       editavel: false,
+      podeRemover: false,
       podeDerivar: false,
       ferramenta: "",
       ferramentaGravada: "",
+      dadosGravados: {},
       categoria: "",
       dados: {}
     };
@@ -68,6 +70,10 @@ sap.ui.define([ // eslint-disable-line no-undef
         // Seção ainda não instanciada: a ligação é refeita no próximo onAfterBinding.
         return;
       }
+      var ferramenta = api.byId("metodologiaFerramenta");
+      if (ferramenta) {
+        ferramenta.attachChange(this.onTrocarFerramenta, this);
+      }
       salvar.attachPress(this.onSalvar, this);
       remover.attachPress(this.onRemover, this);
       CHAVES_DERIVAVEIS.forEach(function (chave) {
@@ -93,15 +99,31 @@ sap.ui.define([ // eslint-disable-line no-undef
           visivel: true,
           podeVer: !ferramenta || texto !== null,
           editavel: !!valores[3],
+          podeRemover: !!valores[3] && !!ferramenta,
           podeDerivar: !!valores[4] && !!ferramenta,
           ferramenta: ferramenta,
           ferramentaGravada: ferramenta,
           categoria: valores[1] || "",
-          dados: lerDados(texto)
+          dados: lerDados(texto),
+          dadosGravados: lerDados(texto)
         });
       }).catch(function () {
         modelo.setData(modeloVazio());
       });
+    },
+
+    // Trocar a ferramenta descarta os campos da anterior (chaves de outra ferramenta seriam recusadas, R3).
+    onTrocarFerramenta: function () {
+      var modelo = this._modelo;
+      var igualGravada = modelo.getProperty("/ferramenta") === modelo.getProperty("/ferramentaGravada");
+      modelo.setProperty("/dados", igualGravada ? Object.assign({}, modelo.getProperty("/dadosGravados")) : {});
+    },
+
+    _falhou: function (erro) {
+      // Mensagens do servidor já são exibidas pelo Fiori elements; aqui só o aviso geral (cancelar o diálogo não é erro).
+      if (erro) {
+        MessageToast.show(this._texto("errorTitle"));
+      }
     },
 
     _texto: function (chave) {
@@ -136,7 +158,7 @@ sap.ui.define([ // eslint-disable-line no-undef
         label: this._texto("metodologiaSalvar")
       }).then(function () {
         return this._depoisDeGravar(mensagem);
-      }.bind(this));
+      }.bind(this)).catch(this._falhou.bind(this));
     },
 
     onSalvar: function () {
@@ -158,7 +180,14 @@ sap.ui.define([ // eslint-disable-line no-undef
     },
 
     onRemover: function () {
-      this._gravar("", false, "metodologiaRemovida");
+      MessageBox.confirm(this._texto("metodologiaConfirmarRemocao"), {
+        title: this._texto("metodologiaRemover"),
+        onClose: function (resposta) {
+          if (resposta === MessageBox.Action.OK) {
+            this._gravar("", true, "metodologiaRemovida");
+          }
+        }.bind(this)
+      });
     },
 
     // Derivação com revisão (CA14): sem skipParameterDialog, o Gestor revisa Descrição e preenche os demais campos.
@@ -172,7 +201,7 @@ sap.ui.define([ // eslint-disable-line no-undef
         label: this._texto("metodologiaDerivarTitulo")
       }).then(function () {
         this.base.getExtensionAPI().refresh();
-      }.bind(this));
+      }.bind(this)).catch(this._falhou.bind(this));
     }
   });
 });

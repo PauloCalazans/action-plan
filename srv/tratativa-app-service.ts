@@ -16,11 +16,10 @@ import {
   type DadosComentarioAcao,
 } from './tratativa/comentarios-inclusao';
 import { aplicarTemplateTratativa } from './templates/templates-aplicacao';
-import { aplicarMascaras, montarContextoMascara, restricaoDeLeitura } from './tratativa/mascara-app';
+import { aplicarMascaras, montarContextoMascara, restricaoDeLeitura, validadorHabilitadoDaRequisicao } from './tratativa/mascara-app';
 import { lerSituacaoAval } from './tratativa/aval-tecnico';
 import { definirMetodologia, derivarAcaoDaMetodologia, type DadosDefinicaoMetodologia, type DadosDerivacaoMetodologia } from './tratativa/metodologia';
 import { emitirAvalTecnico } from './tratativa/aval-tecnico';
-import { tratativasComValidadorHabilitado } from './tratativa/validador-tecnico';
 
 const NS = 'br.com.calazanstec';
 
@@ -107,11 +106,18 @@ const CHAVES_DE_VINCULO: Record<string, string[]> = {
 };
 
 /** Acrescenta as colunas de vínculo (DC-17) ao nível e, recursivamente, às expansões `{ ref, expand }`. */
-function garantirChavesDoNivel(entidade: ElementoComElementos | undefined, colunas: unknown[] | undefined): void {
+function garantirChavesDoNivel(
+  entidade: ElementoComElementos | undefined,
+  colunas: unknown[] | undefined,
+  agrupado = false,
+): void {
   if (!entidade || !Array.isArray(colunas)) return;
-  const itens = colunas as Array<'*' | { ref?: string[]; expand?: unknown[] }>;
+  const itens = colunas as Array<'*' | { ref?: string[]; expand?: unknown[]; groupBy?: unknown[]; func?: string; xpr?: unknown }>;
+  // Nível agregado ($apply: groupBy ou colunas func/xpr): acrescentar chave mudaria o agrupamento e os totais.
+  // A linha agregada sai sem chave e a máscara trata o vínculo como ausente (fail-closed).
+  const agregado = agrupado || itens.some((c) => typeof c === 'object' && c !== null && ('func' in c || 'xpr' in c));
   const pedeTudo = itens.some((c) => c === '*' || (typeof c === 'object' && c?.ref?.[0] === '*'));
-  if (!pedeTudo) {
+  if (!pedeTudo && !agregado) {
     for (const chave of CHAVES_DE_VINCULO[entidade.name ?? ''] ?? []) {
       if (!itens.some((c) => typeof c === 'object' && c?.ref?.length === 1 && c.ref[0] === chave && !('expand' in c))) {
         colunas.push({ ref: [chave] });
@@ -125,7 +131,7 @@ function garantirChavesDoNivel(entidade: ElementoComElementos | undefined, colun
       const elemento: { target?: string; _target?: ElementoComElementos } | undefined = atual?.elements?.[id];
       atual = elemento?._target ?? (elemento?.target ? (cds.model?.definitions[elemento.target] as unknown as ElementoComElementos) : undefined);
     }
-    garantirChavesDoNivel(atual, coluna.expand);
+    garantirChavesDoNivel(atual, coluna.expand, Array.isArray(coluna.groupBy) && coluna.groupBy.length > 0);
   }
 }
 
@@ -154,8 +160,12 @@ export default class TratativaAppService extends cds.ApplicationService {
     // As colunas de vínculo das máscaras (DC-17) são acrescentadas a cada nível, para a decisão fail-closed
     // não esconder o dado de quem tem vínculo. Registrado depois de `restringirLeitura`: a varredura vê só a query do cliente.
     this.before('READ', '*', function garantirChaves(req) {
-      const select = (req.query as unknown as { SELECT?: { columns?: unknown[] } }).SELECT;
-      garantirChavesDoNivel(req.target as unknown as ElementoComElementos, select?.columns);
+      const select = (req.query as unknown as { SELECT?: { columns?: unknown[]; groupBy?: unknown[] } }).SELECT;
+      garantirChavesDoNivel(
+        req.target as unknown as ElementoComElementos,
+        select?.columns,
+        Array.isArray(select?.groupBy) && select.groupBy.length > 0,
+      );
     });
 
     this.after('READ', 'Tratativas', async (resultado, req) => {
@@ -163,17 +173,19 @@ export default class TratativaAppService extends cds.ApplicationService {
       const matricula = normalizarMatricula(obterMatriculaUsuario(req));
       const linhas = (Array.isArray(resultado) ? resultado : [resultado]) as LinhaTratativa[];
       const codigos = linhas.flatMap((linha) => typeof linha?.codigo === 'string' ? [linha.codigo] : []);
-      const situacoes = await lerSituacaoAval(codigos);
-      const habilitadas = await tratativasComValidadorHabilitado(req, codigos);
-      const dados = codigos.length
-        ? (await SELECT.from(`${NS}.Tratativas`).columns('codigo', 'status', 'metodologia').where({ codigo: { in: codigos } })) as
-          Array<{ codigo: string; status: string; metodologia: string | null }>
-        : [];
+      const [situacoes, habilitadas, dados, acoesDoUsuario] = await Promise.all([
+        lerSituacaoAval(codigos),
+        validadorHabilitadoDaRequisicao(req, codigos),
+        codigos.length
+          ? SELECT.from(`${NS}.Tratativas`).columns('codigo', 'status', 'metodologia').where({ codigo: { in: codigos } }) as unknown as
+            Promise<Array<{ codigo: string; status: string; metodologia: string | null }>>
+          : Promise.resolve([]),
+        !gestor && codigos.length
+          ? SELECT.from(`${NS}.Acoes`).columns('tratativa_codigo', 'responsavel').where({ tratativa_codigo: { in: codigos } }) as unknown as
+            Promise<Array<{ tratativa_codigo: string; responsavel: string }>>
+          : Promise.resolve([]),
+      ]);
       const metodologias = new Map(dados.map((linha) => [linha.codigo, linha]));
-      const acoesDoUsuario = !gestor && codigos.length
-        ? (await SELECT.from(`${NS}.Acoes`).columns('tratativa_codigo', 'responsavel').where({ tratativa_codigo: { in: codigos } })) as
-          Array<{ tratativa_codigo: string; responsavel: string }>
-        : [];
       const comAcaoDoUsuario = new Set(
         acoesDoUsuario.filter((acao) => normalizarMatricula(acao.responsavel) === matricula).map((acao) => acao.tratativa_codigo),
       );

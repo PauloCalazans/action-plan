@@ -162,7 +162,7 @@
     </Form>
     <HBox class="sapUiSmallMarginTop">
       <Button id="metodologiaSalvar" text="{i18n>metodologiaSalvar}" tooltip="{i18n>metodologiaSalvarTooltip}" type="Emphasized" visible="{metodologia>/editavel}" class="sapUiTinyMarginEnd"></Button>
-      <Button id="metodologiaRemover" text="{i18n>metodologiaRemover}" tooltip="{i18n>metodologiaRemoverTooltip}" visible="{metodologia>/editavel}"></Button>
+      <Button id="metodologiaRemover" text="{i18n>metodologiaRemover}" tooltip="{i18n>metodologiaRemoverTooltip}" visible="{metodologia>/podeRemover}"></Button>
     </HBox>
   </VBox>
 </core:FragmentDefinition>

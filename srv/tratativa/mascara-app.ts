@@ -678,6 +678,20 @@ function coletarCodigos(
   });
 }
 
+const habilitadasPorRequisicao = new WeakMap<object, Map<string, Promise<Set<string>>>>();
+
+/** `tratativasComValidadorHabilitado` memoizado por requisição: máscara e flags pedem o mesmo conjunto. */
+export function validadorHabilitadoDaRequisicao(req: cds.Request, codigos: string[]): Promise<Set<string>> {
+  const cache = habilitadasPorRequisicao.get(req) ?? new Map<string, Promise<Set<string>>>();
+  habilitadasPorRequisicao.set(req, cache);
+  const chave = [...new Set(codigos)].sort().join(',');
+  const existente = cache.get(chave);
+  if (existente) return existente;
+  const consulta = tratativasComValidadorHabilitado(req, codigos);
+  cache.set(chave, consulta);
+  return consulta;
+}
+
 /** Contexto em lote da máscara: um percurso junta os códigos; vínculo e situação do Aval vêm de uma chamada cada. */
 export async function montarContextoMascara(
   req: cds.Request,
@@ -690,7 +704,7 @@ export async function montarContextoMascara(
   const codigos = [...acumulado.codigos];
   const [vinculoDiagnostico, validadorHabilitado, situacaoAval] = await Promise.all([
     gestor || !codigos.length ? new Set<string>() : tratativasComVinculoDiagnostico(req, codigos),
-    gestor || !codigos.length ? new Set<string>() : tratativasComValidadorHabilitado(req, codigos),
+    gestor || !codigos.length ? new Set<string>() : validadorHabilitadoDaRequisicao(req, codigos),
     acumulado.temAvales && codigos.length ? lerSituacaoAval(codigos) : new Map<string, SituacaoAval>(),
   ]);
   return { gestor, vinculoDiagnostico, validadorHabilitado, situacaoAval };
