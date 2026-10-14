@@ -126,7 +126,7 @@ describe('Gestão de Tratativas: serviço OData e interface declarativa', () => 
       expect(anotacoes).toContain(filtro);
     }
     expect(anotacoes).toContain('Criar Tratativa Avulsa');
-    expect(anotacoes).toContain("Action: 'TratativaAppService.criarTratativaAvulsa'");
+    expect(anotacoes).toContain("Action: 'TratativaAppService.EntityContainer/criarTratativaAvulsa'");
   });
 
   it('CA7 e CA8: identificação declara ações de cabeçalho do Gestor e o serviço as restringe', async () => {
@@ -138,7 +138,13 @@ describe('Gestão de Tratativas: serviço OData e interface declarativa', () => 
       expect(anotacoes).toContain(rotulo);
     }
     expect(anotacoes).toContain('UI.Identification');
-    expect(anotacoes).toContain("Action: 'TratativaAppService.mudarStatus'");
+    // Achado 4 (R-08): os botões de ciclo de vida usam as ações dedicadas com @UI.Hidden: oculta<Acao>.
+    for (const acao of ['iniciarTratativa', 'encerrarTratativa', 'cancelarTratativa', 'reabrirTratativa']) {
+      expect(anotacoes).toContain(`Action: 'TratativaAppService.${acao}'`);
+    }
+    for (const flag of ['ocultaIniciar', 'ocultaEncerrar', 'ocultaCancelar', 'ocultaReabrir']) {
+      expect(anotacoes).toContain(`@UI.Hidden: ${flag}`);
+    }
     expect(anotacoes).toContain("Action: 'TratativaAppService.mudarCriticidade'");
 
     const criada = await POST(

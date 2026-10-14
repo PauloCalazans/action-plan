@@ -5,6 +5,8 @@ import { fixarInstante, liberarRelogio } from './apoio/relogio';
 import { comoAdmin, comoApp, comoGestor, comoUsuario } from './apoio/usuarios';
 import { criarTemplate, desativarTemplate } from './apoio/templates';
 import { sufixoUnico, type Envia } from './apoio/tratativas';
+import { limparEnviosEmail, obterEnviosEmail } from './apoio/email-espiao';
+import { limparEnviosTeams, obterEnviosTeams } from './apoio/teams-espiao';
 
 const { GET, POST } = cds.test(__dirname + '/..');
 const enviar = POST as unknown as Envia;
@@ -47,6 +49,16 @@ async function novoAtivo(): Promise<string> {
   const r = await criarTemplate(enviar, { nome: `Template ${sufixoUnico()}`, descricao: 'Descrição', itens: [item(1)] }, comoAdmin);
   expect(r.status).toBe(200);
   return r.data.id as string;
+}
+
+// R-21: mensagens que o CAP devolve no cabeçalho `sap-messages` de uma resposta de sucesso
+// (capire "Events and Requests > req.info()/req.notify()").
+type MensagemSap = { message?: string };
+
+function mensagensSap(resposta: { headers: unknown }): string[] {
+  const cabecalho = (resposta.headers as Record<string, unknown> | undefined)?.['sap-messages'];
+  expect(typeof cabecalho).toBe('string');
+  return (JSON.parse(cabecalho as string) as MensagemSap[]).map(({ message }) => message ?? '');
 }
 
 describe('Administração da Plataforma: leitura OData administrada e escrita pelas actions da 009/010/011', () => {
@@ -101,8 +113,8 @@ describe('Administração da Plataforma: leitura OData administrada e escrita pe
     for (const campo of ['diasAntecedenciaPrazoProximo', 'diasInatividade', 'emailHabilitado', 'teamsHabilitado', 'horaExecucaoUtc']) {
       expect(anotacoes).toContain(campo);
     }
-    expect(anotacoes).toContain("Action: 'AdministracaoService.atualizarParametrosAlertas'");
-    expect(anotacoes).toContain("Action: 'AdministracaoService.executarProcessamentoAlertas'");
+    expect(anotacoes).toContain("Action: 'AdministracaoService.EntityContainer/atualizarParametrosAlertas'");
+    expect(anotacoes).toContain("Action: 'AdministracaoService.EntityContainer/executarProcessamentoAlertas'");
   });
 
   it('CA16b: a aba Estrutura Organizacional lê os mapeamentos vigentes e persiste a atualização', async () => {
@@ -131,7 +143,8 @@ describe('Administração da Plataforma: leitura OData administrada e escrita pe
     expect(anotacoes).toContain('annotate AdministracaoService.ParametrosIntegracaoSF');
     expect(anotacoes).toContain('nivelUnidadeSF');
     expect(anotacoes).toContain('nivelAreaSF');
-    expect(anotacoes).toContain("Action: 'AdministracaoService.atualizarParametrosIntegracaoSF'");
+    expect(anotacoes).toContain("Action: 'AdministracaoService.EntityContainer/atualizarParametrosIntegracaoSF'");
+    expect(anotacoes).not.toContain("Action: 'AdministracaoService.atualizarParametrosIntegracaoSF'");
   });
 
   it('CA17: Gestor de Tratativa e usuário comum sem papel de Administrador recebem 403', async () => {
@@ -201,5 +214,76 @@ describe('Administração da Plataforma: leitura OData administrada e escrita pe
     expect(textoDo(ANOTACOES)).toContain('annotate AdministracaoService.Templates');
     expect(textoDo(ANOTACOES)).toContain('annotate AdministracaoService.ParametrosAlertas');
     expect(textoDo(ANOTACOES)).toContain('annotate AdministracaoService.ParametrosIntegracaoSF');
+  });
+});
+
+// R-21 (design, seção "Correção R-21"): as ações da Administração devolvem confirmação pelo
+// cabeçalho sap-messages e a de salvar parâmetros relê a tabela por SideEffects.
+describe('R-21: feedback das ações da Administração em sap-messages', () => {
+  beforeEach(() => {
+    limparEnviosEmail();
+    limparEnviosTeams();
+  });
+
+  it('R-21: atualizarParametrosAlertas confirma o salvamento no sap-messages', async () => {
+    const parametros = {
+      diasAntecedenciaPrazoProximo: 5,
+      diasInatividade: 20,
+      emailHabilitado: false,
+      teamsHabilitado: true,
+      horaExecucaoUtc: 9,
+    };
+
+    const salvar = await POST(`${BASE}/atualizarParametrosAlertas`, parametros, comoAdmin);
+    expect(salvar.status).toBe(200);
+
+    expect(mensagensSap(salvar)).toContain('Parâmetros de alertas salvos.');
+  });
+
+  it('R-21: executarProcessamentoAlertas devolve o resumo do relatório no sap-messages', async () => {
+    const processamento = await POST(`${BASE}/executarProcessamentoAlertas`, {}, comoAdmin);
+    expect(processamento.status).toBe(200);
+
+    const relatorio = processamento.data as {
+      ocorrenciasAvaliadas: number;
+      alertasGerados: number;
+      notificacoesEnviadas: number;
+      falhas: number;
+    };
+    const mensagens = mensagensSap(processamento);
+    const resumo = mensagens.find((texto) => texto.includes('Processamento concluído:'));
+    expect(resumo).toBeDefined();
+
+    for (const valor of [
+      relatorio.ocorrenciasAvaliadas,
+      relatorio.alertasGerados,
+      relatorio.notificacoesEnviadas,
+      relatorio.falhas,
+    ]) {
+      expect(typeof valor).toBe('number');
+      expect(String(resumo)).toContain(String(valor));
+    }
+
+    // Sem integrações reais: o processamento passa pelos espiões de e-mail e Teams.
+    expect(obterEnviosEmail()).toHaveLength(0);
+    expect(obterEnviosTeams()).toHaveLength(0);
+  });
+
+  it('R-21: atualizarParametrosAlertas declara SideEffects sobre os Parâmetros de Alertas', async () => {
+    const modelo = (await cds.load(['srv', 'app'])) as unknown as {
+      definitions: Record<string, { kind?: string; [chave: string]: unknown }>;
+    };
+    const action = modelo.definitions['AdministracaoService.atualizarParametrosAlertas'];
+    // Chave com pontos: acesso literal (toHaveProperty a leria como caminho aninhado).
+    const alvos = action?.['@Common.SideEffects.TargetEntities'] as string[] | undefined;
+
+    expect(action?.kind).toBe('action');
+    expect(alvos).toContain('/AdministracaoService.EntityContainer/ParametrosAlertas');
+  });
+
+  it('R-21: o ui5.yaml do Launchpad inclui a biblioteca sap.tnt carregada pelo shell', () => {
+    const ui5 = textoDo(join(RAIZ, 'app', 'launchpad', 'ui5.yaml'));
+
+    expect(ui5).toContain('- name: sap.tnt');
   });
 });

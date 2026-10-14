@@ -1,4 +1,5 @@
 import cds from '@sap/cds';
+import { recusar } from './recusa';
 
 const MS_POR_DIA = 24 * 60 * 60 * 1000;
 
@@ -11,8 +12,11 @@ export function somarDiasCorridos(data: string, dias: number): string {
 
 /** Lê da tabela PrazosCriticidade os dias da Criticidade (R10/R11). */
 export async function diasDoPrazo(criticidade: string): Promise<number> {
-  const prazo = await cds.db.run(
+  const prazo = (await cds.db.run(
     SELECT.one.from('br.com.calazanstec.PrazosCriticidade').columns('dias').where({ criticidade }),
-  );
-  return (prazo as { dias: number }).dias;
+  )) as { dias?: number } | null | undefined;
+  if (!prazo || typeof prazo.dias !== 'number') {
+    recusar(400, 'Prazo não configurado para a criticidade informada.', 'criticidade');
+  }
+  return prazo.dias;
 }

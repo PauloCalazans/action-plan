@@ -2,6 +2,25 @@ specVersion: "4.0"
 metadata:
   name: br.com.calazanstec.actionplan.tratativas
 type: application
+framework:
+  name: SAPUI5
+  version: "1.136.23"
+  libraries:
+    - name: sap.m
+    - name: sap.ui.core
+    - name: sap.ushell
+    - name: sap.fe.templates
+    - name: themelib_sap_horizon
+builder:
+  customTasks:
+    - name: ui5-task-zipper
+      afterTask: generateVersionInfo
+      configuration:
+        # ui5-task-zipper appends .zip to this basename.
+        # Output: brcomcalazanstecactionplantratativas.zip
+        archiveName: brcomcalazanstecactionplantratativas
+        additionalFiles:
+          - xs-app.json
 resources:
   configuration:
     paths:

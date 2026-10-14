@@ -1,0 +1,893 @@
+# Task: 001-acabamento-ui-fiori
+
+**Spec:** agentic/projeto/specs/acabamento-ui-fiori/spec.md
+**Design:** agentic/projeto/specs/acabamento-ui-fiori/design.md
+**Status:** publicada
+**Branch:** acabamento-ui-fiori/001-acabamento-ui-fiori
+
+## Arquivos
+
+### Criados
+- `app/launchpad/ui5.yaml` (projeto UI5 Tooling do Launchpad Sandbox: framework SAPUI5 1.136.23, bibliotecas sap.m, sap.ui.core, sap.ushell, themelib_sap_horizon)
+- `app/launchpad/package.json`
+- `app/launchpad/webapp/manifest.json` (Manifest v2, id br.com.calazanstec.actionplan.launchpad, contentDensities)
+- `app/launchpad/webapp/index.html` (Fiori Launchpad Sandbox UShell com bootstrap kebab-case, resources/sap-ui-core.js provido pelo plugin, sem inline script)
+- `app/launchpad/webapp/sandbox.js` (configuração desacoplada de window["sap-ushell-config"] mapeando os 3 intents para as URLs de montagem do cds-plugin-ui5)
+- `app/launchpad/webapp/init.js` (R-15: módulo do data-sap-ui-on-init que cria o renderer fiori2 do sandbox2 e o coloca em #content)
+- `test/apoio/auth-dev.js` (implementação de Custom Authentication para [development] via cds.requires.auth.impl, injetando persona fixa dos usuários mocked padrão gestor, configurável por DEV_USER/CDS_DEV_USER, sem pedido de login e fora do pacote de produção)
+- `app/tratativas/webapp/Component.js`
+- `app/tratativas/webapp/index.html` (sandbox individual com resources/sap-ui-core.js local, ComponentSupport, bootstrap kebab-case, sem CDN e sem script inline)
+- `app/minhas-pendencias/webapp/Component.js`
+- `app/minhas-pendencias/webapp/index.html` (sandbox individual com resources/sap-ui-core.js local, ComponentSupport, bootstrap kebab-case, sem CDN e sem script inline)
+- `app/administracao/webapp/Component.js`
+- `app/administracao/webapp/index.html` (sandbox individual com resources/sap-ui-core.js local, ComponentSupport, bootstrap kebab-case, sem CDN e sem script inline)
+- `test/ui-acabamento.test.ts`
+
+### Modificados
+- `test/publicacao-descritores.test.ts` (014; Ruling R-09: o build dos apps passa do '--archive', inexistente no UI5 CLI 4, para o ui5-task-zipper)
+- `test/publicacao-seguranca-destinations.test.ts` (014; Ruling R-11/R-12: [development] passa a autenticação customizada com impl apontando para test/apoio/auth-dev; mocked em [test])
+- `package.json` (raiz: inclusão da devDependency cds-plugin-ui5: "0.17.4" e configuração de perfis de autenticação em cds.requires.auth: [development] com impl: "test/apoio/auth-dev", [test] como kind: "mocked" com os 7 usuários mocked, [papeis] como kind: "mocked", e [production] como kind: "xsuaa")
+- `package-lock.json` (devDependencies novas da execução local — cds-plugin-ui5 0.17.4 e ui5-task-zipper —, atualizado pelo npm; Rulings R-10/R-11)
+- `app/tratativas/ui5.yaml` (projeto UI5 Tooling: framework SAPUI5 1.136.23, bibliotecas incluindo sap.ushell e custom task ui5-task-zipper gerando brcomcalazanstecactionplantratativas.zip)
+- `app/tratativas/package.json` (remoção da flag '--archive' inexistente no UI5 CLI 4 e adição da devDependency ui5-task-zipper: "^3.1.3")
+- `app/tratativas/webapp/manifest.json` (Manifest Version 2: _version: "2.0.0", minUI5Version: "1.136.23", contentDensities: { compact: true, cozy: true }, remoção de synchronizationMode obsoleto no modelo OData v4)
+- `app/minhas-pendencias/ui5.yaml` (projeto UI5 Tooling: framework SAPUI5 1.136.23, bibliotecas incluindo sap.ushell e custom task ui5-task-zipper gerando brcomcalazanstecactionplanminhaspendencias.zip)
+- `app/minhas-pendencias/package.json` (remoção da flag '--archive' inexistente no UI5 CLI 4 e adição da devDependency ui5-task-zipper: "^3.1.3")
+- `app/minhas-pendencias/webapp/manifest.json` (Manifest Version 2: _version: "2.0.0", minUI5Version: "1.136.23", contentDensities: { compact: true, cozy: true }, remoção de synchronizationMode obsoleto no modelo OData v4)
+- `app/administracao/ui5.yaml` (projeto UI5 Tooling: framework SAPUI5 1.136.23, bibliotecas incluindo sap.ushell e custom task ui5-task-zipper gerando brcomcalazanstecactionplanadministracao.zip)
+- `app/administracao/package.json` (remoção da flag '--archive' inexistente no UI5 CLI 4 e adição da devDependency ui5-task-zipper: "^3.1.3")
+- `app/administracao/webapp/manifest.json` (Manifest Version 2: _version: "2.0.0", minUI5Version: "1.136.23", contentDensities: { compact: true, cozy: true }, remoção de synchronizationMode obsoleto no modelo OData v4)
+- `srv/tratativa/prazo.ts` (tratamento defensivo de ausência de prazos com recusa 400 sem TypeError)
+- `srv/tratativa-app-service.cds` (remoção de data discricionária em criarTratativaAvulsa, tipagem Date em prazos de ações, ações dedicadas de status com flags pode<Acao> e oculta<Acao>, @Core.OperationAvailable, projeção Colaboradores e domínios fixos)
+- `srv/administracao-service.ts` (R-21: mensagens req.info nas actions atualizarParametrosAlertas e executarProcessamentoAlertas)
+- `srv/tratativa-app-service.ts` (handlers das ações dedicadas de transição, resolução de flags de status e visibilidade, compatibilidade de Date com validação de string, leitura de Colaboradores e listas de valores fixos)
+- `app/tratativas/annotations.cds` (Action Import EntityContainer/criarTratativaAvulsa, botões dedicados de status com @UI.Hidden: oculta<Acao>, labels em Dados Gerais, colunas com @UI.Importance: #High, anotações canônicas de ações e Value Helps/dropdowns em criarTratativaAvulsa, mudarCriticidade, criarAcao, criarSubacao e delegarAcao)
+- `app/tratativas/webapp/i18n/i18n.properties` (catálogo completo de textos pt-BR e placeholders LGPD)
+- `app/minhas-pendencias/annotations.cds` (rótulos amigáveis pt-BR em colunas e filtros)
+- `app/minhas-pendencias/webapp/i18n/i18n.properties` (textos e rótulos pt-BR)
+- `app/administracao/annotations.cds` (rótulos pt-BR e botões operacionais "Salvar Parâmetros" e "Executar Processamento Manual" via EntityContainer/ em Parâmetros de Alertas com popup nativo de resultado)
+- `app/administracao/webapp/i18n/i18n.properties` (textos, abas e rótulos pt-BR)
+- `test/ui-tratativas.test.ts` (atualização de asserções textuais de Action Import com EntityContainer/ e ações dedicadas de status)
+- `test/ui-administracao.test.ts` (atualização de asserções textuais de Action Import com EntityContainer/)
+
+### Removidos
+- `app/index.html` (o sandbox na raiz impedia a página inicial do CAP de listar os apps; substituído por app/launchpad/)
+- `app/sandbox.js` (substituído por app/launchpad/webapp/sandbox.js)
+
+> **Substituição de testes legados e desativação de index na raiz:** Os testes estruturais existentes da etapa 2 em `test/ui-acabamento.test.ts` e `test/publicacao-seguranca-destinations.test.ts` são alinhados para validar: (1) autenticação customizada em `[development]` via `test/apoio/auth-dev.js` (eliminando o dummy superuser que gerava 403); (2) ausência de `app/index.html` e `app/sandbox.js` na raiz de `app/` para que o CAP sirva sua página de boas-vindas padrão injetando os links dos apps via `cds-plugin-ui5` 0.17.4; (3) Fiori Launchpad Sandbox isolado em `app/launchpad/` com `ui5.yaml` e `sandbox.js` apontando para as URLs de montagem do plugin; (4) manifestos em Manifest Version 2 (`_version: "2.0.0"`, `minUI5Version: "1.136.23"`, `contentDensities: { compact: true, cozy: true }` e sem `synchronizationMode`); e (5) parâmetros de bootstrap em grafia kebab-case (`data-sap-ui-resource-roots`, `data-sap-ui-compat-version`, `data-sap-ui-frame-options`).
+
+---
+
+## Interfaces
+
+```cds
+// srv/tratativa-app-service.cds (trechos aditivos e modificados)
+using { br.com.calazanstec as m } from '../db/tratativa';
+
+@path    : '/api/app/v1'
+@requires: 'authenticated-user'
+service TratativaAppService {
+
+  @readonly
+  @cds.redirection.target
+  entity Tratativas as projection on m.Tratativas {
+    key codigo,
+        titulo,
+        descricao,
+        origem,
+        idOrigem,
+        criticidade,
+        status,
+        unidade,
+        area,
+        solicitante,
+        responsavelPrincipal,
+        dataCriacao,
+        dataPrevistaConclusao,
+        false as ocultaResponsaveis : Boolean,
+        false as podeIniciar        : Boolean,
+        false as podeEncerrar       : Boolean,
+        false as podeCancelar       : Boolean,
+        false as podeReabrir        : Boolean,
+        false as ocultaIniciar      : Boolean,
+        false as ocultaEncerrar     : Boolean,
+        false as ocultaCancelar     : Boolean,
+        false as ocultaReabrir      : Boolean,
+        acoes         : Composition of many Acoes on acoes.tratativa = $self,
+        participantes : Composition of many Participantes on participantes.tratativa = $self,
+        evidencias    : Composition of many Evidencias on evidencias.tratativa = $self,
+        comentarios   : Composition of many Comentarios on comentarios.tratativa = $self,
+        historico     : Association to many Historico on historico.tratativa = $self
+  } actions {
+    @requires: 'GestorTratativa'
+    @Core.OperationAvailable: podeIniciar
+    action iniciarTratativa();
+
+    @requires: 'GestorTratativa'
+    @Core.OperationAvailable: podeEncerrar
+    action encerrarTratativa();
+
+    @requires: 'GestorTratativa'
+    @Core.OperationAvailable: podeCancelar
+    action cancelarTratativa(
+      @Common.Label: 'Justificativa do cancelamento'
+      justificativa : String(500)
+    );
+
+    @requires: 'GestorTratativa'
+    @Core.OperationAvailable: podeReabrir
+    action reabrirTratativa(
+      @Common.Label: 'Justificativa da reabertura'
+      justificativa : String(500)
+    );
+
+    @requires: 'GestorTratativa'
+    action mudarStatus(status : String, justificativa : String);
+
+    @requires: 'GestorTratativa'
+    action editar(titulo : String, descricao : String, unidade : String, area : String, solicitante : String);
+
+    @requires: 'GestorTratativa'
+    action mudarCriticidade(
+      @Common.Label: 'Nova criticidade'
+      criticidade : m.Criticidade
+    );
+
+    @requires: 'GestorTratativa'
+    action aplicarTemplate(templateId : UUID);
+
+    @requires: 'GestorTratativa'
+    action criarAcao(
+      @Common.Label: 'Descrição da ação'
+      descricao            : String,
+      @Common.Label: 'Responsável'
+      responsavel          : String,
+      @Common.Label: 'Prazo limite'
+      prazo                : Date,
+      @Common.Label: 'Prioridade'
+      prioridade           : String,
+      @Common.Label: 'Evidência obrigatória'
+      evidenciaObrigatoria : String
+    ) returns ResultadoCriacaoAcao;
+
+    @requires: 'GestorTratativa'
+    action criarSubacao(
+      @Common.Label: 'Ação superior'
+      acaoMae              : UUID,
+      @Common.Label: 'Descrição da subação'
+      descricao            : String,
+      @Common.Label: 'Responsável'
+      responsavel          : String,
+      @Common.Label: 'Prazo limite'
+      prazo                : Date,
+      @Common.Label: 'Prioridade'
+      prioridade           : String,
+      @Common.Label: 'Evidência obrigatória'
+      evidenciaObrigatoria : String
+    ) returns ResultadoCriacaoAcao;
+
+    @requires: 'GestorTratativa'
+    action delegarAcao(
+      @Common.Label: 'Ação'
+      acao            : UUID,
+      @Common.Label: 'Novo responsável'
+      novoResponsavel : String,
+      @Common.Label: 'Justificativa'
+      justificativa   : String
+    );
+
+    @requires: 'authenticated-user'
+    action anexarEvidencia(acao : UUID, nomeArquivo : String, mimeType : String, conteudo : String, descricao : String) returns DetalheEvidencia;
+
+    @requires: 'authenticated-user'
+    action removerEvidencia(acao : UUID, evidencia : UUID);
+
+    @requires: 'authenticated-user'
+    action comentarTratativa(texto : String, mencoes : many String) returns ResultadoComentario;
+
+    @requires: 'authenticated-user'
+    action comentarAcao(acao : String, texto : String, mencoes : many String) returns ResultadoComentario;
+  };
+
+  action criarTratativaAvulsa(
+    @Common.Label: 'Título da tratativa'
+    titulo      : String(200),
+    @Common.Label: 'Descrição detalhada'
+    descricao   : String(5000),
+    @Common.Label: 'Criticidade'
+    criticidade : m.Criticidade,
+    @Common.Label: 'Unidade corporativa'
+    unidade     : String(100),
+    @Common.Label: 'Área operacional'
+    area        : String(100),
+    @Common.Label: 'Colaborador solicitante'
+    solicitante : String(50)
+  ) returns Tratativas;
+
+  @readonly
+  entity Colaboradores {
+    @Common.Label: 'Matrícula funcional'
+    key matricula : String(50);
+    @Common.Label: 'Nome completo'
+        nome      : String(100);
+    @Common.Label: 'E-mail corporativo'
+        email     : String(100);
+  }
+
+  @readonly
+  entity ValoresCriticidade {
+    key codigo    : String(10);
+        descricao : String(50);
+  }
+
+  @readonly
+  entity ValoresPrioridade {
+    key codigo    : String(10);
+        descricao : String(50);
+  }
+
+  @readonly
+  entity ValoresEvidenciaObrigatoria {
+    key codigo    : String(10);
+        descricao : String(50);
+  }
+}
+
+// app/tratativas/annotations.cds (anotações canônicas de ações e ValueLists)
+annotate TratativaAppService with actions {
+  criarTratativaAvulsa(
+    criticidade @(
+      Common.ValueListWithFixedValues: true,
+      Common.ValueList: {
+        CollectionPath: 'ValoresCriticidade',
+        Parameters: [
+          { $Type: 'Common.ValueListParameterInOut', LocalDataProperty: criticidade, ValueListProperty: 'codigo' },
+          { $Type: 'Common.ValueListParameterDisplayOnly', ValueListProperty: 'descricao' }
+        ]
+      }
+    ),
+    solicitante @(
+      Common.ValueList: {
+        CollectionPath: 'Colaboradores',
+        Parameters: [
+          { $Type: 'Common.ValueListParameterInOut', LocalDataProperty: solicitante, ValueListProperty: 'matricula' },
+          { $Type: 'Common.ValueListParameterDisplayOnly', ValueListProperty: 'nome' },
+          { $Type: 'Common.ValueListParameterDisplayOnly', ValueListProperty: 'email' }
+        ]
+      }
+    )
+  );
+};
+
+annotate TratativaAppService.Tratativas with actions {
+  iniciarTratativa @Core.OperationAvailable: podeIniciar;
+  encerrarTratativa @Core.OperationAvailable: podeEncerrar;
+  cancelarTratativa @Core.OperationAvailable: podeCancelar;
+  reabrirTratativa @Core.OperationAvailable: podeReabrir;
+
+  mudarCriticidade(
+    criticidade @(
+      Common.ValueListWithFixedValues: true,
+      Common.ValueList: {
+        CollectionPath: 'ValoresCriticidade',
+        Parameters: [
+          { $Type: 'Common.ValueListParameterInOut', LocalDataProperty: criticidade, ValueListProperty: 'codigo' },
+          { $Type: 'Common.ValueListParameterDisplayOnly', ValueListProperty: 'descricao' }
+        ]
+      }
+    )
+  );
+
+  criarAcao(
+    responsavel @(
+      Common.ValueList: {
+        CollectionPath: 'Colaboradores',
+        Parameters: [
+          { $Type: 'Common.ValueListParameterInOut', LocalDataProperty: responsavel, ValueListProperty: 'matricula' },
+          { $Type: 'Common.ValueListParameterDisplayOnly', ValueListProperty: 'nome' },
+          { $Type: 'Common.ValueListParameterDisplayOnly', ValueListProperty: 'email' }
+        ]
+      }
+    ),
+    prioridade @(
+      Common.ValueListWithFixedValues: true,
+      Common.ValueList: {
+        CollectionPath: 'ValoresPrioridade',
+        Parameters: [
+          { $Type: 'Common.ValueListParameterInOut', LocalDataProperty: prioridade, ValueListProperty: 'codigo' },
+          { $Type: 'Common.ValueListParameterDisplayOnly', ValueListProperty: 'descricao' }
+        ]
+      }
+    ),
+    evidenciaObrigatoria @(
+      Common.ValueListWithFixedValues: true,
+      Common.ValueList: {
+        CollectionPath: 'ValoresEvidenciaObrigatoria',
+        Parameters: [
+          { $Type: 'Common.ValueListParameterInOut', LocalDataProperty: evidenciaObrigatoria, ValueListProperty: 'codigo' },
+          { $Type: 'Common.ValueListParameterDisplayOnly', ValueListProperty: 'descricao' }
+        ]
+      }
+    )
+  );
+
+  criarSubacao(
+    responsavel @(
+      Common.ValueList: {
+        CollectionPath: 'Colaboradores',
+        Parameters: [
+          { $Type: 'Common.ValueListParameterInOut', LocalDataProperty: responsavel, ValueListProperty: 'matricula' },
+          { $Type: 'Common.ValueListParameterDisplayOnly', ValueListProperty: 'nome' },
+          { $Type: 'Common.ValueListParameterDisplayOnly', ValueListProperty: 'email' }
+        ]
+      }
+    ),
+    prioridade @(
+      Common.ValueListWithFixedValues: true,
+      Common.ValueList: {
+        CollectionPath: 'ValoresPrioridade',
+        Parameters: [
+          { $Type: 'Common.ValueListParameterInOut', LocalDataProperty: prioridade, ValueListProperty: 'codigo' },
+          { $Type: 'Common.ValueListParameterDisplayOnly', ValueListProperty: 'descricao' }
+        ]
+      }
+    ),
+    evidenciaObrigatoria @(
+      Common.ValueListWithFixedValues: true,
+      Common.ValueList: {
+        CollectionPath: 'ValoresEvidenciaObrigatoria',
+        Parameters: [
+          { $Type: 'Common.ValueListParameterInOut', LocalDataProperty: evidenciaObrigatoria, ValueListProperty: 'codigo' },
+          { $Type: 'Common.ValueListParameterDisplayOnly', ValueListProperty: 'descricao' }
+        ]
+      }
+    )
+  );
+
+  delegarAcao(
+    novoResponsavel @(
+      Common.ValueList: {
+        CollectionPath: 'Colaboradores',
+        Parameters: [
+          { $Type: 'Common.ValueListParameterInOut', LocalDataProperty: novoResponsavel, ValueListProperty: 'matricula' },
+          { $Type: 'Common.ValueListParameterDisplayOnly', ValueListProperty: 'nome' },
+          { $Type: 'Common.ValueListParameterDisplayOnly', ValueListProperty: 'email' }
+        ]
+      }
+    )
+  );
+};
+```
+
+```javascript
+// app/<app>/webapp/Component.js
+sap.ui.define(["sap/fe/core/AppComponent"], function (AppComponent) {
+  "use strict";
+
+  return AppComponent.extend("br.com.calazanstec.actionplan.<appName>.Component", {
+    metadata: {
+      manifest: "json"
+    }
+  });
+});
+```
+
+```html
+<!-- app/<app>/webapp/index.html (Sandbox individual local sem CDN, sem script inline e com parâmetros kebab-case) -->
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><Título da Aplicação> - Sandbox</title>
+  <style>
+    html, body, #content, #container {
+      height: 100%;
+      margin: 0;
+    }
+  </style>
+  <script
+    id="sap-ui-bootstrap"
+    src="resources/sap-ui-core.js"
+    data-sap-ui-libs="sap.ui.core,sap.fe.templates"
+    data-sap-ui-theme="sap_horizon"
+    data-sap-ui-language="pt-BR"
+    data-sap-ui-resource-roots='{ "br.com.calazanstec.actionplan.<appName>": "./" }'
+    data-sap-ui-on-init="module:sap/ui/core/ComponentSupport"
+    data-sap-ui-compat-version="edge"
+    data-sap-ui-async="true"
+    data-sap-ui-frame-options="allow">
+  </script>
+</head>
+<body class="sapUiBody" id="content">
+  <div
+    id="container"
+    data-sap-ui-component
+    data-name="br.com.calazanstec.actionplan.<appName>"
+    data-id="container"
+    data-settings='{ "id" : "<appName>" }'>
+  </div>
+</body>
+</html>
+```
+
+```json
+// app/<app>/webapp/manifest.json (Trecho Manifest Version 2 com contentDensities e modelo OData v4 canônico)
+{
+  "_version": "2.0.0",
+  "sap.app": {
+    "id": "br.com.calazanstec.actionplan.<appName>",
+    "type": "application",
+    "i18n": "i18n/i18n.properties",
+    "title": "{{appTitle}}",
+    "description": "{{appDescription}}",
+    "applicationVersion": {
+      "version": "1.0.0"
+    },
+    "dataSources": {
+      "mainService": {
+        "uri": "/api/app/v1/",
+        "type": "OData",
+        "settings": {
+          "odataVersion": "4.0"
+        }
+      }
+    }
+  },
+  "sap.ui": {
+    "technology": "UI5",
+    "deviceTypes": {
+      "desktop": true,
+      "tablet": true,
+      "phone": true
+    }
+  },
+  "sap.ui5": {
+    "dependencies": {
+      "minUI5Version": "1.136.23",
+      "libs": {
+        "sap.fe.templates": {},
+        "sap.m": {},
+        "sap.ui.core": {}
+      }
+    },
+    "contentDensities": {
+      "compact": true,
+      "cozy": true
+    },
+    "models": {
+      "": {
+        "dataSource": "mainService",
+        "settings": {
+          "operationMode": "Server",
+          "autoExpandSelect": true
+        }
+      },
+      "i18n": {
+        "type": "sap.ui.model.resource.ResourceModel",
+        "settings": {
+          "bundleName": "br.com.calazanstec.actionplan.<appName>.i18n.i18n"
+        }
+      }
+    }
+  }
+}
+```
+
+```yaml
+# app/launchpad/ui5.yaml (Projeto UI5 Tooling do Launchpad Sandbox)
+specVersion: "4.0"
+metadata:
+  name: br.com.calazanstec.actionplan.launchpad
+type: application
+framework:
+  name: SAPUI5
+  version: "1.136.23"
+  libraries:
+    - name: sap.m
+    - name: sap.ui.core
+    - name: sap.ushell
+    - name: themelib_sap_horizon
+resources:
+  configuration:
+    paths:
+      webapp: webapp
+```
+
+```json
+// app/launchpad/package.json
+{
+  "name": "action-plan-launchpad",
+  "version": "1.0.0",
+  "private": true
+}
+```
+
+```json
+// app/launchpad/webapp/manifest.json (Manifest Version 2 do Launchpad Sandbox)
+{
+  "_version": "2.0.0",
+  "sap.app": {
+    "id": "br.com.calazanstec.actionplan.launchpad",
+    "type": "application",
+    "title": "Plataforma de Ação - Fiori Launchpad"
+  },
+  "sap.ui": {
+    "technology": "UI5"
+  },
+  "sap.ui5": {
+    "dependencies": {
+      "minUI5Version": "1.136.23",
+      "libs": {
+        "sap.m": {},
+        "sap.ui.core": {},
+        "sap.ushell": {}
+      }
+    },
+    "contentDensities": {
+      "compact": true,
+      "cozy": true
+    }
+  }
+}
+```
+
+```html
+<!-- app/launchpad/webapp/index.html (Fiori Launchpad Sandbox UShell com bootstrap kebab-case) -->
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Plataforma de Ação - Fiori Launchpad</title>
+  <script src="sandbox.js"></script>
+  <script
+    id="sap-ui-bootstrap"
+    src="resources/sap-ui-core.js"
+    data-sap-ui-theme="sap_horizon"
+    data-sap-ui-language="pt-BR"
+    data-sap-ui-compat-version="edge"
+    data-sap-ui-async="true"
+    data-sap-ui-on-init="module:sap/ushell/shells/sandbox/fioriSandbox"
+    data-sap-ui-frame-options="allow">
+  </script>
+</head>
+<body class="sapUiBody" id="canvas">
+</body>
+</html>
+```
+
+```javascript
+// app/launchpad/webapp/sandbox.js (Configuração externa desacoplada mapeando URLs do cds-plugin-ui5)
+window["sap-ushell-config"] = {
+  defaultRenderer: "fiori2",
+  renderers: {
+    fiori2: {
+      applications: {
+        "Tratativa-manage": {
+          title: "Gestão de Tratativas",
+          subtitle: "Plataforma de Ação",
+          icon: "sap-icon://task",
+          additionalInformation: "SAPUI5.Component=br.com.calazanstec.actionplan.tratativas",
+          applicationType: "URL",
+          url: "/br.com.calazanstec.actionplan.tratativas"
+        },
+        "MinhasPendencias-display": {
+          title: "Minhas Pendências",
+          subtitle: "Ações e Ocorrências",
+          icon: "sap-icon://user-edit",
+          additionalInformation: "SAPUI5.Component=br.com.calazanstec.actionplan.minhaspendencias",
+          applicationType: "URL",
+          url: "/br.com.calazanstec.actionplan.minhaspendencias"
+        },
+        "AdministracaoPlataforma-manage": {
+          title: "Administração da Plataforma",
+          subtitle: "Parâmetros e Alertas",
+          icon: "sap-icon://settings",
+          additionalInformation: "SAPUI5.Component=br.com.calazanstec.actionplan.administracao",
+          applicationType: "URL",
+          url: "/br.com.calazanstec.actionplan.administracao"
+        }
+      }
+    }
+  },
+  services: {
+    NavTargetResolution: {
+      config: {
+        enableClientSideTargetResolution: true
+      }
+    }
+  }
+};
+```
+
+```javascript
+// test/apoio/auth-dev.js (Custom Authentication em desenvolvimento com persona fixa)
+const cds = require('@sap/cds');
+
+const USUARIOS_PADRAO = {
+  gestor: { id: 'gestor', roles: ['GestorTratativa'] },
+  usuario: { id: 'usuario', roles: [] },
+  admin: { id: 'admin', roles: ['Administrador'] },
+  'leitor-analitico': { id: 'leitor-analitico', roles: ['LeitorAnalitico'] },
+  'app-origem-a': { id: 'app-origem-a', roles: ['AplicativoOrigem'] },
+  'app-origem-b': { id: 'app-origem-b', roles: ['AplicativoOrigem'] },
+  'app-revogado': { id: 'app-revogado', roles: ['AplicativoOrigem'] }
+};
+
+module.exports = function devAuth(req, res, next) {
+  const persona = process.env.DEV_USER || process.env.CDS_DEV_USER || 'gestor';
+  const usuario = USUARIOS_PADRAO[persona] || USUARIOS_PADRAO.gestor;
+  req.user = new cds.User({ id: usuario.id, roles: usuario.roles });
+  next();
+};
+```
+
+```json
+// package.json (raiz: dependência cds-plugin-ui5 0.17.4 e perfis de auth [development], [test], [papeis])
+{
+  "cds": {
+    "requires": {
+      "auth": {
+        "[development]": {
+          "impl": "test/apoio/auth-dev"
+        },
+        "[test]": {
+          "kind": "mocked",
+          "users": {
+            "app-origem-a": { "password": "", "roles": ["AplicativoOrigem"] },
+            "app-origem-b": { "password": "", "roles": ["AplicativoOrigem"] },
+            "app-revogado": { "password": "", "roles": ["AplicativoOrigem"] },
+            "admin": { "password": "", "roles": ["Administrador"] },
+            "usuario": { "password": "", "roles": [] },
+            "gestor": { "password": "", "roles": ["GestorTratativa"] },
+            "leitor-analitico": { "password": "", "roles": ["LeitorAnalitico"] }
+          }
+        },
+        "[papeis]": {
+          "kind": "mocked",
+          "users": {
+            "app-origem-a": { "password": "", "roles": ["AplicativoOrigem"] },
+            "app-origem-b": { "password": "", "roles": ["AplicativoOrigem"] },
+            "app-revogado": { "password": "", "roles": ["AplicativoOrigem"] },
+            "admin": { "password": "", "roles": ["Administrador"] },
+            "usuario": { "password": "", "roles": [] },
+            "gestor": { "password": "", "roles": ["GestorTratativa"] },
+            "leitor-analitico": { "password": "", "roles": ["LeitorAnalitico"] }
+          }
+        },
+        "[production]": {
+          "kind": "xsuaa"
+        }
+      }
+    }
+  },
+  "devDependencies": {
+    "cds-plugin-ui5": "0.17.4"
+  }
+}
+```
+
+```yaml
+# app/<app>/ui5.yaml (Projeto UI5 Tooling com framework SAPUI5 LTS 1.136.23 e custom task ui5-task-zipper)
+specVersion: "4.0"
+metadata:
+  name: br.com.calazanstec.actionplan.<appName>
+type: application
+framework:
+  name: SAPUI5
+  version: "1.136.23"
+  libraries:
+    - name: sap.m
+    - name: sap.ui.core
+    - name: sap.ushell
+    - name: sap.fe.templates
+    - name: themelib_sap_horizon
+builder:
+  customTasks:
+    - name: ui5-task-zipper
+      afterTask: generateVersionInfo
+      configuration:
+        archiveName: <archiveName>
+        additionalFiles:
+          - xs-app.json
+resources:
+  configuration:
+    paths:
+      webapp: webapp
+```
+
+```json
+// app/<app>/package.json (Script build sem a flag --archive e devDependency ui5-task-zipper)
+{
+  "name": "action-plan-<appName>",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build": "ui5 build --config=ui5.yaml --clean-dest"
+  },
+  "devDependencies": {
+    "@ui5/cli": "^4.0.0",
+    "ui5-task-zipper": "^3.1.3"
+  }
+}
+```
+
+---
+
+## Regras para todas as etapas
+
+- **R1: Componentes SAPUI5, Sandbox Launchpad e Execução Local no Padrão CAP/BAS:** Toda aplicação em `app/` possui `Component.js` estendendo `sap.fe.core.AppComponent` e arquivo `webapp/index.html` com bootstrap local em `resources/sap-ui-core.js`, `ComponentSupport`, parâmetros em grafia kebab-case (`data-sap-ui-resource-roots`, `data-sap-ui-compat-version`, `data-sap-ui-frame-options`), sem scripts inline e sem CDN externa. A raiz de `app/` NÃO possui arquivos `index.html` nem `sandbox.js`, garantindo que o CAP sirva sua página de boas-vindas padrão (`/`) com os links dos apps injetados pelo `cds-plugin-ui5` 0.17.4. Para navegação entre apps por intent, é disponibilizado o projeto isolado `app/launchpad/` com seu próprio `ui5.yaml`, montado pelo plugin em `/br.com.calazanstec.actionplan.launchpad/index.html`, onde `sandbox.js` mapeia os 3 intents para as URLs de montagem do plugin (`/br.com.calazanstec.actionplan.tratativas`, `/br.com.calazanstec.actionplan.minhaspendencias`, `/br.com.calazanstec.actionplan.administracao`). Em desenvolvimento (`[development]`), a autenticação é customizada via `cds.requires.auth.impl` em `test/apoio/auth-dev.js` (fora do pacote de produção), injetando persona fixa (padrão gestor, configurável por `DEV_USER` / `CDS_DEV_USER`), sem pedido de login e evitando o erro 403 do dummy superuser em `req.user.is('AplicativoOrigem')`. Os perfis `[test]` e `[papeis]` permanecem com `mocked`. Os manifestos são migrados para Manifest Version 2 (`_version: "2.0.0"`, `minUI5Version: "1.136.23"`, `sap.ui5.contentDensities: { compact: true, cozy: true }` e remoção de `synchronizationMode` obsoleto no OData v4). O empacotamento MTA/HTML5 da spec 014 é realizado via custom task `ui5-task-zipper` no `ui5.yaml` sem a flag inválida `--archive`.
+- **R2: Internacionalização e Rótulos em pt-BR:** 100% dos textos expostos na interface (entidades, campos, colunas, filtros, ações e parâmetros) utilizam rótulos claros em Português do Brasil, eliminando identificadores técnicos em camelCase.
+- **R3: Action Import "Criar Tratativa Avulsa":** Declarado como Action Import no EntityContainer (`TratativaAppService.EntityContainer/criarTratativaAvulsa`), abrindo modal com parâmetros canônicos (sem data discricionária) e acessível a qualquer usuário autenticado.
+- **R4: Tipagem Semântica e Ajudas Visuais:** Prazos como `Date` (`Edm.Date`), recebidos no backend como string ISO `'YYYY-MM-DD'` compatíveis com `validarPrazo`, listas suspensas com `@Common.ValueListWithFixedValues` (Criticidade em tratativas e mudarCriticidade; Prioridade e Evidência Obrigatória em criarAcao e criarSubacao) e Value Help de colaboradores (`Colaboradores`) em criarTratativaAvulsa, criarAcao, criarSubacao e delegarAcao consumindo SuccessFactors exclusivamente para leitura sob a LGPD.
+- **R5: Visibilidade e Habilitação de Transições de Status:** Botões de cabeçalho dedicados para cada ação de ciclo de vida da spec 003, governados declarativamente por `@Core.OperationAvailable: pode<Acao>` na definição das ações bound e `@UI.Hidden: oculta<Acao>` em `UI.Identification` com flags `oculta<Acao> = !pode<Acao>` declaradas na entidade `Tratativas`, com justificativa obrigatória em Cancelar e Reabrir.
+- **R6: Completude Visual e Funcional:** Dados Gerais com etiquetas identificadoras, colunas Unidade/Área/Data prevista visíveis sem corte e botões "Salvar Parâmetros" e "Executar Processamento Manual" operacionais na Administração via `EntityContainer/`, com popup nativo de resultado para o tipo complexo `RelatorioProcessamentoAlertas` sem necessidade de código customizado.
+- **R7: Robustez e Resiliência do Backend:** Consulta de prazos de criticidade (`diasDoPrazo`) trata bases com tabela `PrazosCriticidade` não inicializada com recusa 400 estruturada, sem lançar `TypeError` e sem interromper o servidor.
+- **R8: Proteção LGPD e Menor Privilégio:** Value Help restrito a atributos corporativos não sensíveis, placeholders de conscientização contra dados de saúde em campos de texto livre e mascaramento de campos nulos para não gestores.
+- **R9: Generalidade e Ausência de Regras Departamentais:** Nenhuma tela, coluna, texto ou ajuda apresenta termos específicos do SESMT ou de áreas isoladas (AGENTS.md:36).
+- **R10: Verificação em Duas Camadas:** Esteira automatizada headless sob `cds.test` com SQLite em memória (`verify.sh`) sem navegador real (AGENTS.md:38), combinada com inspeção visual guiada no portal do Maestri documentada em cada etapa.
+
+---
+
+## Itens N3 (aguardam aprovação no Gate 1)
+
+- **N3-1 (R7, Achado 8):** Tratamento defensivo em `srv/tratativa/prazo.ts` com recusa 400 estruturada (`Prazo não configurado para a criticidade informada.`, `target: criticidade`) quando `PrazosCriticidade` estiver vazia.
+- **N3-2 (R3, Achado 3):** Ajuste no Action Import `TratativaAppService.EntityContainer/criarTratativaAvulsa` e remoção do parâmetro discricionário `dataPrevistaConclusao`.
+- **N3-3 (R4, Achado 4):** Exposição da entidade `Colaboradores` em `TratativaAppService` para Value Help conectada ao SuccessFactors em modo estritamente leitura sob LGPD.
+- **N3-4 (R5, Achado 5):** Ações dedicadas de status (`iniciarTratativa`, `encerrarTratativa`, `cancelarTratativa`, `reabrirTratativa`) com controle declarativo `@Core.OperationAvailable`.
+- **N3-5 (R10):** Protocolo de testes headless na esteira de engenharia e roteiro de verificação visual no portal do Maestri.
+
+---
+
+## Etapa 1: Robustez do backend e contratos de serviço (`diasDoPrazo`, tipagem Date, listas de valores e Value Help SF)
+
+**CAs cobertos:** CA5, CA7, CA9, CA13, CA14, CA16.
+**Itens N3 envolvidos:** N3-1, N3-2, N3-3, N3-4, N3-5.
+
+### Verificação visual no navegador (portal do Maestri)
+- O orquestrador valida via navegador/chamadas HTTP que o endpoint `/api/app/v1/$metadata` expõe os novos tipos: parâmetro `prazo` como `Edm.Date`, entidade `Colaboradores` (com campos `matricula`, `nome`, `email`, sem CPF), entidades `ValoresCriticidade`, `ValoresPrioridade` e `ValoresEvidenciaObrigatoria`, e que chamadas de abertura de tratativa em base com prazos não cadastrados retornam recusa HTTP 400 estruturada sem interrupção do servidor Node.js.
+
+### RED
+Criar bloco de testes em `test/ui-acabamento.test.ts` verificando:
+- Chamada a `diasDoPrazo` com tabela `PrazosCriticidade` vazia não lança `TypeError` e devolve recusa 400 estruturada com `target: 'criticidade'` e mensagem `Prazo não configurado para a criticidade informada.` (CA13).
+- Metadados de `TratativaAppService` não contêm o parâmetro `dataPrevistaConclusao` na action `criarTratativaAvulsa` (CA5).
+- Parâmetro `prazo` nas actions `criarAcao` e `criarSubacao` tipado como data (`Edm.Date`), compatível em runtime com a validação `validarPrazo` (CA7, Achado 5).
+- Anotações `Common.ValueList` e `Common.ValueListWithFixedValues` nos parâmetros de ações (`ValoresCriticidade`, `ValoresPrioridade`, `ValoresEvidenciaObrigatoria` e `Colaboradores`) (CA7, Achado 3).
+- Entidade `Colaboradores` expõe no OData unicamente `matricula`, `nome` e `email`, sem campos de CPF ou dados sensíveis (CA14).
+- Ações dedicadas de status (`iniciarTratativa`, `encerrarTratativa`, `cancelarTratativa`, `reabrirTratativa`) presentes nos metadados com `@Core.OperationAvailable: pode<Acao>`, e com justificativa obrigatória em Cancelar e Reabrir (CA9, Achado 2).
+- Entidade `Tratativas` expõe as propriedades booleanas `pode<Acao>` e `oculta<Acao>` (`ocultaIniciar`, `ocultaEncerrar`, `ocultaCancelar`, `ocultaReabrir`) para controle dinâmico de UI (CA9, Achado 1).
+
+### GREEN
+- Refatorar `diasDoPrazo` em `srv/tratativa/prazo.ts` tratando `prazo` ausente com `recusar(400, 'Prazo não configurado para a criticidade informada.', 'criticidade')`.
+- Atualizar `srv/tratativa-app-service.cds` removendo `dataPrevistaConclusao` de `criarTratativaAvulsa`, ajustando `prazo : Date` em `criarAcao`/`criarSubacao`, adicionando as ações dedicadas de status com `@Core.OperationAvailable: pode<Acao>`, declarando na entidade `Tratativas` as propriedades `pode<Acao>` e `oculta<Acao>`, e expondo as entidades `Colaboradores`, `ValoresCriticidade`, `ValoresPrioridade`, `ValoresEvidenciaObrigatoria`.
+- Implementar em `srv/tratativa-app-service.ts` os handlers para as novas ações de status, cálculo das flags `pode<Acao>` e `oculta<Acao> = !pode<Acao>` no hook `after('READ', 'Tratativas')`, repasse do parâmetro `prazo : Date` (recebido como string ISO `'YYYY-MM-DD'`) mantendo compatibilidade com `validarPrazo`, e handlers de `READ` para `Colaboradores` (delegando a `buscarColaboradores` da spec 011 / cache) e domínios fixos.
+
+---
+
+## Etapa 2: Componentes SAPUI5, sandbox Fiori launchpad e execução local no padrão CAP/BAS
+
+**CAs cobertos:** CA1, CA2, CA16.
+**Itens N3 envolvidos:** N3-5.
+
+### Verificação visual no navegador (portal do Maestri)
+- O orquestrador inicia o servidor CAP na raiz do projeto via `cds watch` (perfil padrão de desenvolvimento com estratégia de autenticação customizada via `test/apoio/auth-dev.js`).
+- Abre no navegador corporativo (portal do Maestri) o endereço `http://localhost:4004/`:
+  - A página abre diretamente sem solicitar usuário/senha (sem diálogo nem modal de login HTTP Basic).
+  - Exibe a página oficial de boas-vindas do CAP listando os serviços OData v4 ativos (`/api/app/v1`, `/api/administracao/v1`) e a seção Web Applications com os 4 links injetados pelo `cds-plugin-ui5` 0.17.4:
+    1. `/br.com.calazanstec.actionplan.tratativas/index.html`
+    2. `/br.com.calazanstec.actionplan.minhaspendencias/index.html`
+    3. `/br.com.calazanstec.actionplan.administracao/index.html`
+    4. `/br.com.calazanstec.actionplan.launchpad/index.html`
+  - O orquestrador comprova que é possível abrir os 3 apps diretamente pelos links da página inicial do CAP.
+- Abre o Fiori Launchpad Sandbox em `http://localhost:4004/br.com.calazanstec.actionplan.launchpad/index.html`:
+  - A página abre diretamente sem solicitar credenciais, carregando UI5 a partir de sua montagem válida do tooling (`/br.com.calazanstec.actionplan.launchpad/resources/sap-ui-core.js`).
+  - Exibe o Fiori Launchpad Sandbox com os 3 tiles configurados via `sandbox.js`:
+    1. "Gestão de Tratativas" (intent `#Tratativa-manage`)
+    2. "Minhas Pendências" (intent `#MinhasPendencias-display`)
+    3. "Administração da Plataforma" (intent `#AdministracaoPlataforma-manage`)
+  - O orquestrador clica nos tiles e comprova a navegação entre os 3 apps no padrão Fiori Launchpad:
+    - O clique em "Gestão de Tratativas" navega para `#Tratativa-manage` e renderiza o List Report de Tratativas a partir de `/br.com.calazanstec.actionplan.tratativas`.
+    - O clique em "Minhas Pendências" navega para `#MinhasPendencias-display` e renderiza a tela com as abas de pendências a partir de `/br.com.calazanstec.actionplan.minhaspendencias`.
+    - O clique em "Administração da Plataforma" navega para `#AdministracaoPlataforma-manage` e renderiza a tela administrativa a partir de `/br.com.calazanstec.actionplan.administracao`.
+    - A transição entre os apps ocorre via hash navigation sem recarregamento completo da casca (shell).
+  - Todas as aplicações carregam recursos locais providos pelo `cds-plugin-ui5` em `resources/sap-ui-core.js`, sem qualquer dependência ou requisição para CDNs externas.
+  - O orquestrador valida também a abertura individual de cada aplicação em suas URLs locais (`/br.com.calazanstec.actionplan.tratativas/index.html`, `/br.com.calazanstec.actionplan.minhaspendencias/index.html` e `/br.com.calazanstec.actionplan.administracao/index.html`), comprovando o carregamento autônomo com tema Horizon via `ComponentSupport`.
+
+### RED
+Criar/atualizar bloco de testes automatizados estruturais estáticos em `test/ui-acabamento.test.ts` e alinhar `test/publicacao-seguranca-destinations.test.ts` (sem invocar comandos npm dentro do Jest e sem abrir navegador real na esteira de engenharia), validando os contratos de execução local, serving, manifestos e autenticação dev:
+- **CA1 [estrutural - Component.js]:** valida que cada uma das três aplicações (`app/tratativas/webapp/`, `app/minhas-pendencias/webapp/`, `app/administracao/webapp/`) possui o arquivo `Component.js` estendendo `sap.fe.core.AppComponent` e declarando `metadata: { manifest: "json" }`.
+- **CA1 [estrutural - index.html por app]:** valida que `webapp/index.html` de cada aplicação referencia `src="resources/sap-ui-core.js"` local, configura `data-sap-ui-on-init="module:sap/ui/core/ComponentSupport"`, tema `sap_horizon`, tag container `<div data-sap-ui-component ...>`, parâmetros de bootstrap com grafia nova kebab-case (`data-sap-ui-resource-roots`, `data-sap-ui-compat-version`, `data-sap-ui-frame-options`), NÃO contém referências a CDN externa (`https://ui5.sap.com` ou `https://sapui5.hana.ondemand.com`) e NÃO contém scripts inline (`<script>...</script>` com corpo executável).
+- **CA1 [estrutural - Manifest Version 2]:** valida que o `manifest.json` de cada aplicação (`tratativas`, `minhas-pendencias`, `administracao`) declara `_version: "2.0.0"` (ou superior), `minUI5Version: "1.136.23"`, bloco obrigatório `sap.ui5.contentDensities` com `{ compact: true, cozy: true }` e NÃO contém o parâmetro obsoleto `synchronizationMode` nas configurações do modelo OData v4.
+- **CA1 [estrutural - Launchpad Sandbox em app/launchpad/]:** valida que `app/launchpad/` possui `ui5.yaml` configurado com framework SAPUI5 versão `1.136.23` e bibliotecas `sap.m`, `sap.ui.core`, `sap.ushell`, `themelib_sap_horizon`; possui `package.json` e `webapp/manifest.json` com `_version: "2.0.0"`; que `app/launchpad/webapp/index.html` importa `<script src="sandbox.js"></script>`, carrega `resources/sap-ui-core.js` local, inicializa `sap/ushell/shells/sandbox/fioriSandbox`, possui parâmetros em kebab-case e NÃO contém scripts inline nem CDN; que `app/launchpad/webapp/sandbox.js` define `window["sap-ushell-config"]` configurando os 3 intents (`Tratativa-manage`, `MinhasPendencias-display`, `AdministracaoPlataforma-manage`) com URLs apontando para as montagens válidas do plugin (`/br.com.calazanstec.actionplan.tratativas`, `/br.com.calazanstec.actionplan.minhaspendencias`, `/br.com.calazanstec.actionplan.administracao`); e valida que `app/index.html` e `app/sandbox.js` NÃO existem na raiz de `app/`, permitindo que o CAP sirva sua página de boas-vindas padrão e injete os links das aplicações.
+- **CA1 [estrutural - Autenticação Customizada em dev e perfis no package.json]:** valida que `package.json` na raiz declara `cds-plugin-ui5` (versão `"0.17.4"`) em `devDependencies`; que `cds.requires.auth` define `[development]` com `impl: "test/apoio/auth-dev"`; que o arquivo `test/apoio/auth-dev.js` existe fora do pacote de produção e exporta middleware que injeta `req.user = new cds.User(...)` com persona fixa (padrão `gestor`, sem papel `AplicativoOrigem` para não disparar 403 em `srv/tratativa-app-service.ts:89`, configurável via `DEV_USER` / `CDS_DEV_USER`); que `[test]` declara `kind: "mocked"` com o dicionário dos 7 usuários mocked pré-existentes, e `[papeis]` declara `kind: "mocked"`.
+- **CA1 [estrutural - Alinhamento do teste de publicação 014]:** valida que `test/publicacao-seguranca-destinations.test.ts` (014) confere `impl: "test/apoio/auth-dev"` em `[development]` (eliminando a asserção legada de `kind: "dummy"` incompatível com a guarda de segurança do serviço) e preserva a asserção de `kind: "mocked"` em `[test]`.
+- **CA1 e CA16 [estrutural - UI5 Tooling e ui5-task-zipper]:** valida que `ui5.yaml` de cada app declara `framework: { name: "SAPUI5", version: "1.136.23" }`, inclui `sap.ushell` em `framework.libraries` e a custom task `ui5-task-zipper` configurada para gerar o arquivo zip com o nome esperado pelo `mta.yaml`; e que `package.json` de cada app declara `ui5-task-zipper` (versão `"^3.1.3"`) em `devDependencies` e script `build` sem a flag inválida `--archive` (`ui5 build --config=ui5.yaml --clean-dest`).
+
+### GREEN
+- Atualizar `package.json` na raiz do projeto: adicionar `"cds-plugin-ui5": "0.17.4"` às `devDependencies`, configurar `cds.requires.auth` com `[development]: { "impl": "test/apoio/auth-dev" }`, `[test]: { "kind": "mocked", "users": { ... } }` e `[papeis]: { "kind": "mocked", "users": { ... } }`.
+- Criar `test/apoio/auth-dev.js` implementando o middleware de Custom Authentication do CAP que injeta `req.user = new cds.User({ id, roles })` com persona padrão `gestor` (com papel `GestorTratativa` e sem `AplicativoOrigem`), alternável via `process.env.DEV_USER || process.env.CDS_DEV_USER`.
+- Atualizar `test/publicacao-seguranca-destinations.test.ts` (014) ajustando a verificação de `auth['[development]']` para esperar `impl: "test/apoio/auth-dev"` em vez de `kind: "dummy"`.
+- Remover `app/index.html` e `app/sandbox.js` da raiz de `app/` para que o CAP renderize a página de boas-vindas padrão em `/` e permita que o `cds-plugin-ui5` injete os links das aplicações UI5.
+- Criar o projeto isolado `app/launchpad/` contendo:
+  - `app/launchpad/ui5.yaml` com specVersion "4.0", framework SAPUI5 1.136.23 e bibliotecas `sap.m`, `sap.ui.core`, `sap.ushell`, `themelib_sap_horizon`.
+  - `app/launchpad/package.json` privado.
+  - `app/launchpad/webapp/manifest.json` com `_version: "2.0.0"`, id `br.com.calazanstec.actionplan.launchpad`, `minUI5Version: "1.136.23"` e `contentDensities: { compact: true, cozy: true }`.
+  - `app/launchpad/webapp/sandbox.js` configurando `window["sap-ushell-config"]` com os 3 intents apontando para as URLs de montagem do plugin (`/br.com.calazanstec.actionplan.tratativas`, `/br.com.calazanstec.actionplan.minhaspendencias`, `/br.com.calazanstec.actionplan.administracao`).
+  - `app/launchpad/webapp/index.html` inicializando o Fiori Launchpad Sandbox UShell com `sandbox.js` e `resources/sap-ui-core.js` local, com bootstrap em kebab-case e sem scripts inline.
+- Atualizar `manifest.json` das três aplicações (`app/tratativas/`, `app/minhas-pendencias/`, `app/administracao/`) para Manifest Version 2 (`_version: "2.0.0"`, `minUI5Version: "1.136.23"`, inclusão de `sap.ui5.contentDensities: { compact: true, cozy: true }` e remoção de `synchronizationMode: "None"` do modelo OData v4).
+- Atualizar `webapp/index.html` das três aplicações adotando parâmetros de bootstrap com grafia kebab-case (`data-sap-ui-resource-roots`, `data-sap-ui-compat-version`, `data-sap-ui-frame-options`), sem CDN e sem scripts inline.
+- Atualizar `app/tratativas/ui5.yaml`, `app/minhas-pendencias/ui5.yaml` e `app/administracao/ui5.yaml` configurando framework SAPUI5 versão `1.136.23`, bibliotecas incluindo `sap.ushell` em `framework.libraries`, e custom task `ui5-task-zipper` com `archiveName` alinhado ao `mta.yaml`.
+- Atualizar `app/tratativas/package.json`, `app/minhas-pendencias/package.json` e `app/administracao/package.json` adicionando `"ui5-task-zipper": "^3.1.3"` às `devDependencies` e ajustando o script `build` para `ui5 build --config=ui5.yaml --clean-dest` (sem `--archive`).
+- Manter os arquivos `Component.js` em cada app herdando de `sap.fe.core.AppComponent`.
+
+---
+
+## Etapa 3: Rótulos amigáveis pt-BR, internacionalização e acabamento de `app/tratativas/`
+
+**CAs cobertos:** CA3, CA4, CA6, CA8, CA10, CA15, CA16.
+**Itens N3 envolvidos:** N3-2, N3-3, N3-4, N3-5.
+
+### Verificação visual no navegador (portal do Maestri)
+- O orquestrador acessa a aplicação Gestão de Tratativas (`/br.com.calazanstec.actionplan.tratativas/index.html`) no navegador e valida:
+  1. **Lista de Tratativas:** barra de filtros e cabeçalhos de tabela exibem rótulos em pt-BR (Código, Título, Origem, ID na Origem, Criticidade, Status, Unidade, Área, Data Prevista de Conclusão); colunas Unidade, Área e Data prevista visíveis sem corte em desktop.
+  2. **Criar Tratativa Avulsa:** botão na barra de ferramentas abre diálogo modal com Título, Criticidade (com dropdown), Descrição, Unidade, Área e Solicitante (com Value Help); nenhum campo de data discricionária é exibido; preenchimento e clique em Criar salva e inclui a ocorrência na lista.
+  3. **Object Page e Ciclo de Vida:** seção "Dados Gerais" exibe valores rotulados com suas etiquetas identificadoras; botões de transição de status aparecem conforme a máquina de estados:
+     - Em `Aberta`: botões "Iniciar Tratativa", "Encerrar Tratativa" e "Cancelar Tratativa" visíveis; "Reabrir Tratativa" ausente.
+     - Ao clicar em "Iniciar Tratativa": status muda para `Em andamento`, botões "Encerrar Tratativa" e "Cancelar Tratativa" aparecem.
+     - Ao clicar em "Cancelar Tratativa": diálogo solicita Justificativa obrigatória com placeholder orientativo contra dados sensíveis; após confirmação, status passa a `Cancelada` e nenhum botão de transição permanece visível.
+  4. **Adicionar Ação:** diálogo exibe seletor de calendário no campo Prazo, dropdowns em Prioridade e Evidência Obrigatória, e ícone de pesquisa no campo Responsável abrindo Value Help de colaboradores do SuccessFactors.
+
+### RED
+Criar bloco de testes em `test/ui-acabamento.test.ts` e ajustar asserções pré-existentes em `test/ui-tratativas.test.ts` verificando:
+- Inexistência de identificadores técnicos em camelCase nas anotações de `app/tratativas/` (todos os campos com `@Common.Label` ou `@title` em pt-BR) (CA3).
+- Declaração do botão "Criar Tratativa Avulsa" apontando para `TratativaAppService.EntityContainer/criarTratativaAvulsa` (CA5).
+- Ajuste das asserções em `test/ui-tratativas.test.ts`: linha 129 para `EntityContainer/criarTratativaAvulsa` e linha 141 para as ações dedicadas de status (`iniciarTratativa`, `encerrarTratativa`, `cancelarTratativa`, `reabrirTratativa`) com `@UI.Hidden: oculta<Acao>` em substituição a `mudarStatus` (Achado 4).
+- Anotações `@UI.LineItem` de Tratativas contendo colunas Unidade, Área e Data prevista com `@UI.Importance: #High` (CA11).
+- Anotações `@UI.FieldGroup#DadosGerais` contendo labels em todos os DataFields (CA11).
+- Anotações dos botões de transição em `@UI.Identification` com `@UI.Hidden: oculta<Acao>` condicionados às flags de status da Tratativa, sem `@Core.OperationAvailable` dentro do DataField (CA9, Achados 1 e 2).
+- Anotações canônicas de Value Help e dropdowns nos parâmetros das ações via `annotate ... with actions { ... }` para `criarTratativaAvulsa`, `mudarCriticidade`, `criarAcao`, `criarSubacao` e `delegarAcao` (CA7, Achado 3).
+- Presença de placeholders com orientação contra dados sensíveis em `i18n.properties` (CA15).
+
+### GREEN
+- Atualizar `app/tratativas/annotations.cds` com Action Import no EntityContainer, `@UI.Importance: #High` nas colunas, rótulos explícitos em `FieldGroup#DadosGerais`, botões dedicados de transição em `@UI.Identification` com `@UI.Hidden: oculta<Acao>` (sem `@Core.OperationAvailable` dentro do DataField), e anotações canônicas no escopo de ações com `@Common.ValueList` / `@Common.ValueListWithFixedValues` em `criarTratativaAvulsa`, `mudarCriticidade`, `criarAcao`, `criarSubacao` e `delegarAcao`.
+- Atualizar `app/tratativas/webapp/i18n/i18n.properties` com todos os textos amigáveis em pt-BR e placeholders LGPD.
+- Atualizar `test/ui-tratativas.test.ts` alinhando as asserções de texto com a nova convenção canônica (`EntityContainer/` e ações dedicadas de status) (Achado 4).
+
+---
+
+## Etapa 4: Acabamento de `app/minhas-pendencias/` e `app/administracao/`
+
+**CAs cobertos:** CA3, CA4, CA11, CA12, CA16.
+**Itens N3 envolvidos:** N3-4, N3-5.
+
+### Verificação visual no navegador (portal do Maestri)
+- O orquestrador acessa as aplicações de Minhas Pendências e Administração no navegador e valida:
+  1. **Minhas Pendências (`/br.com.calazanstec.actionplan.minhaspendencias/index.html`):** abas "Minhas Ações" e "Minhas Tratativas" exibem cabeçalhos de colunas e filtros inteiramente traduzidos em pt-BR sem identificadores técnicos.
+  2. **Administração (`/br.com.calazanstec.actionplan.administracao/index.html`):** aba "Parâmetros de Alertas" exibe os botões "Salvar Parâmetros" e "Executar Processamento Manual" visíveis na barra de ferramentas / cabeçalho; ao clicar em "Salvar Parâmetros", os dados são persistidos e confirmação (Toast) é exibida; ao clicar em "Executar Processamento Manual", o processamento é executado imediatamente exibindo o diálogo/popup nativo do Fiori elements v4 com o resumo de alertas gerados (`RelatorioProcessamentoAlertas`) sem código customizado (Achado 6).
+
+### RED
+Criar bloco de testes em `test/ui-acabamento.test.ts` e ajustar asserções pré-existentes em `test/ui-administracao.test.ts` verificando:
+- Inexistência de camelCase nas anotações e i18n de `app/minhas-pendencias/` e `app/administracao/` (CA3).
+- Aba Parâmetros de Alertas em `app/administracao/annotations.cds` declara botões para `atualizarParametrosAlertas` ("Salvar Parâmetros") e `executarProcessamentoAlertas` ("Executar Processamento Manual") via `EntityContainer` (CA11).
+- Ajuste das asserções em `test/ui-administracao.test.ts` (linhas 104-105) para `AdministracaoService.EntityContainer/atualizarParametrosAlertas` e `AdministracaoService.EntityContainer/executarProcessamentoAlertas` (Achado 4).
+- Textos em pt-BR em `app/minhas-pendencias/webapp/i18n/i18n.properties` e `app/administracao/webapp/i18n/i18n.properties` (CA3).
+
+### GREEN
+- Atualizar `app/minhas-pendencias/annotations.cds` e `app/minhas-pendencias/webapp/i18n/i18n.properties` com rótulos amigáveis em pt-BR para todas as colunas e filtros de Minhas Ações e Minhas Tratativas.
+- Atualizar `app/administracao/annotations.cds` incluindo os botões `UI.DataFieldForAction` para `atualizarParametrosAlertas` e `executarProcessamentoAlertas` em `LineItem` e `Identification` via `EntityContainer/`, e atualizar `app/administracao/webapp/i18n/i18n.properties` com todos os textos amigáveis em pt-BR.
+- Atualizar `test/ui-administracao.test.ts` alinhando as asserções de texto para a sintaxe `EntityContainer/` (Achado 4).
+
+---
+
+## Critérios de Pronto
+
+1. Todos os 16 critérios de aceite (CA1 a CA16) atendidos integralmente.
+2. Cada aplicação em `app/` possui `Component.js` e `index.html` locais (sem CDN e sem script inline, bootstrap kebab-case), manifestos em Manifest Version 2 (LTS 1.136.23, contentDensities e sem synchronizationMode), o launchpad sandbox isolado em `app/launchpad/` provê navegação entre os 3 apps por intents com URLs de montagem do `cds-plugin-ui5` 0.17.4, a página inicial do CAP lista todos os apps no padrão BAS, o servidor local opera com autenticação dev customizada (`test/apoio/auth-dev.js` sem prompt de login) e o empacotamento MTA utiliza `ui5-task-zipper`.
+3. 100% dos textos expostos na interface possuem rótulos em pt-BR sem identificadores técnicos em camelCase.
+4. Botão "Criar Tratativa Avulsa" abre diálogo canônico com persistência síncrona para qualquer usuário autenticado.
+5. Diálogos oferecem DatePicker para datas, dropdowns para campos discretos e Value Help para colaboradores via SuccessFactors sob a LGPD.
+6. Transições de status da Tratativa seguem o ciclo de vida oficial da spec 003 com visibilidade condicional e justificativa obrigatória em Cancelar e Reabrir.
+7. Administração disponibiliza botões "Salvar Parâmetros" e "Executar Processamento Manual" operacionais.
+8. Rotina `diasDoPrazo` em `srv/tratativa/prazo.ts` trata defensivamente ausência de prazos com recusa 400 sem `TypeError`.
+9. `npm run lint`, `npm test` e `npm run arch` passam com retorno zero no `verify.sh`, sem navegadores reais na esteira.

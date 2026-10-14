@@ -21,6 +21,55 @@
     "requires": {
       "auth": {
         "[development]": {
+          "impl": "test/apoio/auth-dev"
+        },
+        "[test]": {
+          "kind": "mocked",
+          "impl": null,
+          "users": {
+            "app-origem-a": {
+              "password": "",
+              "roles": [
+                "AplicativoOrigem"
+              ]
+            },
+            "app-origem-b": {
+              "password": "",
+              "roles": [
+                "AplicativoOrigem"
+              ]
+            },
+            "app-revogado": {
+              "password": "",
+              "roles": [
+                "AplicativoOrigem"
+              ]
+            },
+            "admin": {
+              "password": "",
+              "roles": [
+                "Administrador"
+              ]
+            },
+            "usuario": {
+              "password": "",
+              "roles": []
+            },
+            "gestor": {
+              "password": "",
+              "roles": [
+                "GestorTratativa"
+              ]
+            },
+            "leitor-analitico": {
+              "password": "",
+              "roles": [
+                "LeitorAnalitico"
+              ]
+            }
+          }
+        },
+        "[papeis]": {
           "kind": "mocked",
           "users": {
             "app-origem-a": {
@@ -159,6 +208,7 @@
     "@sap/eslint-plugin-cds": "^4.2.5",
     "@types/jest": "^30.0.0",
     "@types/node": "^26.6.4",
+    "cds-plugin-ui5": "0.17.4",
     "dependency-cruiser": "^16.10.4",
     "eslint": "^9.39.5",
     "globals": "^17.13.0",

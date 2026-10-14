@@ -21,12 +21,36 @@ service TratativaAppService {
         dataCriacao,
         dataPrevistaConclusao,
         false as ocultaResponsaveis : Boolean,
+        false as podeIniciar        : Boolean,
+        false as podeEncerrar       : Boolean,
+        false as podeCancelar       : Boolean,
+        false as podeReabrir        : Boolean,
+        false as ocultaIniciar      : Boolean,
+        false as ocultaEncerrar     : Boolean,
+        false as ocultaCancelar     : Boolean,
+        false as ocultaReabrir      : Boolean,
         acoes         : Composition of many Acoes on acoes.tratativa = $self,
         participantes : Composition of many Participantes on participantes.tratativa = $self,
         evidencias    : Composition of many Evidencias on evidencias.tratativa = $self,
         comentarios   : Composition of many Comentarios on comentarios.tratativa = $self,
         historico     : Association to many Historico on historico.tratativa = $self
   } actions {
+    @requires: 'GestorTratativa'
+    @Core.OperationAvailable: in.podeIniciar
+    action iniciarTratativa();
+
+    @requires: 'GestorTratativa'
+    @Core.OperationAvailable: in.podeEncerrar
+    action encerrarTratativa();
+
+    @requires: 'GestorTratativa'
+    @Core.OperationAvailable: in.podeCancelar
+    action cancelarTratativa(justificativa : String(500));
+
+    @requires: 'GestorTratativa'
+    @Core.OperationAvailable: in.podeReabrir
+    action reabrirTratativa(justificativa : String(500));
+
     @requires: 'GestorTratativa'
     action mudarStatus(status : String, justificativa : String);
 
@@ -40,10 +64,10 @@ service TratativaAppService {
     action aplicarTemplate(templateId : UUID);
 
     @requires: 'GestorTratativa'
-    action criarAcao(descricao : String, responsavel : String, prazo : String, prioridade : String, evidenciaObrigatoria : String) returns ResultadoCriacaoAcao;
+    action criarAcao(descricao : String, responsavel : String, prazo : Date, prioridade : String, evidenciaObrigatoria : String) returns ResultadoCriacaoAcao;
 
     @requires: 'GestorTratativa'
-    action criarSubacao(acaoMae : UUID, descricao : String, responsavel : String, prazo : String, prioridade : String, evidenciaObrigatoria : String) returns ResultadoCriacaoAcao;
+    action criarSubacao(acaoMae : UUID, descricao : String, responsavel : String, prazo : Date, prioridade : String, evidenciaObrigatoria : String) returns ResultadoCriacaoAcao;
 
     @requires: 'GestorTratativa'
     action delegarAcao(acao : UUID, novoResponsavel : String, justificativa : String);
@@ -86,9 +110,33 @@ service TratativaAppService {
     criticidade           : m.Criticidade,
     unidade               : String(100),
     area                  : String(100),
-    solicitante           : String(50),
-    dataPrevistaConclusao : Date
+    solicitante           : String(50)
   ) returns Tratativas;
+
+  @readonly
+  entity Colaboradores {
+    key matricula : String(50);
+        nome      : String(100);
+        email     : String(100);
+  }
+
+  @readonly
+  entity ValoresCriticidade {
+    key codigo    : String(10);
+        descricao : String(50);
+  }
+
+  @readonly
+  entity ValoresPrioridade {
+    key codigo    : String(10);
+        descricao : String(50);
+  }
+
+  @readonly
+  entity ValoresEvidenciaObrigatoria {
+    key codigo    : String(10);
+        descricao : String(50);
+  }
 
   @readonly
   @cds.redirection.target

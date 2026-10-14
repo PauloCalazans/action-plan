@@ -1,0 +1,18 @@
+specVersion: "4.0"
+metadata:
+  name: br.com.calazanstec.actionplan.launchpad
+type: application
+framework:
+  name: SAPUI5
+  version: "1.136.23"
+  libraries:
+    - name: sap.fe.templates
+    - name: sap.m
+    - name: sap.ui.core
+    - name: sap.ushell
+    - name: sap.tnt
+    - name: themelib_sap_horizon
+resources:
+  configuration:
+    paths:
+      webapp: webapp

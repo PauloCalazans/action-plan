@@ -110,7 +110,7 @@ export default class AdministracaoService extends cds.ApplicationService {
         nivelAreaSF: parametros.nivelAreaSF.trim(),
       });
     });
-    this.on('atualizarParametrosAlertas', (req) => {
+    this.on('atualizarParametrosAlertas', async (req) => {
       const parametros = req.data as DadosParametrosAlertas;
       type CampoNumerico = keyof Pick<
         DadosParametrosAlertas,
@@ -147,9 +147,17 @@ export default class AdministracaoService extends cds.ApplicationService {
           req.reject(400, limite.mensagem, limite.campo);
         }
       }
-      return atualizarParametrosAlertas(parametros);
+      const atualizado = await atualizarParametrosAlertas(parametros);
+      req.info('Parâmetros de alertas salvos.');
+      return atualizado;
     });
-    this.on('executarProcessamentoAlertas', async () => processarAlertas(new Date()));
+    this.on('executarProcessamentoAlertas', async (req) => {
+      const relatorio = await processarAlertas(new Date());
+      req.info(
+        `Processamento concluído: ${relatorio.ocorrenciasAvaliadas} ocorrências avaliadas, ${relatorio.alertasGerados} alertas gerados, ${relatorio.notificacoesEnviadas} notificações enviadas, ${relatorio.falhas} falhas.`,
+      );
+      return relatorio;
+    });
     this.on('listarAlertasEmitidos', (req) => listarAlertasEmitidos(req.data as FiltrosListagemAlertas));
     return super.init();
   }
