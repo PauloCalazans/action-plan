@@ -1,0 +1,6 @@
+usuarioTecnico;descricao;ativa
+app-origem-a;Inspeções de Segurança (app SIS) - origem Inspeção de Segurança;true
+app-origem-b;Auditorias Internas (app QAudit) - origem Auditoria Interna;true
+app-quase-acidente;Reporte de Quase-Acidente (app móvel) - origem Quase-Acidente;true
+app-manutencao;Ordens de Manutenção (integração SAP PM) - origem Manutenção;true
+app-revogado;Checklist legado de 5S - credencial revogada em 30/06/2026;false
