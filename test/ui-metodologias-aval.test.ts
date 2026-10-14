@@ -1,4 +1,6 @@
 import cds from '@sap/cds';
+import { existsSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { criarAcao, criarSubacao } from './apoio/acoes';
 import { comoValidador, comoValidadorB, emitirAval } from './apoio/aval';
 import { anexarEvidencia, gerarPDF, removerEvidencia } from './apoio/evidencias';
@@ -350,5 +352,158 @@ describe('Contrato do app para metodologia e Aval (task 007, Etapa 1)', () => {
     const pareceres = await consultar(`${APP}/ValoresParecerAval`, comoGestor);
     expect(pareceres.status).toBe(200);
     expect(itens(pareceres.data).map((item) => item.codigo).sort()).toEqual(['Aprovado', 'Reprovado']);
+  });
+});
+
+// --- Etapa 2: seção customizada da metodologia (estrutural) ---
+
+const RAIZ = join(__dirname, '..');
+const MANIFESTO = join(RAIZ, 'app', 'tratativas', 'webapp', 'manifest.json');
+const UI5 = join(RAIZ, 'app', 'tratativas', 'ui5.yaml');
+const FRAGMENTO = join(RAIZ, 'app', 'tratativas', 'webapp', 'ext', 'fragment', 'MetodologiaSection.fragment.xml');
+const EXTENSAO = join(RAIZ, 'app', 'tratativas', 'webapp', 'ext', 'controller', 'MetodologiaExtension.js');
+const I18N = join(RAIZ, 'app', 'tratativas', 'webapp', 'i18n', 'i18n.properties');
+
+const TEXTOS_SPEC: Record<string, string> = {
+  tresWOQue: 'Descreva o evento ou desvio observado de forma objetiva. Evite nomes de pessoas ou dados sensíveis',
+  tresWOnde: 'Informe o local físico, posto de trabalho ou linha de processo onde o desvio ocorreu. Evite nomes de pessoas ou dados sensíveis',
+  tresWQuando: 'Informe o momento, turno ou data/hora em que a ocorrência foi detectada. Evite nomes de pessoas ou dados sensíveis',
+  cincoProblema: 'Defina claramente a falha ou o problema inicial a ser investigado. Evite nomes de pessoas ou dados sensíveis',
+  cincoPorque1: 'Por que a falha imediata ocorreu? Descreva o fator causal direto. Evite nomes de pessoas ou dados sensíveis',
+  cincoPorque2a5: 'Por que a condição anterior ocorreu? Aprofunde até a causa básica do processo. Evite nomes de pessoas ou dados sensíveis',
+  cincoConclusao: 'Sintetize a causa raiz fundamental e sistêmica identificada. Evite nomes de pessoas ou dados sensíveis',
+  cincoW2H: 'Preencha a análise operacional do desvio focando em processo, causas e contramedidas. Evite citar nomes pessoais',
+  pdca: 'Descreva as etapas do ciclo de melhoria contínua e as disciplinas de contenção, correção e padronização. Evite nomes de pessoas ou dados sensíveis',
+  categoria: 'Selecione a macrocausa padronizada para consolidar o indicador de Pareto (ex.: Método/Processo, Máquina/Equipamento)',
+};
+
+function textoDo(arquivo: string): string {
+  expect(existsSync(arquivo)).toBe(true);
+  return readFileSync(arquivo, 'utf8');
+}
+
+function xmlBemFormado(xml: string): boolean {
+  const semComentarios = xml.replace(/<!--[\s\S]*?-->/g, '');
+  const pilha: string[] = [];
+  for (const tag of semComentarios.match(/<\/?[^>]+>/g) ?? []) {
+    if (/^<\?/.test(tag) || /^<!/.test(tag) || /\/>$/.test(tag)) continue;
+    const nome = /^<\/\s*([\w:.-]+)/.exec(tag)?.[1] ?? /^<\s*([\w:.-]+)/.exec(tag)?.[1];
+    if (!nome) continue;
+    if (tag.startsWith('</')) {
+      if (pilha.pop() !== nome) return false;
+    } else {
+      pilha.push(nome);
+    }
+  }
+  return pilha.length === 0;
+}
+
+function contemChave(objeto: unknown, chave: string): boolean {
+  if (Array.isArray(objeto)) return objeto.some((item) => contemChave(item, chave));
+  if (!objeto || typeof objeto !== 'object') return false;
+  return Object.entries(objeto as Record<string, unknown>).some(
+    ([nome, valor]) => nome === chave || contemChave(valor, chave),
+  );
+}
+
+function valoresI18n(conteudo: string): string[] {
+  return conteudo
+    .split(/\r?\n/)
+    .filter((linha) => linha.includes('=') && !linha.trimStart().startsWith('#'))
+    .map((linha) => linha.slice(linha.indexOf('=') + 1).trim());
+}
+
+describe('Seção customizada da metodologia (task 007, Etapa 2)', () => {
+  it('manifest.json e ui5.yaml registram a seção, o controller de extensão e a biblioteca sap.ui.layout', () => {
+    const manifesto = JSON.parse(textoDo(MANIFESTO)) as {
+      'sap.ui5'?: {
+        dependencies?: { libs?: Record<string, unknown> };
+        content?: { body?: { sections?: Record<string, { template?: string; position?: { anchor?: string } }> } };
+      };
+    };
+    const sapUi5 = manifesto['sap.ui5'] ?? {};
+    expect(sapUi5.dependencies?.libs?.['sap.ui.layout']).toBeDefined();
+
+    const secao = sapUi5.content?.body?.sections?.MetodologiaSection;
+    expect(secao?.template).toBe('br.com.calazanstec.actionplan.tratativas.ext.fragment.MetodologiaSection');
+    expect(secao?.position?.anchor).toBe('PlanoAcaoFacet');
+
+    const serializado = JSON.stringify(manifesto);
+    expect(serializado).toContain('MetodologiaExtension');
+    expect(contemChave(manifesto, 'controllerExtensions')).toBe(true);
+
+    expect(textoDo(UI5)).toContain('sap.ui.layout');
+  });
+
+  it('o fragmento é XML válido, usa Form + ColumnLayout e um FormContainer por ferramenta', () => {
+    const fragmento = textoDo(FRAGMENTO);
+    expect(xmlBemFormado(fragmento)).toBe(true);
+    expect(fragmento).toContain('<core:FragmentDefinition');
+    expect(fragmento).not.toContain('<script');
+    expect(fragmento).not.toContain('SimpleForm');
+    expect(fragmento).toMatch(/sap\.ui\.layout\.form/);
+    expect(fragmento).toContain('<Form');
+    expect(fragmento).toContain('ColumnLayout');
+    expect(fragmento).toContain('columnsM="2"');
+    expect(fragmento).toContain('columnsL="3"');
+    expect(fragmento).toContain('columnsXL="4"');
+    expect((fragmento.match(/<FormContainer/g) ?? []).length).toBeGreaterThanOrEqual(4);
+
+    expect(fragmento).toMatch(/<Select[^>]*id="metodologiaFerramenta"|<Select[^>]*metodologiaFerramenta/);
+    expect(fragmento).toMatch(/<ComboBox[^>]*id="metodologiaCategoria"|<ComboBox[^>]*metodologiaCategoria/);
+    for (const id of ['metodologiaSalvar', 'metodologiaRemover', 'metodologiaDerivar-']) {
+      expect(fragmento).toContain(id);
+    }
+    expect(fragmento).not.toMatch(/\spress\s*=/);
+  });
+
+  it('CA31: cada placeholder é uma chave i18n existente com o texto literal da spec', () => {
+    const fragmento = textoDo(FRAGMENTO);
+    const i18n = textoDo(I18N);
+    const chaves = new Set(
+      i18n
+        .split(/\r?\n/)
+        .filter((linha) => linha.includes('=') && !linha.trimStart().startsWith('#'))
+        .map((linha) => linha.slice(0, linha.indexOf('=')).trim()),
+    );
+    const referenciadas = [...fragmento.matchAll(/\{i18n>([^}]+)\}/g)].map((captura) => captura[1].trim());
+    expect(referenciadas.length).toBeGreaterThanOrEqual(12);
+    for (const chave of referenciadas) {
+      expect(chaves.has(chave)).toBe(true);
+    }
+
+    const valores = valoresI18n(i18n);
+    const contar = (texto: string) => valores.filter((valor) => valor === texto).length;
+    for (const texto of [
+      TEXTOS_SPEC.tresWOQue,
+      TEXTOS_SPEC.tresWOnde,
+      TEXTOS_SPEC.tresWQuando,
+      TEXTOS_SPEC.cincoProblema,
+      TEXTOS_SPEC.cincoPorque1,
+      TEXTOS_SPEC.cincoConclusao,
+      TEXTOS_SPEC.categoria,
+    ]) {
+      expect(contar(texto)).toBeGreaterThanOrEqual(1);
+    }
+    expect(contar(TEXTOS_SPEC.cincoPorque2a5)).toBeGreaterThanOrEqual(4);
+    expect(contar(TEXTOS_SPEC.cincoW2H)).toBeGreaterThanOrEqual(7);
+    expect(contar(TEXTOS_SPEC.pdca)).toBeGreaterThanOrEqual(4);
+  });
+
+  it('a extensão de controller liga os controles e grava pelas actions do App (DC-13)', () => {
+    const extensao = textoDo(EXTENSAO);
+    expect(extensao.startsWith('sap.ui.define')).toBe(true);
+    expect(extensao).toContain('onAfterBinding');
+    expect(extensao).toContain('requestProperty');
+    expect(extensao).toContain('getExtensionAPI');
+    expect(extensao).toContain('getEditFlow');
+    expect(extensao).toContain('invokeAction');
+    for (const trecho of ['byId(', 'attachPress', 'metodologiaSalvar', 'metodologiaRemover', 'metodologiaDerivar-']) {
+      expect(extensao).toContain(trecho);
+    }
+    expect(extensao).toContain('TratativaAppService.definirMetodologia');
+    expect(extensao).toContain('TratativaAppService.derivarAcaoDaMetodologia');
+    expect(extensao).not.toMatch(/'\.\.\/\.\.\/\.\.\/srv|"\.\.\/\.\.\/\.\.\/srv/);
+    expect(extensao).not.toContain("from 'db/");
   });
 });
