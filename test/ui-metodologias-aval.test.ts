@@ -1,7 +1,7 @@
 import cds from '@sap/cds';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { criarAcao, criarSubacao } from './apoio/acoes';
+import { criarAcao, criarSubacao, mudarStatusAcao } from './apoio/acoes';
 import { comoValidador, comoValidadorB, emitirAval } from './apoio/aval';
 import { anexarEvidencia, gerarPDF, removerEvidencia } from './apoio/evidencias';
 import { registrarCredenciais } from './apoio/credenciais';
@@ -63,8 +63,8 @@ async function afirmarAcao(resposta: Resposta, status: number): Promise<string> 
   return String(resposta.data.codigo);
 }
 
-// Cenário rico da Etapa 1: metodologia 5 Porquês do gestor, Ação derivada para M1001, Subação de M2002,
-// Aval aprovado do validador e M2002 como Participante (vínculo direto para a leitura do Histórico).
+// Cenário rico da Etapa 1: metodologia 5 Porquês do gestor, Aval aprovado do validador, Ação derivada
+// para M1001 (com a causa vinculada), uma Subação dela para M2002 e M2002 como Participante.
 async function cenario(): Promise<{ codigo: string; acao: string; subacao: string }> {
   const codigo = await nova();
   await iniciar(codigo);
@@ -74,29 +74,26 @@ async function cenario(): Promise<{ codigo: string; acao: string; subacao: strin
     conclusao: 'A causa raiz foi o checklist incompleto.',
   })).status).toBe(204);
 
-  const acao = await afirmarAcao(await criarAcao(
-    enviar,
-    codigo,
-    { descricao: 'Revisar checklist', responsavel: 'M1001', prazo: '2026-11-01', prioridade: 'Alta', evidenciaObrigatoria: 'não' },
-    comoGestor,
-  ), 200);
-  const subacao = await afirmarAcao(await criarSubacao(
-    enviar,
-    codigo,
-    { acaoMae: acao, descricao: 'Subação de evidência', responsavel: 'M2002', prazo: '2026-11-02', prioridade: 'Média', evidenciaObrigatoria: 'não' },
-    comoGestor,
-  ), 200);
-  expect((await derivar(codigo, {
+  // O Aval exige que não haja Ação em aberto (CA20): emita antes de derivar.
+  expect((await emitirAval(enviar, codigo, PARECER, comoValidador)).status).toBe(204);
+
+  const derivada = await derivar(codigo, {
     causaIdentificador: 'porque1',
     descricao: 'Revisar checklist de inspeção',
     responsavel: 'M1001',
     prazo: '2026-11-03',
     prioridade: 'Alta',
     evidenciaObrigatoria: 'não',
-  })).status).toBe(200);
-
+  });
+  expect(derivada.status).toBe(200);
+  const acao = String(derivada.data.codigo);
+  const subacao = await afirmarAcao(await criarSubacao(
+    enviar,
+    codigo,
+    { acaoMae: acao, descricao: 'Subação de evidência', responsavel: 'M2002', prazo: '2026-11-02', prioridade: 'Média', evidenciaObrigatoria: 'não' },
+    comoGestor,
+  ), 200);
   expect((await incluirParticipante(enviar, codigo, { participante: 'M2002' }, comoGestor)).status).toBe(204);
-  expect((await emitirAval(enviar, codigo, PARECER, comoValidador)).status).toBe(204);
   return { codigo, acao, subacao };
 }
 
@@ -161,6 +158,9 @@ describe('Contrato do app para metodologia e Aval (task 007, Etapa 1)', () => {
     expect(usuario.status).toBe(200);
     expect(usuario.data.metodologiaData).toBeNull();
 
+    // Concluir a Ação deixa a etapa de verificação ativa (sem Ação aberta) e permite emitir o Aval.
+    const conclusao = await mudarStatusAcao(enviar, codigo, { acao: criada.data.codigo, status: 'Concluída' }, comoGestor);
+    expect(conclusao.status).toBe(204);
     expect((await emitirAval(enviar, codigo, PARECER, comoValidador)).status).toBe(204);
     const avaliacoes = await consultar(`${APP}/AvalesTecnicos?$filter=tratativa_codigo eq ${codigo}`, comoGestor);
     expect(avaliacoes.status).toBe(200);
