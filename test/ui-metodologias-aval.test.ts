@@ -177,7 +177,8 @@ describe('Contrato do app para metodologia e Aval (task 007, Etapa 1)', () => {
   });
 
   it('HTTP: a máscara vale em navegação, $expand, expand cruzado e sem a chave no $select', async () => {
-    const { codigo, subacao } = await cenario();
+    const { codigo, acao, subacao } = await cenario();
+    const daAcao = (linhas: Record<string, unknown>[]) => linhas.find((item) => String(item.codigo) === acao);
 
     // (a) navegação
     const navAvales = await consultar(`${APP}/Tratativas(${codigo})/avalesTecnicos`, comoUsuario);
@@ -185,17 +186,19 @@ describe('Contrato do app para metodologia e Aval (task 007, Etapa 1)', () => {
     expect(itens(navAvales.data)[0]?.fundamentacao).toBeNull();
     expect(itens(navAvales.data)[0]?.validador).toBeNull();
     const navAcoesUsuario = await consultar(`${APP}/Tratativas(${codigo})/acoes`, comoUsuario);
-    expect((itens(navAcoesUsuario.data)[0] as Record<string, unknown> | undefined)?.causaDescricao).toBeNull();
+    expect(itens(navAcoesUsuario.data).length).toBe(2);
+    expect(itens(navAcoesUsuario.data).every((item) => item.causaDescricao === null)).toBe(true);
     const navAcoesValidador = await consultar(`${APP}/Tratativas(${codigo})/acoes`, comoValidador);
     // O Validador habilitado (sem lista = habilitado) tem vínculo diagnóstico (DC-15).
-    expect((itens(navAcoesValidador.data)[0] as Record<string, unknown> | undefined)?.causaDescricao).toBe('Checklist incompleto');
+    expect(daAcao(itens(navAcoesValidador.data))?.causaDescricao).toBe('Checklist incompleto');
 
     // (b) $expand
     const expandido = await consultar(`${APP}/Tratativas(${codigo})?$expand=avalesTecnicos,acoes`, comoUsuario);
     expect(expandido.status).toBe(200);
     const linha = expandido.data as Record<string, unknown>;
     expect((linha.avalesTecnicos as Record<string, unknown>[])[0]?.fundamentacao).toBeNull();
-    expect((linha.acoes as Record<string, unknown>[])[0]?.causaDescricao).toBeNull();
+    expect((linha.acoes as Record<string, unknown>[]).length).toBe(2);
+    expect((linha.acoes as Record<string, unknown>[]).every((item) => item.causaDescricao === null)).toBe(true);
     const expandidoValidador = await consultar(`${APP}/Tratativas(${codigo})?$expand=avalesTecnicos,acoes`, comoValidador);
     const linhaValidador = expandidoValidador.data as Record<string, unknown>;
     expect((linhaValidador.avalesTecnicos as Record<string, unknown>[])[0]?.fundamentacao).toBe(PARECER.fundamentacao);
@@ -215,7 +218,8 @@ describe('Contrato do app para metodologia e Aval (task 007, Etapa 1)', () => {
 
     // AvalesTecnicos e Participantes com expand de tratativa (sem chave)
     const avalesCruzado = await consultar(`${APP}/AvalesTecnicos?$expand=tratativa($select=metodologiaData)`, comoUsuario);
-    expect((itens(avalesCruzado.data)[0]?.tratativa as Record<string, unknown>)?.metodologiaData).toBeNull();
+    expect(itens(avalesCruzado.data).length).toBeGreaterThan(0);
+    expect(itens(avalesCruzado.data).every((item) => (item.tratativa as Record<string, unknown>)?.metodologiaData === null)).toBe(true);
     const participantes = await consultar(`${APP}/Participantes?$filter=tratativa_codigo eq ${codigo}&$expand=tratativa($select=metodologiaData)`, comoM2002);
     expect(participantes.status).toBe(200);
     expect((itens(participantes.data)[0]?.tratativa as Record<string, unknown>)?.metodologiaData).toBeNull();
