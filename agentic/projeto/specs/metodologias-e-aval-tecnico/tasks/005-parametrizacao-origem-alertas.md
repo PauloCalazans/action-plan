@@ -1,7 +1,7 @@
 # Task 005: parametrizacao-origem-alertas
 
 **Spec:** agentic/projeto/specs/metodologias-e-aval-tecnico/spec.md
-**Status:** draft
+**Status:** em-andamento
 **Branch:** metodologias-e-aval-tecnico/005-admin-indicadores-ui
 
 > **Grupo 3 (decisão do humano, 2026-10-13):** esta task e a(s) task(s) 006, 007 são executadas num único ciclo (um RED, um GREEN, uma revisão de diff) e publicadas num único PR, nesta branch. O escopo do grupo é a união dos "## Arquivos" abaixo; RED, GREEN e critérios de cada task incorporada continuam no documento dela.
@@ -28,6 +28,10 @@ Expor a parametrização por Origem e a designação de Validadores (inclusive a
 
 ### Removidos
 - Nenhum.
+
+### Débito D-01 (execução local, R-19)
+- `srv/tratativa/evidencias-storage.ts` (`import()` do módulo de armazenamento por `pathToFileURL(...).href`; hoje `anexarEvidencia` falha na execução local Windows com ERR_UNSUPPORTED_ESM_URL_SCHEME)
+- `test/evidencias-storage-carregamento.test.ts` (prova que o módulo é carregado a partir de um caminho absoluto)
 
 ### Incorporado da task 006 (006-indicadores-eficacia)
 ### Criados
