@@ -1,7 +1,7 @@
 # Task 005: parametrizacao-origem-alertas
 
 **Spec:** agentic/projeto/specs/metodologias-e-aval-tecnico/spec.md
-**Status:** em-andamento
+**Status:** publicada
 **Branch:** metodologias-e-aval-tecnico/005-admin-indicadores-ui
 
 > **Grupo 3 (decisão do humano, 2026-10-13):** esta task e a(s) task(s) 006, 007 são executadas num único ciclo (um RED, um GREEN, uma revisão de diff) e publicadas num único PR, nesta branch. O escopo do grupo é a união dos "## Arquivos" abaixo; RED, GREEN e critérios de cada task incorporada continuam no documento dela.
@@ -52,7 +52,7 @@ Expor a parametrização por Origem e a designação de Validadores (inclusive a
 ### Incorporado da task 007 (007-ui-fiori-metodologias-aval)
 ### Criados
 - `app/tratativas/webapp/ext/fragment/MetodologiaSection.fragment.xml`
-- `app/tratativas/webapp/ext/controller/MetodologiaExtension.js`
+- `app/tratativas/webapp/ext/controller/MetodologiaExtension.js` (renomeado para `.controller.js` na R-27)
 - `app/tratativas/webapp/ext/controller/MetodologiaExtension.controller.js`
 - `test/ui-metodologias-aval.test.ts`
 
