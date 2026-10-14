@@ -1,7 +1,7 @@
 # Task 001: acoes-nas-entidades
 
 **Spec:** agentic/projeto/specs/acoes-nas-entidades/spec.md
-**Status:** em-andamento
+**Status:** publicada
 **Branch:** acoes-nas-entidades/001-acoes-nas-entidades
 
 Empilhada sobre `metodologias-e-aval-tecnico/005-admin-indicadores-ui` (HEAD `b58543a`).
