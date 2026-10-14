@@ -18,6 +18,35 @@ service TratativaService {
     codigo : UUID;
   }
 
+  type ResultadoAvalTecnico {
+    id      : UUID;
+    parecer : String;
+  }
+
+  type ItemAvalTecnico {
+    id            : UUID;
+    parecer       : String;
+    fundamentacao : String(2000);
+    validador     : String(50);
+    emitidoEm     : Timestamp;
+    vigente       : Boolean;
+  }
+
+  type DetalheAvalTecnico {
+    vigente               : ItemAvalTecnico;
+    dataBaseVerificacao   : Date;
+    dataLimiteVerificacao : Date;
+    historico             : many ItemAvalTecnico;
+  }
+
+  type DetalheMetodologia {
+    metodologia       : String(20);
+    categoriaCausaRaiz: String(50);
+    dados             : LargeString;
+    autor             : String(50);
+    atualizadoEm      : Timestamp;
+  }
+
   /** R25: exatamente estes dez campos na listagem (sem Descrição e sem Solicitante). */
   type ItemListagem {
     codigo                : UUID;
@@ -260,6 +289,10 @@ service TratativaService {
   /** R26: consulta pelo Código; inexistente → 404. */
   function consultarTratativa(codigo : UUID) returns DetalheTratativa;
 
+  function consultarAvalTecnicoTratativa(codigoTratativa : UUID) returns DetalheAvalTecnico;
+
+  function consultarMetodologiaTratativa(codigoTratativa : UUID) returns DetalheMetodologia;
+
   /** R17, R26 (005; Ruling R-02): consulta de responsáveis exclusiva para o Gestor. */
   @restrict: [{ grant: '*', to: 'GestorTratativa' }]
   function consultarResponsaveis(tratativa : UUID) returns DetalheResponsaveis;
@@ -315,7 +348,7 @@ service TratativaService {
     // rejeita com a mensagem fixa "Forbidden" (não customizável), incompatível com "Acesso negado."
     // exigido pelo contrato D10 (CA21a); a restrição ao papel GestorTratativa é feita em código
     // (srv/tratativa-service.ts, before('aplicarTemplateTratativa')), mesmo padrão de mudarStatusAcao/delegarAcao.
-    { grant: ['aplicarTemplateTratativa'], to: 'authenticated-user' }
+    { grant: ['aplicarTemplateTratativa', 'emitirAvalTecnico', 'definirMetodologia', 'derivarAcaoDaMetodologia'], to: 'authenticated-user' }
   ]
   entity Tratativas as projection on m.Tratativas { key codigo } actions {
     /** R2/R4/R5: a operação é identificada pelo Status de destino. */
@@ -363,6 +396,15 @@ service TratativaService {
 
     /** R5-R11, R13, R15(a), R16 (spec templates-de-acoes): aplica Template de Ações na Tratativa (D9, UTC). */
     action aplicarTemplateTratativa(template : UUID, responsavelPadrao : String, atribuicoes : many AtribuicaoItemTemplate) returns ResultadoAplicacaoTemplate;
+
+    action emitirAvalTecnico(parecer : String, fundamentacao : String);
+
+    action definirMetodologia(ferramenta : String, categoriaCausaRaiz : String, dados : LargeString,
+                              confirmarSubstituicao : Boolean);
+
+    action derivarAcaoDaMetodologia(causaIdentificador : String, descricao : String, responsavel : String,
+                                    prazo : String, prioridade : String, evidenciaObrigatoria : String)
+      returns ResultadoCriacaoAcao;
   };
 
   /** R1, R8 (spec historico-e-auditoria): detalhe estruturado do evento de histórico. */
@@ -374,6 +416,7 @@ service TratativaService {
     evidencia     : UUID;
     mimeType      : String(100);
     tamanho       : Integer;
+    fundamentacao : String(2000);
   }
 
   /** R1, R2, R6 (spec historico-e-auditoria): item unificado da trilha de auditoria. */

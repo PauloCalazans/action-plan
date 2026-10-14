@@ -17,6 +17,7 @@ export interface LinhaHistorico {
   /** R11 (spec templates-de-acoes): metadado aditivo do template gerador da Ação (sem cópia de Descrição). */
   template?: string | null;
   templateNome?: string | null;
+  avalTecnico?: string | null;
 }
 
 /** R20: autor e tipo de autor válidos antes de qualquer gravação. */
@@ -59,6 +60,7 @@ export async function registrarHistorico(
         ...(l.tamanho !== undefined && l.tamanho !== null ? { tamanho: l.tamanho } : {}),
         ...(l.template ? { template_id: l.template } : {}),
         ...(l.templateNome ? { templateNome: l.templateNome } : {}),
+        ...(l.avalTecnico ? { avalTecnico: l.avalTecnico } : {}),
       })),
     ),
   );

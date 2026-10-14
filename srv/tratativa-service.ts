@@ -22,6 +22,8 @@ import { filtrarPorAutorizacao, mascarar } from './tratativa/historico-autorizac
 import { listarTemplates, consultarTemplate, type FiltrosListagemTemplates } from './templates/templates-consulta';
 import { aplicarTemplateTratativa, type DadosAplicacaoTemplate } from './templates/templates-aplicacao';
 import { consultarParametrosIntegracaoSF } from './integracoes/parametros-sf';
+import { consultarAvalTecnico, emitirAvalTecnico } from './tratativa/aval-tecnico';
+import { consultarMetodologia, definirMetodologia, derivarAcaoDaMetodologia } from './tratativa/metodologia';
 
 /** Contrato dos usuários: só monta o Autor e delega ao domínio (decisões 6, 14 e 15). */
 export default class TratativaService extends cds.ApplicationService {
@@ -64,6 +66,12 @@ export default class TratativaService extends cds.ApplicationService {
     this.on('consultarTratativa', (req) =>
       consultarTratativa((req.data as { codigo?: string }).codigo, req.user.is('GestorTratativa')),
     );
+    this.on('consultarAvalTecnicoTratativa', (req) =>
+      consultarAvalTecnico(req, (req.data as { codigoTratativa?: string }).codigoTratativa),
+    );
+    this.on('consultarMetodologiaTratativa', (req) =>
+      consultarMetodologia(req, (req.data as { codigoTratativa?: string }).codigoTratativa),
+    );
     this.on('consultarParametrosIntegracaoSF', () => consultarParametrosIntegracaoSF());
     this.on('criarTratativaAvulsa', (req) =>
       abrirTratativa(req.data as DadosAbertura, { id: obterMatriculaUsuario(req), tipo: 'Usuario' }),
@@ -71,6 +79,33 @@ export default class TratativaService extends cds.ApplicationService {
     this.on('mudarStatus', 'Tratativas', async (req) => {
       const { codigo } = req.params[0] as { codigo: string };
       await mudarStatus(String(codigo).toLowerCase(), req.data, { id: obterMatriculaUsuario(req), tipo: 'Usuario' });
+    });
+    this.on('emitirAvalTecnico', 'Tratativas', async (req) => {
+      const { codigo } = req.params[0] as { codigo: string };
+      await emitirAvalTecnico(
+        req,
+        String(codigo),
+        req.data as { parecer?: unknown; fundamentacao?: unknown },
+        { id: obterMatriculaUsuario(req), tipo: 'Usuario' },
+      );
+    });
+    this.on('definirMetodologia', 'Tratativas', async (req) => {
+      const { codigo } = req.params[0] as { codigo: string };
+      await definirMetodologia(
+        req,
+        String(codigo),
+        req.data,
+        { id: obterMatriculaUsuario(req), tipo: 'Usuario' },
+      );
+    });
+    this.on('derivarAcaoDaMetodologia', 'Tratativas', (req) => {
+      const { codigo } = req.params[0] as { codigo: string };
+      return derivarAcaoDaMetodologia(
+        req,
+        String(codigo),
+        req.data as { causaIdentificador?: unknown; descricao?: unknown; responsavel?: unknown; prazo?: unknown; prioridade?: unknown; evidenciaObrigatoria?: unknown },
+        { id: obterMatriculaUsuario(req), tipo: 'Usuario' },
+      );
     });
     this.on('editar', 'Tratativas', async (req) => {
       const { codigo } = req.params[0] as { codigo: string };

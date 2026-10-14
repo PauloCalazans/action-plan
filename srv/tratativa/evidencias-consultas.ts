@@ -4,6 +4,7 @@ import { recusar } from './recusa';
 import { registrarHistorico } from './historico';
 import { obterMatriculaUsuario, usuarioAutenticadoEhMatricula } from './identidade';
 import { getStorage } from './evidencias-storage';
+import { usuarioEhValidadorHabilitado } from './validador-tecnico';
 
 const NS = 'br.com.calazanstec';
 const FINAIS = ['Concluída', 'Cancelada'];
@@ -148,9 +149,10 @@ export async function listarEvidenciasAcao(
 
   const ehGestor = req.user.is('GestorTratativa');
   const ehResponsavel = usuarioAutenticadoEhMatricula(req, acao.responsavel);
+  const ehValidador = await usuarioEhValidadorHabilitado(req, codigoTratativa);
 
   // Menor privilégio: Gestor e Responsável veem, terceiros não
-  if (!ehGestor && !ehResponsavel) {
+  if (!ehGestor && !ehResponsavel && !ehValidador) {
     return [];
   }
 
@@ -200,6 +202,7 @@ export async function listarEvidenciasTratativa(
 
   const ehGestor = req.user.is('GestorTratativa');
   const matriculaUsuario = obterMatriculaUsuario(req);
+  const ehValidador = await usuarioEhValidadorHabilitado(req, codigoTratativa);
 
   // Buscar todas as evidências ativas da Tratativa com código da Ação
   const evidencias = (await cds.db.run(
@@ -217,6 +220,9 @@ export async function listarEvidenciasTratativa(
     criadoEm: string;
     autorAnexo: string;
   }>;
+
+  // Validador habilitado vê tudo, com autorAnexo mascarado (CA44).
+  if (!ehGestor && ehValidador) return evidencias.map((ev) => ({ ...ev, autorAnexo: null }));
 
   if (!ehGestor) {
     // Buscar Ações sob responsabilidade do usuário
@@ -285,8 +291,9 @@ export async function baixarEvidencia(
   // Etapa 6: Autorização dinâmica (Gestor ou Responsável da Ação)
   const ehGestor = req.user.is('GestorTratativa');
   const ehResponsavel = usuarioAutenticadoEhMatricula(req, acao.responsavel);
+  const ehValidador = await usuarioEhValidadorHabilitado(req, codigoTratativa);
 
-  if (!ehGestor && !ehResponsavel) {
+  if (!ehGestor && !ehResponsavel && !ehValidador) {
     recusar(403, 'Forbidden');
   }
 

@@ -17,6 +17,7 @@ import {
 } from './tratativa/comentarios-inclusao';
 import { aplicarTemplateTratativa } from './templates/templates-aplicacao';
 import { aplicarMascaras, restricaoDeLeitura } from './tratativa/mascara-app';
+import { lerSituacaoAval } from './tratativa/aval-tecnico';
 
 const NS = 'br.com.calazanstec';
 
@@ -30,6 +31,7 @@ interface ChaveAcao {
 }
 
 interface LinhaTratativa {
+  codigo?: string;
   status?: string | null;
   descricao?: string | null;
   solicitante?: string | null;
@@ -101,17 +103,23 @@ export default class TratativaAppService extends cds.ApplicationService {
       if (!colunas) return;
       const pedeFlag = colunas.some((c) => /^(pode|oculta)(Iniciar|Encerrar|Cancelar|Reabrir)$/.test(c.ref?.[0] ?? ''));
       const temStatus = colunas.some((c) => c.ref?.[0] === 'status' || c.ref?.[0] === '*');
+      const temCodigo = colunas.some((c) => c.ref?.[0] === 'codigo' || c.ref?.[0] === '*');
       if (pedeFlag && !temStatus) colunas.push({ ref: ['status'] });
+      if (pedeFlag && !temCodigo) colunas.push({ ref: ['codigo'] });
     });
 
-    this.after('READ', 'Tratativas', (resultado, req) => {
+    this.after('READ', 'Tratativas', async (resultado, req) => {
       const gestor = req.user.is('GestorTratativa');
-      const linhas = Array.isArray(resultado) ? resultado : [resultado];
-      for (const linha of linhas as LinhaTratativa[]) {
+      const linhas = (Array.isArray(resultado) ? resultado : [resultado]) as LinhaTratativa[];
+      const codigos = linhas.flatMap((linha) => typeof linha?.codigo === 'string' ? [linha.codigo] : []);
+      const situacoes = await lerSituacaoAval(codigos);
+      for (const linha of linhas) {
         if (!linha) continue;
         const status = linha.status;
+        const situacao = linha.codigo ? situacoes.get(linha.codigo) : undefined;
         linha.podeIniciar = gestor && status === 'Aberta';
-        linha.podeEncerrar = gestor && (status === 'Aberta' || status === 'Em andamento');
+        linha.podeEncerrar = gestor && status === 'Em andamento' &&
+          !situacao?.acoesAbertas && !!situacao?.aprovadoVigente;
         linha.podeCancelar = gestor && (status === 'Aberta' || status === 'Em andamento');
         linha.podeReabrir = gestor && status === 'Encerrada';
         linha.ocultaIniciar = !linha.podeIniciar;

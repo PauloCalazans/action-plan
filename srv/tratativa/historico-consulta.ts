@@ -26,6 +26,7 @@ export interface DetalheEventoHistorico {
   evidencia: string | null;
   mimeType: string | null;
   tamanho: number | null;
+  fundamentacao: string | null;
 }
 
 /**
@@ -56,6 +57,8 @@ interface LinhaHistoricoTratativa {
   autor: string;
   tipoAutor: string;
   quando: string;
+  avalTecnico?: string | null;
+  fundamentacao?: string | null;
 }
 
 interface LinhaHistoricoAcoes extends LinhaHistoricoTratativa {
@@ -65,10 +68,11 @@ interface LinhaHistoricoAcoes extends LinhaHistoricoTratativa {
   tamanho: number | null;
 }
 
-const COLUNAS_TRATATIVA = [
+const COLUNAS_COMUNS = [
   'ID', 'tratativa_codigo', 'evento', 'campo', 'valorAnterior', 'valorNovo', 'justificativa', 'autor', 'tipoAutor', 'quando',
 ];
-const COLUNAS_ACOES = [...COLUNAS_TRATATIVA, 'acao_codigo', 'evidencia', 'mimeType', 'tamanho'];
+const COLUNAS_TRATATIVA = [...COLUNAS_COMUNS, 'avalTecnico'];
+const COLUNAS_ACOES = [...COLUNAS_COMUNS, 'acao_codigo', 'evidencia', 'mimeType', 'tamanho'];
 
 function montarDetalhe(linha: LinhaHistoricoTratativa | LinhaHistoricoAcoes): DetalheEventoHistorico {
   const comEvidencia = linha as LinhaHistoricoAcoes;
@@ -80,6 +84,7 @@ function montarDetalhe(linha: LinhaHistoricoTratativa | LinhaHistoricoAcoes): De
     evidencia: comEvidencia.evidencia ?? null,
     mimeType: comEvidencia.mimeType ?? null,
     tamanho: comEvidencia.tamanho ?? null,
+    fundamentacao: ('fundamentacao' in linha ? linha.fundamentacao : null) ?? null,
   };
 }
 
@@ -273,6 +278,18 @@ export async function consultarHistoricoUnificado(
       SELECT.from(`${NS}.HistoricoAcoes`).columns(...COLUNAS_ACOES).where({ tratativa_codigo: codigo }),
     ) as Promise<LinhaHistoricoAcoes[]>,
   ]);
+  const idsAval = [...new Set(linhasTratativa
+    .map((linha) => linha.avalTecnico)
+    .filter((id): id is string => !!id))];
+  if (idsAval.length) {
+    const avales = (await cds.db.run(
+      SELECT.from(`${NS}.AvalesTecnicos`).columns('id', 'fundamentacao').where({ id: { in: idsAval } }),
+    )) as Array<{ id: string; fundamentacao: string }>;
+    const fundamentacoes = new Map(avales.map((aval) => [aval.id, aval.fundamentacao]));
+    for (const linha of linhasTratativa) {
+      linha.fundamentacao = linha.avalTecnico ? fundamentacoes.get(linha.avalTecnico) ?? null : null;
+    }
+  }
 
   return aplicarFiltros(
     [...linhasTratativa.map(normalizarLinhaTratativa), ...linhasAcoes.map(normalizarLinhaAcao)],
