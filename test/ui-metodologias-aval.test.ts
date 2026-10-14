@@ -581,3 +581,54 @@ describe('Diálogo do Aval Técnico e facet de avaliações (task 007, Etapa 3)'
     }
   });
 });
+
+// --- R-26: agregações do App não recebem a chave de vínculo injetada ---
+
+describe('Agregação do App sem chave injetada (R-26)', () => {
+  const semChaves = (linhas: Record<string, unknown>[]) =>
+    linhas.every((linha) => !('codigo' in linha) && !('tratativa_codigo' in linha));
+
+  async function duasTratativas(): Promise<{ filtro: string; status: string[] }> {
+    const a = await nova();
+    const b = await nova();
+    await iniciar(b);
+    const status: string[] = [];
+    for (const codigo of [a, b]) {
+      const lida = await consultar(`${APP}/Tratativas(${codigo})?$select=status`, comoGestor);
+      expect(lida.status).toBe(200);
+      status.push(String(lida.data.status));
+    }
+    return { filtro: `filter(codigo eq ${a} or codigo eq ${b})`, status };
+  }
+
+  it('gestor: groupby sem agregação devolve só as colunas agrupadas', async () => {
+    const { filtro, status } = await duasTratativas();
+    const resposta = await consultar(`${APP}/Tratativas?$apply=${filtro}/groupby((status))`, comoGestor);
+    expect(resposta.status).toBe(200);
+    const linhas = itens(resposta.data);
+    expect(semChaves(linhas)).toBe(true);
+    expect(linhas.map((linha) => String(linha.status)).sort()).toEqual([...new Set(status)].sort());
+  });
+
+  it('gestor: groupby com $count devolve totais corretos e sem codigo', async () => {
+    const { filtro, status } = await duasTratativas();
+    const resposta = await consultar(`${APP}/Tratativas?$apply=${filtro}/groupby((status),aggregate($count as total))`, comoGestor);
+    expect(resposta.status).toBe(200);
+    const linhas = itens(resposta.data);
+    expect(semChaves(linhas)).toBe(true);
+    for (const valor of new Set(status)) {
+      const esperado = status.filter((item) => item === valor).length;
+      expect(Number(linhas.find((linha) => String(linha.status) === valor)?.total)).toBe(esperado);
+    }
+  });
+
+  it('gestor: aggregate($count) devolve uma linha só com o total', async () => {
+    const { filtro } = await duasTratativas();
+    const resposta = await consultar(`${APP}/Tratativas?$apply=${filtro}/aggregate($count as total)`, comoGestor);
+    expect(resposta.status).toBe(200);
+    const linhas = itens(resposta.data);
+    expect(linhas).toHaveLength(1);
+    expect(semChaves(linhas)).toBe(true);
+    expect(Number(linhas[0].total)).toBe(2);
+  });
+});
