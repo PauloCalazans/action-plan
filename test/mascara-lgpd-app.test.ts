@@ -5,6 +5,7 @@ import { comoGestor, comoM1001, comoM2002, comoM9999, comoUsuario } from './apoi
 import { criarAcao, criarSubacao } from './apoio/acoes';
 import { atribuirResponsavelPrincipal, incluirParticipante } from './apoio/responsaveis';
 import { sufixoUnico, type Envia } from './apoio/tratativas';
+import { linhas } from './apoio/banco';
 
 const { GET, POST } = cds.test(__dirname + '/..');
 const enviar = POST as unknown as Envia;
@@ -58,9 +59,8 @@ async function anexo(
   descricao: string,
 ): Promise<string> {
   const resposta = await POST(
-    `${BASE}/Tratativas(${tratativa})/anexarEvidencia`,
+    `${BASE}/Acoes(${acao})/anexarEvidencia`,
     {
-      acao,
       nomeArquivo,
       mimeType: 'text/plain',
       conteudo: Buffer.from(`Conteúdo ${nomeArquivo}`).toString('base64'),
@@ -134,14 +134,14 @@ beforeAll(async () => {
   );
   expect(comentarioTratativa.status).toBe(200);
   const comentarioAcao = await POST(
-    `${BASE}/Tratativas(${tratativa})/comentarAcao`,
-    { acao: codigoAcao, texto: `ComentarioAcao${sufixo}`, mencoes: [] },
+    `${BASE}/Acoes(${codigoAcao})/comentarAcao`,
+    { texto: `ComentarioAcao${sufixo}`, mencoes: [] },
     comoGestor,
   );
   expect(comentarioAcao.status).toBe(200);
   const comentarioSubacao = await POST(
-    `${BASE}/Tratativas(${tratativa})/comentarAcao`,
-    { acao: codigoSubacao, texto: `ComentarioSubacao${sufixo}`, mencoes: [] },
+    `${BASE}/Acoes(${codigoSubacao})/comentarAcao`,
+    { texto: `ComentarioSubacao${sufixo}`, mencoes: [] },
     comoGestor,
   );
   expect(comentarioSubacao.status).toBe(200);
@@ -160,8 +160,8 @@ beforeAll(async () => {
     `DescricaoSubacao${sufixo}`,
   );
   const remocao = await POST(
-    `${BASE}/Tratativas(${tratativa})/removerEvidencia`,
-    { acao: codigoAcao, evidencia: evidenciaRemovida },
+    `${BASE}/Evidencias(${evidenciaRemovida})/removerEvidencia`,
+    {},
     comoGestor,
   );
   expect(remocao.status).toBe(204);
@@ -690,20 +690,16 @@ describe('Máscara LGPD genérica do TratativaAppService', () => {
       `$filter=tratativa_codigo eq ${cenario.tratativa}`,
       comoGestor,
     );
-    expect(itens(evidenciasGestor.data).map((linha) => linha.codigo)).toEqual(
-      expect.arrayContaining([
-        cenario.evidencias.ativa,
-        cenario.evidencias.removida,
-        cenario.evidencias.subacao,
-      ]),
-    );
+    const codigosGestor = itens(evidenciasGestor.data).map((linha) => linha.codigo);
+    expect(codigosGestor).toEqual(expect.arrayContaining([cenario.evidencias.ativa, cenario.evidencias.subacao]));
+    expect(codigosGestor).not.toContain(cenario.evidencias.removida);
     const evidenciaRemovidaGestor = await GET(
       `${BASE}/Evidencias(${cenario.evidencias.removida})`,
       comoGestor,
     );
-    expect(evidenciaRemovidaGestor.status).toBe(200);
-    expect(evidenciaRemovidaGestor.data.autorAnexo).toBe('gestor');
-    expect(evidenciaRemovidaGestor.data.autorRemocao).toBe('gestor');
+    expect(evidenciaRemovidaGestor.status).toBe(404);
+    const [removidaNoBanco] = await linhas('Evidencias', { codigo: cenario.evidencias.removida });
+    expect(removidaNoBanco).toMatchObject({ ativo: false, autorAnexo: 'gestor', autorRemocao: 'gestor' });
     const historicoGestor = await consulta(
       'Historico',
       `$filter=tratativa_codigo eq ${cenario.tratativa}`,

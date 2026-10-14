@@ -51,7 +51,10 @@
         "sap.fe.templates": {},
         "sap.m": {},
         "sap.ui.core": {},
-        "sap.ui.layout": {}
+        "sap.ui.layout": {},
+        "sap.ui.unified": {
+          "lazy": false
+        }
       }
     },
     "contentDensities": {
@@ -126,6 +129,90 @@
                         "placement": "After",
                         "anchor": "PlanoAcaoFacet"
                       }
+                    }
+                  }
+                }
+              },
+              "controlConfiguration": {
+                "acoes/@com.sap.vocabularies.UI.v1.LineItem": {
+                  "actions": {
+                    "criarAcao": {
+                      "press": "br.com.calazanstec.actionplan.tratativas.ext.acoes.OperacoesLinha.criarAcao",
+                      "text": "{i18n>acaoCriarAcao}",
+                      "requiresSelection": false,
+                      "visible": "{= ${ocultaGestaoAcoes} !== true }",
+                      "enabled": "{= ${podeCriarAcao} === true }"
+                    },
+                    "criarSubacao": {
+                      "press": "br.com.calazanstec.actionplan.tratativas.ext.acoes.OperacoesLinha.criarSubacao",
+                      "text": "{i18n>acaoCriarSubacao}",
+                      "requiresSelection": true,
+                      "enableOnSelect": "single",
+                      "visible": "br.com.calazanstec.actionplan.tratativas.ext.acoes.OperacoesLinha.visivelGestao",
+                      "enabled": "br.com.calazanstec.actionplan.tratativas.ext.acoes.OperacoesLinha.habilitadoCriarSubacao"
+                    },
+                    "delegarAcao": {
+                      "press": "br.com.calazanstec.actionplan.tratativas.ext.acoes.OperacoesLinha.delegarAcao",
+                      "text": "{i18n>acaoDelegarAcao}",
+                      "requiresSelection": true,
+                      "enableOnSelect": "single",
+                      "visible": "br.com.calazanstec.actionplan.tratativas.ext.acoes.OperacoesLinha.visivelGestao",
+                      "enabled": "br.com.calazanstec.actionplan.tratativas.ext.acoes.OperacoesLinha.habilitadoDelegar"
+                    },
+                    "anexarEvidencia": {
+                      "press": "br.com.calazanstec.actionplan.tratativas.ext.acoes.OperacoesLinha.anexarEvidencia",
+                      "text": "{i18n>acaoAnexarEvidencia}",
+                      "requiresSelection": true,
+                      "enableOnSelect": "single",
+                      "visible": "br.com.calazanstec.actionplan.tratativas.ext.acoes.OperacoesLinha.visivelOperacao",
+                      "enabled": "br.com.calazanstec.actionplan.tratativas.ext.acoes.OperacoesLinha.habilitadoAnexar"
+                    },
+                    "comentarAcao": {
+                      "press": "br.com.calazanstec.actionplan.tratativas.ext.acoes.OperacoesLinha.comentarAcao",
+                      "text": "{i18n>acaoComentarAcao}",
+                      "requiresSelection": true,
+                      "enableOnSelect": "single",
+                      "visible": "br.com.calazanstec.actionplan.tratativas.ext.acoes.OperacoesLinha.visivelOperacao",
+                      "enabled": "br.com.calazanstec.actionplan.tratativas.ext.acoes.OperacoesLinha.habilitadoComentarAcao"
+                    },
+                    "iniciarAcao": {
+                      "press": "br.com.calazanstec.actionplan.tratativas.ext.acoes.OperacoesLinha.iniciarAcao",
+                      "text": "{i18n>acaoIniciarAcao}",
+                      "requiresSelection": true,
+                      "enableOnSelect": "single",
+                      "visible": "br.com.calazanstec.actionplan.tratativas.ext.acoes.OperacoesLinha.visivelOperacao",
+                      "enabled": "br.com.calazanstec.actionplan.tratativas.ext.acoes.OperacoesLinha.habilitadoIniciar"
+                    },
+                    "concluirAcao": {
+                      "press": "br.com.calazanstec.actionplan.tratativas.ext.acoes.OperacoesLinha.concluirAcao",
+                      "text": "{i18n>acaoConcluirAcao}",
+                      "requiresSelection": true,
+                      "enableOnSelect": "single",
+                      "visible": "br.com.calazanstec.actionplan.tratativas.ext.acoes.OperacoesLinha.visivelOperacao",
+                      "enabled": "br.com.calazanstec.actionplan.tratativas.ext.acoes.OperacoesLinha.habilitadoConcluir"
+                    }
+                  }
+                },
+                "evidencias/@com.sap.vocabularies.UI.v1.LineItem": {
+                  "actions": {
+                    "removerEvidencia": {
+                      "press": "br.com.calazanstec.actionplan.tratativas.ext.acoes.OperacoesLinha.removerEvidencia",
+                      "text": "{i18n>acaoRemoverEvidencia}",
+                      "requiresSelection": true,
+                      "enableOnSelect": "single",
+                      "visible": "br.com.calazanstec.actionplan.tratativas.ext.acoes.OperacoesLinha.visivelRemover",
+                      "enabled": "br.com.calazanstec.actionplan.tratativas.ext.acoes.OperacoesLinha.habilitadoRemover"
+                    }
+                  }
+                },
+                "comentarios/@com.sap.vocabularies.UI.v1.LineItem": {
+                  "actions": {
+                    "comentarTratativa": {
+                      "press": "br.com.calazanstec.actionplan.tratativas.ext.acoes.OperacoesLinha.comentarTratativa",
+                      "text": "{i18n>acaoComentarTratativa}",
+                      "requiresSelection": false,
+                      "visible": "{= ${ocultaComentarTratativa} !== true }",
+                      "enabled": "{= ${podeComentarTratativa} === true }"
                     }
                   }
                 }

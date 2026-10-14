@@ -40,6 +40,11 @@ service TratativaAppService {
         false as ocultaDerivarAcao         : Boolean,
         false as podeEmitirAval            : Boolean,
         false as ocultaEmitirAval          : Boolean,
+        false as podeCriarAcao             : Boolean,
+        false as ocultaGestaoAcoes         : Boolean,
+        false as podeComentarTratativa     : Boolean,
+        false as ocultaComentarTratativa   : Boolean,
+        false as ocultaOperacoesDeAcao     : Boolean,
         acoes         : Composition of many Acoes on acoes.tratativa = $self,
         participantes : Composition of many Participantes on participantes.tratativa = $self,
         evidencias    : Composition of many Evidencias on evidencias.tratativa = $self,
@@ -76,25 +81,12 @@ service TratativaAppService {
     action aplicarTemplate(templateId : UUID);
 
     @requires: 'GestorTratativa'
+    @Core.OperationAvailable: in.podeCriarAcao
     action criarAcao(descricao : String, responsavel : String, prazo : Date, prioridade : String, evidenciaObrigatoria : String) returns ResultadoCriacaoAcao;
 
-    @requires: 'GestorTratativa'
-    action criarSubacao(acaoMae : UUID, descricao : String, responsavel : String, prazo : Date, prioridade : String, evidenciaObrigatoria : String) returns ResultadoCriacaoAcao;
-
-    @requires: 'GestorTratativa'
-    action delegarAcao(acao : UUID, novoResponsavel : String, justificativa : String);
-
     @requires: 'authenticated-user'
-    action anexarEvidencia(acao : UUID, nomeArquivo : String, mimeType : String, conteudo : String, descricao : String) returns DetalheEvidencia;
-
-    @requires: 'authenticated-user'
-    action removerEvidencia(acao : UUID, evidencia : UUID);
-
-    @requires: 'authenticated-user'
+    @Core.OperationAvailable: in.podeComentarTratativa
     action comentarTratativa(texto : String, mencoes : many String) returns ResultadoComentario;
-
-    @requires: 'authenticated-user'
-    action comentarAcao(acao : String, texto : String, mencoes : many String) returns ResultadoComentario;
 
     @requires: 'authenticated-user'
     @Core.OperationAvailable: in.podeDefinirMetodologia
@@ -127,6 +119,19 @@ service TratativaAppService {
     criadoEm    : Timestamp;
     autorAnexo  : String(50);
   }
+
+  type FormatoEvidencia {
+    extensao : String(10);
+    tipos    : many String(100);
+  }
+
+  type RegrasAnexoEvidencia {
+    tamanhoMaximo : Integer;
+    formatos      : many FormatoEvidencia;
+  }
+
+  @requires: 'authenticated-user'
+  function regrasAnexoEvidencia() returns RegrasAnexoEvidencia;
 
   action criarTratativaAvulsa(
     titulo                : String(200),
@@ -194,10 +199,37 @@ service TratativaAppService {
         responsavel,
         causaIdentificador,
         causaDescricao,
-        acaoMae
+        acaoMae.codigo as acaoMae_codigo,
+        acaoMae : Association to Acoes on acaoMae.codigo = $self.acaoMae_codigo,
+        false as ocultaOperacoesDaLinha : Boolean,
+        false as podeCriarSubacao       : Boolean,
+        false as podeDelegar            : Boolean,
+        false as podeAnexarEvidencia    : Boolean,
+        false as podeComentarAcao       : Boolean,
+        false as podeIniciarAcao        : Boolean,
+        false as podeConcluirAcao       : Boolean
   } actions {
+    @Core.OperationAvailable: in.podeIniciarAcao
     action iniciar();
+
+    @Core.OperationAvailable: in.podeConcluirAcao
     action concluir();
+
+    @requires: 'GestorTratativa'
+    @Core.OperationAvailable: in.podeCriarSubacao
+    action criarSubacao(descricao : String, responsavel : String, prazo : Date, prioridade : String, evidenciaObrigatoria : String) returns ResultadoCriacaoAcao;
+
+    @requires: 'GestorTratativa'
+    @Core.OperationAvailable: in.podeDelegar
+    action delegarAcao(novoResponsavel : String, justificativa : String);
+
+    @requires: 'authenticated-user'
+    @Core.OperationAvailable: in.podeAnexarEvidencia
+    action anexarEvidencia(nomeArquivo : String, mimeType : String, conteudo : String, descricao : String) returns DetalheEvidencia;
+
+    @requires: 'authenticated-user'
+    @Core.OperationAvailable: in.podeComentarAcao
+    action comentarAcao(texto : String, mencoes : many String) returns ResultadoComentario;
   };
 
   @readonly
@@ -221,7 +253,15 @@ service TratativaAppService {
   };
 
   @readonly
-  entity Evidencias as projection on m.Evidencias;
+  entity Evidencias as projection on m.Evidencias {
+    *,
+    false as ocultaRemover : Boolean,
+    false as podeRemover   : Boolean
+  } where ativo = true actions {
+    @requires: 'authenticated-user'
+    @Core.OperationAvailable: in.podeRemover
+    action removerEvidencia();
+  };
 
   @readonly
   entity Comentarios as projection on m.Comentarios;

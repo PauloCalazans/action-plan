@@ -45,41 +45,6 @@ annotate TratativaAppService.Tratativas with @(
     },
     {
       $Type: 'UI.DataFieldForAction',
-      Label: 'Adicionar Ação',
-      Action: 'TratativaAppService.criarAcao'
-    },
-    {
-      $Type: 'UI.DataFieldForAction',
-      Label: 'Adicionar Subação',
-      Action: 'TratativaAppService.criarSubacao'
-    },
-    {
-      $Type: 'UI.DataFieldForAction',
-      Label: 'Delegar Ação',
-      Action: 'TratativaAppService.delegarAcao'
-    },
-    {
-      $Type: 'UI.DataFieldForAction',
-      Label: 'Anexar Evidência',
-      Action: 'TratativaAppService.anexarEvidencia'
-    },
-    {
-      $Type: 'UI.DataFieldForAction',
-      Label: 'Remover Evidência',
-      Action: 'TratativaAppService.removerEvidencia'
-    },
-    {
-      $Type: 'UI.DataFieldForAction',
-      Label: 'Comentar Tratativa',
-      Action: 'TratativaAppService.comentarTratativa'
-    },
-    {
-      $Type: 'UI.DataFieldForAction',
-      Label: 'Comentar Ação',
-      Action: 'TratativaAppService.comentarAcao'
-    },
-    {
-      $Type: 'UI.DataFieldForAction',
       Label: 'Aplicar Template',
       Action: 'TratativaAppService.aplicarTemplate'
     }
@@ -202,16 +167,7 @@ annotate TratativaAppService.Acoes with @(
     { $Type: 'UI.DataField', Value: evidenciaObrigatoria },
     { $Type: 'UI.DataField', Value: dataConclusao },
     { $Type: 'UI.DataField', Value: responsavel },
-    {
-      $Type: 'UI.DataFieldForAction',
-      Label: 'Iniciar',
-      Action: 'TratativaAppService.iniciar'
-    },
-    {
-      $Type: 'UI.DataFieldForAction',
-      Label: 'Concluir',
-      Action: 'TratativaAppService.concluir'
-    }
+    { $Type: 'UI.DataField', Value: acaoMae_codigo, Label: 'Ação mãe' }
   ]
 );
 
@@ -335,6 +291,7 @@ annotate TratativaAppService.Acoes with {
   responsavel          @title: 'Responsável';
   causaIdentificador   @title: 'Identificador da causa';
   causaDescricao       @title: 'Causa de origem';
+  acaoMae_codigo       @title: 'Ação mãe';
 };
 
 annotate TratativaAppService.Participantes with {
@@ -391,25 +348,7 @@ annotate TratativaAppService.Tratativas with actions {
     prioridade @title: 'Prioridade',
     evidenciaObrigatoria @title: 'Evidência obrigatória'
   );
-  criarSubacao(
-    acaoMae @title: 'Ação mãe',
-    descricao @title: 'Descrição' @UI.Placeholder: 'Descreva os fatos sem incluir nomes ou dados sensíveis.',
-    responsavel @title: 'Responsável',
-    prazo @title: 'Prazo',
-    prioridade @title: 'Prioridade',
-    evidenciaObrigatoria @title: 'Evidência obrigatória'
-  );
-  delegarAcao(acao @title: 'Ação', novoResponsavel @title: 'Novo responsável', justificativa @title: 'Justificativa' @UI.Placeholder: 'Explique o motivo sem incluir nomes ou dados sensíveis.');
-  anexarEvidencia(
-    acao @title: 'Ação',
-    nomeArquivo @title: 'Nome do arquivo',
-    mimeType @title: 'Tipo do arquivo',
-    conteudo @title: 'Conteúdo',
-    descricao @title: 'Descrição'
-  );
-  removerEvidencia(acao @title: 'Ação', evidencia @title: 'Evidência');
-  comentarTratativa(texto @title: 'Comentário' @UI.Placeholder: 'Registre o comentário sem incluir nomes ou dados sensíveis.', mencoes @title: 'Menções');
-  comentarAcao(acao @title: 'Ação', texto @title: 'Comentário' @UI.Placeholder: 'Registre o comentário sem incluir nomes ou dados sensíveis.', mencoes @title: 'Menções');
+  comentarTratativa(texto @title: 'Comentário' @UI.Placeholder: 'Digite seu comentário sobre esta ocorrência ou ação (até 2.000 caracteres). Evite incluir nomes de pessoas ou dados sensíveis. Menções a participantes devem ser feitas no campo de menções.', mencoes @title: 'Menções');
   definirMetodologia(
     ferramenta @title: 'Ferramenta',
     categoriaCausaRaiz @title: 'Categoria da causa raiz',
@@ -429,6 +368,30 @@ annotate TratativaAppService.Tratativas with actions {
       @UI.Placeholder: 'Selecione Aprovado para validar a eficácia comprovada das contramedidas ou Reprovado se o desvio persistir',
     fundamentacao @title: 'Fundamentação'
       @UI.Placeholder: 'Fundamente tecnicamente a comprovação de eficácia das ações ou o motivo detalhado da reprovação (mínimo de 20 caracteres). Evite dados sensíveis'
+  );
+};
+
+annotate TratativaAppService.Acoes with actions {
+  criarSubacao(
+    descricao @title: 'Descrição' @UI.Placeholder: 'Descreva os fatos sem incluir nomes ou dados sensíveis.',
+    responsavel @title: 'Responsável',
+    prazo @title: 'Prazo',
+    prioridade @title: 'Prioridade',
+    evidenciaObrigatoria @title: 'Evidência obrigatória'
+  );
+  delegarAcao(
+    novoResponsavel @title: 'Novo responsável',
+    justificativa @title: 'Justificativa' @UI.Placeholder: 'Explique o motivo sem incluir nomes ou dados sensíveis.'
+  );
+  anexarEvidencia(
+    nomeArquivo @title: 'Nome do arquivo',
+    mimeType @title: 'Tipo do arquivo',
+    conteudo @title: 'Conteúdo',
+    descricao @title: 'Descrição'
+  );
+  comentarAcao(
+    texto @title: 'Comentário' @UI.Placeholder: 'Digite seu comentário sobre esta ocorrência ou ação (até 2.000 caracteres). Evite incluir nomes de pessoas ou dados sensíveis. Menções a participantes devem ser feitas no campo de menções.',
+    mencoes @title: 'Menções'
   );
 };
 
@@ -467,13 +430,13 @@ annotate TratativaAppService.Tratativas with actions {
 
 annotate TratativaAppService.Tratativas with actions {
   iniciarTratativa @Core.OperationAvailable: in.podeIniciar
-    @Common.SideEffects: { TargetProperties: ['in/status', 'in/podeIniciar', 'in/podeEncerrar', 'in/podeCancelar', 'in/podeReabrir', 'in/ocultaIniciar', 'in/ocultaEncerrar', 'in/ocultaCancelar', 'in/ocultaReabrir', 'in/podeEmitirAval', 'in/ocultaEmitirAval', 'in/podeDefinirMetodologia', 'in/ocultaDefinirMetodologia', 'in/podeDerivarAcao', 'in/ocultaDerivarAcao'] };
+    @Common.SideEffects: { TargetProperties: ['in/status', 'in/podeIniciar', 'in/podeEncerrar', 'in/podeCancelar', 'in/podeReabrir', 'in/ocultaIniciar', 'in/ocultaEncerrar', 'in/ocultaCancelar', 'in/ocultaReabrir', 'in/podeEmitirAval', 'in/ocultaEmitirAval', 'in/podeDefinirMetodologia', 'in/ocultaDefinirMetodologia', 'in/podeDerivarAcao', 'in/ocultaDerivarAcao', 'in/podeCriarAcao', 'in/podeComentarTratativa', 'in/ocultaComentarTratativa', 'in/ocultaOperacoesDeAcao'], TargetEntities: ['in/acoes', 'in/evidencias', 'in/comentarios'] };
   encerrarTratativa @Core.OperationAvailable: in.podeEncerrar
-    @Common.SideEffects: { TargetProperties: ['in/status', 'in/podeIniciar', 'in/podeEncerrar', 'in/podeCancelar', 'in/podeReabrir', 'in/ocultaIniciar', 'in/ocultaEncerrar', 'in/ocultaCancelar', 'in/ocultaReabrir', 'in/podeEmitirAval', 'in/ocultaEmitirAval', 'in/podeDefinirMetodologia', 'in/ocultaDefinirMetodologia', 'in/podeDerivarAcao', 'in/ocultaDerivarAcao'] };
+    @Common.SideEffects: { TargetProperties: ['in/status', 'in/podeIniciar', 'in/podeEncerrar', 'in/podeCancelar', 'in/podeReabrir', 'in/ocultaIniciar', 'in/ocultaEncerrar', 'in/ocultaCancelar', 'in/ocultaReabrir', 'in/podeEmitirAval', 'in/ocultaEmitirAval', 'in/podeDefinirMetodologia', 'in/ocultaDefinirMetodologia', 'in/podeDerivarAcao', 'in/ocultaDerivarAcao', 'in/podeCriarAcao', 'in/podeComentarTratativa', 'in/ocultaComentarTratativa', 'in/ocultaOperacoesDeAcao'], TargetEntities: ['in/acoes', 'in/evidencias', 'in/comentarios'] };
   cancelarTratativa @Core.OperationAvailable: in.podeCancelar
-    @Common.SideEffects: { TargetProperties: ['in/status', 'in/podeIniciar', 'in/podeEncerrar', 'in/podeCancelar', 'in/podeReabrir', 'in/ocultaIniciar', 'in/ocultaEncerrar', 'in/ocultaCancelar', 'in/ocultaReabrir', 'in/podeEmitirAval', 'in/ocultaEmitirAval', 'in/podeDefinirMetodologia', 'in/ocultaDefinirMetodologia', 'in/podeDerivarAcao', 'in/ocultaDerivarAcao'] };
+    @Common.SideEffects: { TargetProperties: ['in/status', 'in/podeIniciar', 'in/podeEncerrar', 'in/podeCancelar', 'in/podeReabrir', 'in/ocultaIniciar', 'in/ocultaEncerrar', 'in/ocultaCancelar', 'in/ocultaReabrir', 'in/podeEmitirAval', 'in/ocultaEmitirAval', 'in/podeDefinirMetodologia', 'in/ocultaDefinirMetodologia', 'in/podeDerivarAcao', 'in/ocultaDerivarAcao', 'in/podeCriarAcao', 'in/podeComentarTratativa', 'in/ocultaComentarTratativa', 'in/ocultaOperacoesDeAcao'], TargetEntities: ['in/acoes', 'in/evidencias', 'in/comentarios'] };
   reabrirTratativa @Core.OperationAvailable: in.podeReabrir
-    @Common.SideEffects: { TargetProperties: ['in/status', 'in/podeIniciar', 'in/podeEncerrar', 'in/podeCancelar', 'in/podeReabrir', 'in/ocultaIniciar', 'in/ocultaEncerrar', 'in/ocultaCancelar', 'in/ocultaReabrir', 'in/podeEmitirAval', 'in/ocultaEmitirAval', 'in/podeDefinirMetodologia', 'in/ocultaDefinirMetodologia', 'in/podeDerivarAcao', 'in/ocultaDerivarAcao'] };
+    @Common.SideEffects: { TargetProperties: ['in/status', 'in/podeIniciar', 'in/podeEncerrar', 'in/podeCancelar', 'in/podeReabrir', 'in/ocultaIniciar', 'in/ocultaEncerrar', 'in/ocultaCancelar', 'in/ocultaReabrir', 'in/podeEmitirAval', 'in/ocultaEmitirAval', 'in/podeDefinirMetodologia', 'in/ocultaDefinirMetodologia', 'in/podeDerivarAcao', 'in/ocultaDerivarAcao', 'in/podeCriarAcao', 'in/podeComentarTratativa', 'in/ocultaComentarTratativa', 'in/ocultaOperacoesDeAcao'], TargetEntities: ['in/acoes', 'in/evidencias', 'in/comentarios'] };
 
   emitirAvalTecnico @Core.OperationAvailable: in.podeEmitirAval
     @Common.SideEffects: {
@@ -583,7 +546,9 @@ annotate TratativaAppService.Tratativas with actions {
       }
     )
   );
+};
 
+annotate TratativaAppService.Acoes with actions {
   criarSubacao(
     responsavel @(
       Common.ValueList: {
