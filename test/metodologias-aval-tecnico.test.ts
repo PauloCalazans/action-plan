@@ -69,7 +69,12 @@ describe('Aval Técnico — emissão e consulta pelo TratativaService (task 002)
     const [registro] = await linhas('AvalesTecnicos', { tratativa_codigo: codigo });
     expect(registro.parecer).toBe('Aprovado');
     expect(registro.validador).toBe('validador');
-    expect(registro.vigente).toBe(true);
+    // Vigência é derivada (DC-05): prova pela operação pública, não por coluna persistida.
+    const consulta = await consultarAval(consultar, codigo, comoGestor);
+    expect(consulta.status).toBe(200);
+    expect(consulta.data.vigente).toEqual(
+      expect.objectContaining({ id: registro.id, parecer: 'Aprovado', validador: 'validador', vigente: true }),
+    );
   });
 
   it('CA20: não emite Aval enquanto existir Ação em andamento', async () => {
@@ -221,7 +226,10 @@ describe('Aval Técnico — emissão e consulta pelo TratativaService (task 002)
     expect(novaAcao).not.toBe(acao);
     const segundaEmissao = await emitirAval(enviar, codigo, PARECER_APROVADO, comoValidador);
     expect(segundaEmissao.status).toBe(204);
-    expect((await linhas('AvalesTecnicos', { tratativa_codigo: codigo })).filter((item) => item.vigente)).toHaveLength(1);
+    const final = await consultarAval(consultar, codigo, comoGestor);
+    expect(final.status).toBe(200);
+    expect(final.data.historico.filter((item: { vigente: boolean }) => item.vigente)).toHaveLength(1);
+    expect(final.data.vigente).toEqual(expect.objectContaining({ parecer: 'Aprovado', vigente: true }));
   });
 
   it('CA25/CA39: calcula prazo de verificação a partir da última conclusão ou da entrada em andamento', async () => {

@@ -2,7 +2,7 @@ import cds from '@sap/cds';
 import { registrarCredenciais } from './apoio/credenciais';
 import { encerrarComAval } from './apoio/encerramento';
 import { fixarInstante, liberarRelogio } from './apoio/relogio';
-import { criarAvulsa, abrirPorApp, editar, mudarStatus, sufixoUnico, type Envia } from './apoio/tratativas';
+import { criarAvulsa, abrirPorApp, editar, sufixoUnico, type Envia } from './apoio/tratativas';
 import { comoGestor } from './apoio/usuarios';
 import { criarAcao, mudarStatusAcao } from './apoio/acoes';
 import { atribuirResponsavelPrincipal } from './apoio/responsaveis';

@@ -207,9 +207,10 @@ describe('histórico da transição (R9)', () => {
   it('CA20: campo status, valores, autor gestor, tipo Usuario, instante fixado e justificativa aparada', async () => {
     fixarInstante('2026-10-07T12:00:00-03:00');
     const codigo = await nova('Em andamento');
+    const antes = await transicoes(codigo);
     const r = await mudar(codigo, { status: 'Cancelada', justificativa: '  duplicada  ' });
     expect(r.status).toBe(204);
-    const [h] = await transicoes(codigo);
+    const [h] = (await transicoes(codigo)).slice(antes.length);
     expect(h).toBeDefined();
     expect(h.campo).toBe('status');
     expect(h.valorAnterior).toBe('Em andamento');
