@@ -32,11 +32,11 @@ sap.ui.define([ // eslint-disable-line no-undef
     });
   }
 
-  // Fail-closed: sem resposta do servidor, o botão fica oculto ou desabilitado.
-  function visivelSeNao(nomeDaPagina, nomeDaLinha) {
-    return function (pagina, selecionados) {
-      var unica = selecionados && selecionados.length === 1;
-      return propriedade(unica ? selecionados[0] : pagina, unica ? nomeDaLinha : nomeDaPagina).then(function (oculta) {
+  // Fail-closed: sem resposta do servidor, o botão fica oculto.
+  // O visible do manifest não é reavaliado na troca de seleção (R-06): depende só da página; o enabled é por linha.
+  function visivelSeNao(nomeDaPagina) {
+    return function (pagina) {
+      return propriedade(pagina, nomeDaPagina).then(function (oculta) {
         return oculta === false;
       });
     };
@@ -247,8 +247,8 @@ sap.ui.define([ // eslint-disable-line no-undef
         return oculta === false;
       });
     },
-    visivelOperacao: visivelSeNao("ocultaOperacoesDeAcao", "ocultaOperacoesDaLinha"),
-    visivelRemover: visivelSeNao("ocultaOperacoesDeAcao", "ocultaRemover"),
+    visivelOperacao: visivelSeNao("ocultaOperacoesDeAcao"),
+    visivelRemover: visivelSeNao("ocultaOperacoesDeAcao"),
 
     // enabled
     habilitadoCriarSubacao: habilitadoSe("podeCriarSubacao"),
