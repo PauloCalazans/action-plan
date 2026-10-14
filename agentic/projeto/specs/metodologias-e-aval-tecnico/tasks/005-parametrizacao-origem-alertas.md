@@ -53,6 +53,7 @@ Expor a parametrização por Origem e a designação de Validadores (inclusive a
 ### Criados
 - `app/tratativas/webapp/ext/fragment/MetodologiaSection.fragment.xml`
 - `app/tratativas/webapp/ext/controller/MetodologiaExtension.js`
+- `app/tratativas/webapp/ext/controller/MetodologiaExtension.controller.js`
 - `test/ui-metodologias-aval.test.ts`
 
 ### Modificados
