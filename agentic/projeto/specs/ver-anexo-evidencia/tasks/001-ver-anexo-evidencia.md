@@ -1,7 +1,7 @@
 # Task 001: ver-anexo-evidencia
 
 **Spec:** agentic/projeto/specs/ver-anexo-evidencia/spec.md
-**Status:** pendente
+**Status:** em-andamento
 <!-- pendente | em-andamento | em-revisão | publicada (integrada não é escrito: deriva do git) -->
 **Branch:** ver-anexo-evidencia/001-ver-anexo-evidencia
 
