@@ -126,7 +126,7 @@ describe('Acabamento da UI: robustez do backend e contratos de serviço', () => 
     expect(typeof criada.data.codigo).toBe('string');
   });
 
-  it('CA7: prazo de criarAcao/criarSubacao é Edm.Date e segue compatível com a validação de prazo', async () => {
+  it('CA7 e CA32 (acoes-nas-entidades): prazo de criarAcao/criarSubacao é Edm.Date e segue compatível com a validação de prazo', async () => {
     const xml = await metadados(comoGestor);
     for (const nome of ['criarAcao', 'criarSubacao']) {
       expect(parametro(blocoAcao(xml, nome), 'prazo')).toContain('Edm.Date');
@@ -796,7 +796,11 @@ describe('Acabamento da UI: robustez do backend e contratos de serviço', () => 
 
       const semPlaceholder: string[] = [];
       for (const [acao, parametro] of parametros) {
-        const vinculada = modelo.definitions['TratativaAppService.Tratativas']?.actions?.[acao]?.params?.[parametro];
+        // R28: as três operações movidas para a linha da Ação são lidas em Acoes (acoes-nas-entidades).
+        const dono = ['delegarAcao', 'criarSubacao', 'comentarAcao'].includes(acao)
+          ? 'TratativaAppService.Acoes'
+          : 'TratativaAppService.Tratativas';
+        const vinculada = modelo.definitions[dono]?.actions?.[acao]?.params?.[parametro];
         const naoVinculada = modelo.definitions[`TratativaAppService.${acao}`]?.params?.[parametro];
         const placeholder = (vinculada ?? naoVinculada ?? {})['@UI.Placeholder'];
         if (typeof placeholder !== 'string' || !/dados sensíveis/i.test(placeholder)) {

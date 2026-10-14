@@ -191,11 +191,33 @@ describe('Gestão de Tratativas: serviço OData e interface declarativa', () => 
     expect(anotacoes).toContain('Value: justificativa');
   });
 
-  it('CA9, CA10 e CA12 (Achado 4): as anotações declaram os botões das actions de Subação, Delegação e Evidência', () => {
-    const anotacoes = textoDo(ANOTACOES);
+  it('CA2, CA3 e CA29 (acoes-nas-entidades): o manifest declara os botões das actions de linha e o serviço as liga a Acoes e a Evidencias', async () => {
+    const manifesto = JSON.parse(textoDo(MANIFESTO)) as {
+      'sap.ui5': {
+        routing: {
+          targets: {
+            TratativasObjectPage: {
+              options: { settings: { controlConfiguration?: Record<string, { actions?: Record<string, unknown> }> } };
+            };
+          };
+        };
+      };
+    };
+    const configuracao =
+      manifesto['sap.ui5'].routing.targets.TratativasObjectPage.options.settings.controlConfiguration ?? {};
+    const modelo = (await cds.load(['srv', 'app'])) as unknown as {
+      definitions: Record<string, { actions?: Record<string, unknown> }>;
+    };
+    const daTratativa = Object.keys(modelo.definitions['TratativaAppService.Tratativas'].actions ?? {});
+    const daAcao = Object.keys(modelo.definitions['TratativaAppService.Acoes'].actions ?? {});
 
+    for (const lista of ['acoes', 'evidencias', 'comentarios']) {
+      const acoes = configuracao[`${lista}/@com.sap.vocabularies.UI.v1.LineItem`]?.actions ?? {};
+      expect(Object.keys(acoes).length).toBeGreaterThan(0);
+    }
     for (const action of ['criarSubacao', 'delegarAcao', 'anexarEvidencia']) {
-      expect(anotacoes).toContain(`Action: 'TratativaAppService.${action}'`);
+      expect(daTratativa).not.toContain(action);
+      expect(daAcao).toContain(action);
     }
   });
 
@@ -204,8 +226,8 @@ describe('Gestão de Tratativas: serviço OData e interface declarativa', () => 
     const mae = await novaAcaoApp(tratativa, 'M1001');
 
     const filha = await POST(
-      `${BASE}/Tratativas(${tratativa})/criarSubacao`,
-      { acaoMae: mae, descricao: 'Subação da UI', responsavel: 'M1001', prazo: '2027-01-01', prioridade: 'Média' },
+      `${BASE}/Acoes(${mae})/criarSubacao`,
+      { descricao: 'Subação da UI', responsavel: 'M1001', prazo: '2027-01-01', prioridade: 'Média' },
       comoGestor,
     );
     expect(filha.status).toBe(200);
@@ -221,8 +243,8 @@ describe('Gestão de Tratativas: serviço OData e interface declarativa', () => 
     const conteudo = Buffer.from('%PDF-1.4\nEvidência de teste').toString('base64');
 
     const anexo = await POST(
-      `${BASE}/Tratativas(${tratativa})/anexarEvidencia`,
-      { acao, nomeArquivo: 'evidencia.pdf', mimeType: 'application/pdf', conteudo, descricao: 'Evidência de teste' },
+      `${BASE}/Acoes(${acao})/anexarEvidencia`,
+      { nomeArquivo: 'evidencia.pdf', mimeType: 'application/pdf', conteudo, descricao: 'Evidência de teste' },
       comoGestor,
     );
     expect(anexo.status).toBe(200);
@@ -232,7 +254,7 @@ describe('Gestão de Tratativas: serviço OData e interface declarativa', () => 
     expect(ativa.status).toBe(200);
     expect(ativa.data.ativo).toBe(true);
 
-    const remocao = await POST(`${BASE}/Tratativas(${tratativa})/removerEvidencia`, { acao, evidencia }, comoGestor);
+    const remocao = await POST(`${BASE}/Evidencias(${evidencia})/removerEvidencia`, {}, comoGestor);
     expect(remocao.status).toBe(204);
     const removida = await GET(`${BASE}/Evidencias(${evidencia})`, comoGestor);
     expect(removida.status).toBe(200);
@@ -254,8 +276,8 @@ describe('Gestão de Tratativas: serviço OData e interface declarativa', () => 
     expect(comentarioTratativa.data.texto).toBe('Comentário na Tratativa');
 
     const naAcao = await POST(
-      `${BASE}/Tratativas(${tratativa})/comentarAcao`,
-      { acao, texto: 'Comentário na Ação', mencoes: ['M2002'] },
+      `${BASE}/Acoes(${acao})/comentarAcao`,
+      { texto: 'Comentário na Ação', mencoes: ['M2002'] },
       comoGestor,
     );
     expect(naAcao.status).toBe(200);
@@ -264,13 +286,13 @@ describe('Gestão de Tratativas: serviço OData e interface declarativa', () => 
     expect(comentarioAcao.data.texto).toBe('Comentário na Ação');
   });
 
-  it('CA12 (Achado 4): delegarAcao troca o responsável pela ação pelo TratativaAppService', async () => {
+  it('CA3 e CA27 (acoes-nas-entidades): delegarAcao da linha troca o responsável pela ação pelo TratativaAppService', async () => {
     const tratativa = await novaTratativaApp();
     const acao = await novaAcaoApp(tratativa, 'M1001');
 
     const delegacao = await POST(
-      `${BASE}/Tratativas(${tratativa})/delegarAcao`,
-      { acao, novoResponsavel: 'M2002', justificativa: 'Redistribuição de carga' },
+      `${BASE}/Acoes(${acao})/delegarAcao`,
+      { novoResponsavel: 'M2002', justificativa: 'Redistribuição de carga' },
       comoGestor,
     );
     expect(delegacao.status).toBe(204);

@@ -58,9 +58,8 @@ async function anexo(
   descricao: string,
 ): Promise<string> {
   const resposta = await POST(
-    `${BASE}/Tratativas(${tratativa})/anexarEvidencia`,
+    `${BASE}/Acoes(${acao})/anexarEvidencia`,
     {
-      acao,
       nomeArquivo,
       mimeType: 'text/plain',
       conteudo: Buffer.from(`Conteúdo ${nomeArquivo}`).toString('base64'),
@@ -134,14 +133,14 @@ beforeAll(async () => {
   );
   expect(comentarioTratativa.status).toBe(200);
   const comentarioAcao = await POST(
-    `${BASE}/Tratativas(${tratativa})/comentarAcao`,
-    { acao: codigoAcao, texto: `ComentarioAcao${sufixo}`, mencoes: [] },
+    `${BASE}/Acoes(${codigoAcao})/comentarAcao`,
+    { texto: `ComentarioAcao${sufixo}`, mencoes: [] },
     comoGestor,
   );
   expect(comentarioAcao.status).toBe(200);
   const comentarioSubacao = await POST(
-    `${BASE}/Tratativas(${tratativa})/comentarAcao`,
-    { acao: codigoSubacao, texto: `ComentarioSubacao${sufixo}`, mencoes: [] },
+    `${BASE}/Acoes(${codigoSubacao})/comentarAcao`,
+    { texto: `ComentarioSubacao${sufixo}`, mencoes: [] },
     comoGestor,
   );
   expect(comentarioSubacao.status).toBe(200);
@@ -160,8 +159,8 @@ beforeAll(async () => {
     `DescricaoSubacao${sufixo}`,
   );
   const remocao = await POST(
-    `${BASE}/Tratativas(${tratativa})/removerEvidencia`,
-    { acao: codigoAcao, evidencia: evidenciaRemovida },
+    `${BASE}/Evidencias(${evidenciaRemovida})/removerEvidencia`,
+    {},
     comoGestor,
   );
   expect(remocao.status).toBe(204);
