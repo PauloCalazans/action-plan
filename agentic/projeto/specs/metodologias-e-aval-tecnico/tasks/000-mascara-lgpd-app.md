@@ -1,7 +1,7 @@
 # Task 000: mascara-lgpd-app
 
 **Spec:** agentic/projeto/specs/metodologias-e-aval-tecnico/spec.md
-**Status:** draft
+**Status:** em-andamento
 **Branch:** metodologias-e-aval-tecnico/000-mascara-lgpd-app
 
 ## Objetivo
