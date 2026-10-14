@@ -257,7 +257,7 @@ service TratativaAppService {
     *,
     false as ocultaRemover : Boolean,
     false as podeRemover   : Boolean
-  } actions {
+  } where ativo = true actions {
     @requires: 'authenticated-user'
     @Core.OperationAvailable: in.podeRemover
     action removerEvidencia();
