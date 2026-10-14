@@ -352,6 +352,7 @@ describe('Acabamento da UI: robustez do backend e contratos de serviço', () => 
       expect(auth['[production]']?.kind).toBe('xsuaa');
       expect(Object.keys(auth['[test]']?.users ?? {}).sort()).toEqual([
         'admin', 'app-origem-a', 'app-origem-b', 'app-revogado', 'gestor', 'leitor-analitico', 'usuario',
+        'validador', 'validador-b',
       ]);
       expect(JSON.stringify(auth['[production]'] ?? {})).not.toContain('auth-dev');
     });
