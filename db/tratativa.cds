@@ -12,6 +12,41 @@ type Criticidade : String(10) enum {
   Critica = 'Crítica';
 }
 
+/** R7, R10, R11 (016): pareceres do Aval Técnico; somente inclusão. */
+@PersonalData.EntitySemantics: 'Other'
+entity AvalesTecnicos {
+  key id                    : UUID;
+      tratativa             : Association to one Tratativas not null;
+      parecer               : ParecerAvalTecnico not null;
+      @PersonalData.IsPotentiallyPersonal
+      fundamentacao         : String(2000) not null;
+      @PersonalData.IsPotentiallyPersonal
+      validador             : String(50) not null;
+      emitidoEm             : Timestamp not null;
+      dataBaseVerificacao   : Timestamp;
+      dataLimiteVerificacao : Date;
+}
+
+/** R13 (016): parametrização por Origem; a linha '*' é o baseline global. */
+@PersonalData.EntitySemantics: 'Other'
+entity ParametrosOrigem : managed {
+  key origemNormalizada            : String(100);
+      origem                       : String(100) not null;
+      metodologiaSugerida          : FerramentaMetodologia;
+      validadorPadrao              : String(100) not null;
+      prazoVerificacaoEficaciaDias : Integer not null default 30 @assert.range: [1, 180];
+      validadores                  : Composition of many ValidadoresOrigem on validadores.parametro = $self;
+}
+
+/** R7, R12 d (016): matrículas habilitadas como Validador Técnico na Origem. */
+@PersonalData.EntitySemantics: 'Other'
+entity ValidadoresOrigem {
+  key ID        : UUID;
+      parametro : Association to one ParametrosOrigem not null;
+      @PersonalData.IsPotentiallyPersonal
+      matricula : String(50) not null;
+}
+
 /** R1 (spec tratativa): Status da Tratativa; toda Tratativa nasce `Aberta` (R20 do 002). */
 type StatusTratativa : String(20) enum {
   Aberta;
@@ -34,6 +69,9 @@ type EventoHistorico : String(30) enum {
   InclusaoParticipante;
   RemocaoParticipante;
   InclusaoComentario;
+  DefinicaoMetodologia;
+  EdicaoMetodologia;
+  EmissaoAvalTecnico;
 }
 
 type TipoAutor : String(20) enum {
@@ -76,6 +114,7 @@ type EventoHistoricoAcao : String(30) enum {
   RemocaoEvidencia;
   DownloadEvidencia;
   InclusaoComentario;
+  CriacaoAcaoComCausa;
 }
 
 /** R1 (spec alertas-e-notificacoes): modalidades de alertas de negócio. */
@@ -90,6 +129,28 @@ type TipoAlerta : String(30) enum {
 type EntidadeAlerta : String(20) enum {
   Tratativa;
   Acao;
+  VerificacaoEficacia;
+}
+
+type FerramentaMetodologia : String(20) enum {
+  TresW = '3W';
+  CincoPorques = '5 Porquês';
+  CincoWDoisH = '5W2H';
+  PdcaOitoD = 'PDCA/8D';
+}
+
+type MacrocausaCausaRaiz : String(50) enum {
+  MetodoProcesso = 'Método/Processo';
+  MaquinaEquipamento = 'Máquina/Equipamento';
+  MaterialInsumo = 'Material/Insumo';
+  MaoDeObraComportamental = 'Mão de Obra/Comportamental';
+  MeioAmbienteInstalacao = 'Meio Ambiente/Instalação';
+  GestaoPlanejamento = 'Gestão/Planejamento';
+}
+
+type ParecerAvalTecnico : String(20) enum {
+  Aprovado;
+  Reprovado;
 }
 
 /** R5 (spec alertas-e-notificacoes): canais corporativos suportados. */
@@ -130,6 +191,13 @@ entity Tratativas {
       /** R1, R3, R17 (spec responsaveis-e-participantes): Responsável Principal da Tratativa. */
       @PersonalData.IsPotentiallyPersonal
       responsavelPrincipal : String(50);
+      metodologia          : FerramentaMetodologia;
+      categoriaCausaRaiz   : MacrocausaCausaRaiz;
+      @PersonalData.IsPotentiallyPersonal
+      metodologiaData      : LargeString;
+      @PersonalData.IsPotentiallyPersonal
+      metodologiaAutor     : String(50);
+      metodologiaAtualizadoEm : Timestamp;
       /** R1, R6 (spec responsaveis-e-participantes): lista de até 20 Participantes da Tratativa. */
       participantes         : Composition of many ParticipantesTratativa on participantes.tratativa = $self;
 }
@@ -167,6 +235,7 @@ entity HistoricoTratativa {
   key ID            : UUID;
       tratativa     : Association to one Tratativas not null;
       evento        : EventoHistorico not null;
+      avalTecnico   : UUID;
       campo         : String(50);
       /** Pode conter a matrícula do Solicitante (R15 da spec tratativa); a Descrição nunca é copiada. */
       @PersonalData.IsPotentiallyPersonal
@@ -198,6 +267,9 @@ entity Acoes {
       descricao             : String(500) not null;
       @PersonalData.IsPotentiallyPersonal
       responsavel           : String(50) not null;
+      causaIdentificador    : String(30);
+      @PersonalData.IsPotentiallyPersonal
+      causaDescricao        : String(2000);
       prazo                 : Date not null;
       prioridade            : PrioridadeAcao not null default 'Média';
       status                : StatusAcao not null default 'Pendente';

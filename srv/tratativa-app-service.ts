@@ -16,6 +16,7 @@ import {
   type DadosComentarioAcao,
 } from './tratativa/comentarios-inclusao';
 import { aplicarTemplateTratativa } from './templates/templates-aplicacao';
+import { aplicarMascaras, restricaoDeLeitura } from './tratativa/mascara-app';
 
 const NS = 'br.com.calazanstec';
 
@@ -89,6 +90,10 @@ export default class TratativaAppService extends cds.ApplicationService {
       if (req.user.is('AplicativoOrigem')) req.reject(403, 'Acesso negado.');
     });
 
+    this.before('READ', '*', async (req) => {
+      await restricaoDeLeitura(req);
+    });
+
     // As flags dependem de `status`; o Fiori elements só pede os caminhos das anotações, então garantimos a coluna.
     this.before('READ', 'Tratativas', (req) => {
       const select = (req.query as unknown as { SELECT?: { columns?: { ref?: string[] }[] } }).SELECT;
@@ -114,15 +119,13 @@ export default class TratativaAppService extends cds.ApplicationService {
         linha.ocultaCancelar = !linha.podeCancelar;
         linha.ocultaReabrir = !linha.podeReabrir;
         linha.ocultaResponsaveis = !gestor;
-        if (gestor) continue;
-        linha.descricao = null;
-        linha.solicitante = null;
-        linha.responsavelPrincipal = null;
-        if (linha.participantes) linha.participantes = [];
-        if (linha.acoes) {
-          for (const acao of linha.acoes) acao.responsavel = null;
-        }
       }
+    });
+
+    this.after('READ', '*', (resultado, req) => {
+      aplicarMascaras(req.target as unknown as cds.entity, resultado, {
+        gestor: req.user.is('GestorTratativa'),
+      });
     });
 
     this.on('READ', 'Colaboradores', async (req) => {
@@ -160,19 +163,6 @@ export default class TratativaAppService extends cds.ApplicationService {
       { codigo: 'Sim', descricao: 'Sim' },
       { codigo: 'Não', descricao: 'Não' },
     ]);
-
-    // Mesma máscara LGPD da Tratativa, aplicada às leituras diretas de Participantes e Acoes.
-    this.after('READ', 'Participantes', (resultado, req) => {
-      if (req.user.is('GestorTratativa')) return;
-      const linhas = (Array.isArray(resultado) ? resultado : [resultado]) as { matricula?: string | null }[];
-      for (const linha of linhas) if (linha) linha.matricula = null;
-    });
-
-    this.after('READ', 'Acoes', (resultado, req) => {
-      if (req.user.is('GestorTratativa')) return;
-      const linhas = (Array.isArray(resultado) ? resultado : [resultado]) as { responsavel?: string | null }[];
-      for (const linha of linhas) if (linha) linha.responsavel = null;
-    });
 
     this.on('criarTratativaAvulsa', async (req) => {
       const dados = req.data as DadosAbertura;

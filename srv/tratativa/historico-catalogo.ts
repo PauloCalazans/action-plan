@@ -8,8 +8,19 @@ export type OrigemHistorico = 'Tratativa' | 'Acao' | 'Responsaveis' | 'Evidencia
 
 /** Nomes canônicos de evento por Origem, na ordem alfabética usada no desempate (N3-5). */
 export const CATALOGO_EVENTOS: Record<OrigemHistorico, string[]> = {
-  Tratativa: ['Criacao', 'AlteracaoCriticidade', 'MudancaStatus', 'Encerramento', 'Reabertura', 'Cancelamento', 'Edicao'],
-  Acao: ['Criacao', 'MudancaStatus', 'Conclusao', 'Reabertura', 'Cancelamento', 'Edicao'],
+  Tratativa: [
+    'Criacao',
+    'AlteracaoCriticidade',
+    'DefinicaoMetodologia',
+    'EdicaoMetodologia',
+    'EmissaoAvalTecnico',
+    'MudancaStatus',
+    'Encerramento',
+    'Reabertura',
+    'Cancelamento',
+    'Edicao',
+  ],
+  Acao: ['Criacao', 'CriacaoAcaoComCausa', 'MudancaStatus', 'Conclusao', 'Reabertura', 'Cancelamento', 'Edicao'],
   Responsaveis: [
     'AtribuicaoResponsavelPrincipal',
     'ReatribuicaoResponsavelPrincipal',

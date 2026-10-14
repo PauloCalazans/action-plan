@@ -8,6 +8,10 @@ const PERSONAS = {
   usuario: [],
   gestor: ['GestorTratativa'],
   'leitor-analitico': ['LeitorAnalitico'],
+  validador: ['ValidadorTecnico'],
+  'validador-b': ['ValidadorTecnico'],
+  'M1001': [],
+  'M2002': [],
 };
 
 module.exports = function authDev(req, _res, next) {
