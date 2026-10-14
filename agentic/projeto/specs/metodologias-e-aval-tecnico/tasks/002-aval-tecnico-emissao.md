@@ -17,6 +17,7 @@ Implementar a emissão e a consulta do Aval Técnico no `TratativaService`, com 
 - `srv/tratativa/validador-tecnico.ts` (`validadoresEfetivos(origemNormalizada)`, `usuarioEhValidadorHabilitado(req, codigoTratativa)`, `tratativasComValidadorHabilitado(req, codigos)` em lote; lê `Tratativas.origemNormalizada` num SELECT próprio depois de `bloquearTratativa`, sem alterar `srv/tratativa/bloqueio.ts`; origem nula ou sem linha em `ParametrosOrigem` usa a linha `*`, DC-16)
 - `test/apoio/aval.ts` (helpers `comoValidador`, `comoValidadorB`, `emitirAval(enviar, tratativa, dados, como)`, `consultarAval(...)`; sem `expect(`)
 - `test/metodologias-aval-tecnico.test.ts`
+- `test/metodologias-correcoes-r22.test.ts` (RED dos achados da revisão de diff r1 do grupo 2, ruling R-22: I-01, I-02, I-03, M-02, M-05)
 
 ### Modificados
 - `srv/tratativa-service.cds` (tipos `ItemAvalTecnico`, `DetalheAvalTecnico`, `ResultadoAvalTecnico`; function `consultarAvalTecnicoTratativa`; action `emitirAvalTecnico`; grant `authenticated-user`; `fundamentacao` em `DetalheEventoHistorico`)
