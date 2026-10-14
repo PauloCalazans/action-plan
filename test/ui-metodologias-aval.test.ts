@@ -374,7 +374,7 @@ const RAIZ = join(__dirname, '..');
 const MANIFESTO = join(RAIZ, 'app', 'tratativas', 'webapp', 'manifest.json');
 const UI5 = join(RAIZ, 'app', 'tratativas', 'ui5.yaml');
 const FRAGMENTO = join(RAIZ, 'app', 'tratativas', 'webapp', 'ext', 'fragment', 'MetodologiaSection.fragment.xml');
-const EXTENSAO = join(RAIZ, 'app', 'tratativas', 'webapp', 'ext', 'controller', 'MetodologiaExtension.js');
+const EXTENSAO = join(RAIZ, 'app', 'tratativas', 'webapp', 'ext', 'controller', 'MetodologiaExtension.controller.js');
 const I18N = join(RAIZ, 'app', 'tratativas', 'webapp', 'i18n', 'i18n.properties');
 
 const TEXTOS_SPEC: Record<string, string> = {
@@ -522,6 +522,85 @@ describe('Seção customizada da metodologia (task 007, Etapa 2)', () => {
     expect(extensao).toContain('TratativaAppService.derivarAcaoDaMetodologia');
     expect(extensao).not.toMatch(/'\.\.\/\.\.\/\.\.\/srv|"\.\.\/\.\.\/\.\.\/srv/);
     expect(extensao).not.toContain("from 'db/");
+  });
+
+  // V-01: o UI5 resolve o controllerName do manifest para <namespace como caminho>.controller.js (medido no navegador).
+  it('o controllerName da extensão no manifest resolve para um arquivo .controller.js existente (V-01)', () => {
+    const manifesto = JSON.parse(textoDo(MANIFESTO)) as { 'sap.app': { id: string } };
+    const namespace = manifesto['sap.app'].id;
+    const extensoes = JSON.parse(textoDo(MANIFESTO))['sap.ui5'].extends.extensions['sap.ui.controllerExtensions'] as Record<string, { controllerName: string }>;
+    const nomes = Object.values(extensoes).map((e) => e.controllerName);
+    expect(nomes.length).toBeGreaterThan(0);
+    for (const nome of nomes) {
+      expect(nome.startsWith(`${namespace}.`)).toBe(true);
+      const relativo = nome.slice(namespace.length + 1).split('.').join('/');
+      const arquivo = join(RAIZ, 'app', 'tratativas', 'webapp', `${relativo}.controller.js`);
+      expect(existsSync(arquivo)).toBe(true);
+    }
+  });
+
+  // V-02: ExtensionAPI#byId só resolve IDs de seção customizada com o prefixo da subseção (medido: byId("metodologiaSalvar") = undefined).
+  it('todo byId da extensão usa o prefixo da subseção customizada e o sufixo existe no fragmento (V-02)', () => {
+    const PREFIXO = 'fe::CustomSubSection::MetodologiaSection--';
+    const extensao = textoDo(EXTENSAO);
+    const fragmento = textoDo(FRAGMENTO);
+    const idsFragmento = [...fragmento.matchAll(/\bid="([^"]+)"/g)].map((m) => m[1]);
+
+    // Argumento completo de cada chamada (parênteses balanceados) de byId / wrappers *ById.
+    const chamadas: { direta: boolean; arg: string }[] = [];
+    for (const m of extensao.matchAll(/(\.?)\b(\w*[Bb]yId)\(/g)) {
+      const antes = extensao.slice(Math.max(0, (m.index ?? 0) - 12), m.index ?? 0);
+      if (/function\s*$/.test(antes)) continue;
+      let fundo = 1;
+      let i = (m.index ?? 0) + m[0].length;
+      const ini = i;
+      for (; i < extensao.length && fundo > 0; i++) {
+        if (extensao[i] === '(') fundo++;
+        else if (extensao[i] === ')') fundo--;
+      }
+      chamadas.push({ direta: m[2] === 'byId', arg: extensao.slice(ini, i - 1).trim() });
+    }
+    expect(chamadas.length).toBeGreaterThanOrEqual(3);
+
+    const valorDe = (ident: string): string | undefined => {
+      const nome = ident.split('.').pop() as string;
+      const def = new RegExp(String.raw`(?:\b(?:var|const|let)\s+${nome}\s*=|\b${nome}\s*:)\s*(["'])([^"']*)\1`).exec(extensao);
+      return def?.[2];
+    };
+    const inicio = (arg: string): string | undefined => {
+      const lit = /^(["'])([^"']*)\1/.exec(arg);
+      if (lit) return lit[2];
+      const id = /^([A-Za-z_$][\w$.]*)/.exec(arg);
+      return id ? valorDe(id[1]) : undefined;
+    };
+
+    for (const { direta, arg } of chamadas) {
+      if (direta) {
+        // aceita o literal completo ou uma constante de prefixo concatenada
+        expect(inicio(arg)?.startsWith(PREFIXO)).toBe(true);
+      }
+      // sufixos literais (sem o prefixo) precisam existir no fragmento; terminando em '-' valem como prefixo de ID
+      for (const lit of arg.matchAll(/(["'])([^"']*)\1/g)) {
+        const sufixo = lit[2].startsWith(PREFIXO) ? lit[2].slice(PREFIXO.length) : lit[2];
+        if (sufixo === '') continue;
+        const existe = sufixo.endsWith('-') ? idsFragmento.some((id) => id.startsWith(sufixo)) : idsFragmento.includes(sufixo);
+        expect(existe).toBe(true);
+      }
+    }
+  });
+
+  // M-05: cancelar o diálogo rejeita com Error("Dialog cancelled") (medido no navegador); não é falha a avisar.
+  it('o tratamento de falha da extensão ignora o cancelamento do diálogo antes de avisar (M-05)', () => {
+    const extensao = textoDo(EXTENSAO);
+    const ini = extensao.indexOf('_falhou:');
+    expect(ini).toBeGreaterThanOrEqual(0);
+    const fim = extensao.indexOf('_texto:', ini);
+    const corpo = extensao.slice(ini, fim > ini ? fim : undefined);
+    const aviso = corpo.indexOf('MessageToast.show');
+    const cancelamento = corpo.indexOf('Dialog cancelled');
+    expect(aviso).toBeGreaterThanOrEqual(0);
+    expect(cancelamento).toBeGreaterThanOrEqual(0);
+    expect(cancelamento).toBeLessThan(aviso);
   });
 });
 
