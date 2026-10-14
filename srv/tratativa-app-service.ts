@@ -26,6 +26,7 @@ import {
   localizarAcaoDaLinha,
   localizarEvidenciaDaLinha,
   regrasAnexo,
+  servirAnexoEvidencia,
 } from './tratativa/operacoes-linha-app';
 
 const NS = 'br.com.calazanstec';
@@ -61,6 +62,7 @@ interface LinhaTratativa {
   ocultaComentarTratativa?: boolean;
   ocultaOperacoesDeAcao?: boolean;
   participantes?: unknown[] | null;
+  evidencias?: unknown[] | null;
   acoes?: { responsavel?: string | null }[] | null;
 }
 
@@ -82,6 +84,15 @@ function aplicarIndicacoes(linha: LinhaComCodigo, indicacoes: object | undefined
   if (!indicacoes) return;
   for (const [nome, valor] of Object.entries(indicacoes)) {
     if (nome in linha) linha[nome] = valor;
+  }
+}
+
+/** Habilita o link de anexo do Fiori elements (`fileStreamNotEmpty`) só em linhas de dados, nunca no Readable. */
+function marcarLinksDeMidia(linhas: LinhaComCodigo[]): void {
+  for (const linha of linhas) {
+    if (linha && typeof linha === 'object' && typeof linha.mimeType === 'string') {
+      linha['conteudo@odata.mediaContentType'] = linha.mimeType;
+    }
   }
 }
 
@@ -239,6 +250,8 @@ export default class TratativaAppService extends cds.ApplicationService {
       );
       for (const linha of linhas) {
         if (!linha) continue;
+        // $expand=evidencias: as linhas expandidas também levam o link de mídia (nunca o binário).
+        if (Array.isArray(linha.evidencias)) marcarLinksDeMidia(linha.evidencias as LinhaComCodigo[]);
         const solicitadas = new Set(Object.keys(linha));
         const status = linha.status;
         const situacao = linha.codigo ? situacoes.get(linha.codigo) : undefined;
@@ -281,8 +294,18 @@ export default class TratativaAppService extends cds.ApplicationService {
       for (const linha of linhas) aplicarIndicacoes(linha, linha.codigo ? indicacoes.get(linha.codigo) : undefined);
     });
 
+    // Acesso ao stream `conteudo` (caminho direto ou por contenção): autorização, auditoria e binário.
+    this.on('READ', 'Evidencias', async (req, next) => {
+      if ((req.query as unknown as { _propertyAccess?: string })._propertyAccess === 'conteudo') {
+        return servirAnexoEvidencia(req);
+      }
+      return next();
+    });
+
     this.after('READ', 'Evidencias', async (resultado, req) => {
       const linhas = linhasDe(resultado);
+      // Link de mídia do Fiori elements: só nas linhas de dados, nunca no Readable do stream.
+      marcarLinksDeMidia(linhas);
       const indicacoes = await indicacoesEvidencias(req, codigosDe(linhas));
       for (const linha of linhas) aplicarIndicacoes(linha, linha.codigo ? indicacoes.get(linha.codigo) : undefined);
     });

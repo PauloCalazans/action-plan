@@ -2,7 +2,9 @@
 // de disponibilidade por linha (acoes-nas-entidades, decisões 2, 3 e 7). Sem matrícula nas respostas (LGPD).
 
 import cds from '@sap/cds';
+import { Readable } from 'node:stream';
 import { codigoValido } from './consulta';
+import { processarDownloadEvidencia } from './evidencias-consultas';
 import { FORMATOS_ACEITOS, TAMANHO_MAXIMO_ARQUIVO } from './evidencias-validacao';
 import { usuarioAutenticadoEhMatricula } from './identidade';
 import { recusar } from './recusa';
@@ -24,6 +26,9 @@ export interface EvidenciaDaLinha {
   codigoEvidencia: string;
   codigoAcao: string;
   codigoTratativa: string;
+  nomeArquivo: string;
+  mimeType: string;
+  tamanho: number;
 }
 
 export interface IndicacoesAcao {
@@ -115,13 +120,56 @@ export async function localizarEvidenciaDaLinha(req: cds.Request): Promise<Evide
   const evidencia = (await cds.db.run(
     SELECT.one
       .from(`${NS}.Evidencias`)
-      .columns('codigo', 'acao_codigo', 'tratativa_codigo', 'ativo')
+      .columns('codigo', 'acao_codigo', 'tratativa_codigo', 'ativo', 'nomeArquivo', 'mimeType', 'tamanho')
       .where({ codigo: codigoEvidencia }),
-  )) as { codigo: string; acao_codigo: string; tratativa_codigo: string; ativo: boolean } | undefined;
+  )) as
+    | {
+        codigo: string;
+        acao_codigo: string;
+        tratativa_codigo: string;
+        ativo: boolean;
+        nomeArquivo: string;
+        mimeType: string;
+        tamanho: number;
+      }
+    | undefined;
   if (!evidencia || evidencia.ativo === false) recusar(404, mensagem);
   const codigoTratativa = String(evidencia.tratativa_codigo).toLowerCase();
   if (tratativa !== undefined && tratativa.toLowerCase() !== codigoTratativa) recusar(404, mensagem);
-  return { codigoEvidencia, codigoAcao: String(evidencia.acao_codigo).toLowerCase(), codigoTratativa };
+  return {
+    codigoEvidencia,
+    codigoAcao: String(evidencia.acao_codigo).toLowerCase(),
+    codigoTratativa,
+    nomeArquivo: evidencia.nomeArquivo,
+    mimeType: evidencia.mimeType,
+    tamanho: Number(evidencia.tamanho),
+  };
+}
+
+/** Tipos que o navegador exibe na própria aba; os demais são baixados (R2: na dúvida, baixar). */
+const TIPOS_EXIBIVEIS = new Set(['image/jpeg', 'image/pjpeg', 'image/png', 'application/pdf', 'text/plain']);
+
+/**
+ * Anexo da Evidência pela propriedade de mídia `conteudo` (caminho direto ou por contenção). Precedência:
+ * 404 Evidência, 404 Ação, 403 (autorização dinâmica), auditoria e só então o binário.
+ */
+export async function servirAnexoEvidencia(req: cds.Request): Promise<void> {
+  const { codigoEvidencia, codigoAcao, codigoTratativa, nomeArquivo, mimeType, tamanho } =
+    await localizarEvidenciaDaLinha(req);
+  const acao = (await cds.db.run(
+    SELECT.one.from(`${NS}.Acoes`).columns('responsavel').where({ codigo: codigoAcao }),
+  )) as { responsavel: string | null } | undefined;
+  if (!acao) recusar(404, 'Ação não encontrada.');
+  const conteudo = await processarDownloadEvidencia(
+    req,
+    { codigoTratativa, codigoAcao, codigoEvidencia, responsavelAcao: acao.responsavel ?? '', mimeType, tamanho },
+    'Acesso negado.',
+  );
+  const disposicao = TIPOS_EXIBIVEIS.has(mimeType.toLowerCase()) ? 'inline' : 'attachment';
+  const resposta = (req as unknown as { http?: { res?: { set(nome: string, valor: string): void } } }).http?.res;
+  resposta?.set('content-type', mimeType);
+  resposta?.set('content-disposition', `${disposicao}; filename="${encodeURIComponent(nomeArquivo)}"`);
+  req.reply(Readable.from(conteudo) as never);
 }
 
 interface LinhaAcaoBase {
