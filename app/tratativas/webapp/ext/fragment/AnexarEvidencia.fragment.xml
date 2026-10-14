@@ -1,0 +1,54 @@
+<core:FragmentDefinition xmlns="sap.m" xmlns:core="sap.ui.core" xmlns:u="sap.ui.unified">
+  <Dialog id="dialogo" title="{i18n>anexarTitulo}" contentWidth="32rem" draggable="true" resizable="false">
+    <content>
+      <VBox class="sapUiSmallMargin">
+        <Label text="{i18n>anexarArquivo}" labelFor="arquivo" required="true"/>
+        <u:FileUploader
+          id="arquivo"
+          width="100%"
+          uploadOnChange="false"
+          sendXHR="true"
+          useMultipart="false"
+          fileType="{anexo>/extensoes}"
+          maximumFileSize="{anexo>/tamanhoMaximoMb}"
+          placeholder="{i18n>anexarArquivoPlaceholder}"
+          tooltip="{i18n>anexarArquivoTooltip}"
+          change=".onEscolherArquivo"
+          typeMissmatch=".onAviso"
+          fileSizeExceed=".onAviso"/>
+        <MessageStrip
+          id="aviso"
+          text="{anexo>/avisoTexto}"
+          type="Warning"
+          showIcon="true"
+          visible="{= !!${anexo>/avisoTexto} }"
+          class="sapUiTinyMarginTopBottom"/>
+        <Label text="{i18n>anexarDescricao}" labelFor="descricao" class="sapUiSmallMarginTop"/>
+        <TextArea
+          id="descricao"
+          width="100%"
+          rows="3"
+          maxLength="500"
+          value="{anexo>/descricao}"
+          placeholder="{i18n>anexarDescricaoPlaceholder}"
+          tooltip="{i18n>anexarDescricaoTooltip}"/>
+      </VBox>
+    </content>
+    <beginButton>
+      <Button
+        id="confirmar"
+        type="Emphasized"
+        text="{i18n>anexarConfirmar}"
+        tooltip="{i18n>anexarConfirmarTooltip}"
+        enabled="{anexo>/podeAnexar}"
+        press=".onConfirmar"/>
+    </beginButton>
+    <endButton>
+      <Button
+        id="cancelar"
+        text="{i18n>anexarCancelar}"
+        tooltip="{i18n>anexarCancelarTooltip}"
+        press=".onCancelar"/>
+    </endButton>
+  </Dialog>
+</core:FragmentDefinition>

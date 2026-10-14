@@ -8,7 +8,7 @@ import { mudarStatusAcao } from './tratativa/acoes-ciclo-de-vida';
 import { criarAcao, criarSubacao, type DadosCriacaoAcao } from './tratativa/acoes-criacao';
 import { delegarAcao } from './tratativa/acoes-delegacao';
 import { anexarEvidencia, type DadosAnexoEvidencia } from './tratativa/evidencias-anexo';
-import { removerEvidencia, type DadosRemocaoEvidencia } from './tratativa/evidencias-remocao';
+import { removerEvidencia } from './tratativa/evidencias-remocao';
 import {
   comentarTratativa,
   comentarAcao,
@@ -20,16 +20,18 @@ import { aplicarMascaras, montarContextoMascara, restricaoDeLeitura, validadorHa
 import { lerSituacaoAval } from './tratativa/aval-tecnico';
 import { definirMetodologia, derivarAcaoDaMetodologia, type DadosDefinicaoMetodologia, type DadosDerivacaoMetodologia } from './tratativa/metodologia';
 import { emitirAvalTecnico } from './tratativa/aval-tecnico';
+import {
+  indicacoesAcoes,
+  indicacoesEvidencias,
+  localizarAcaoDaLinha,
+  localizarEvidenciaDaLinha,
+  regrasAnexo,
+} from './tratativa/operacoes-linha-app';
 
 const NS = 'br.com.calazanstec';
 
 interface ChaveTratativa {
   codigo: string;
-}
-
-interface ChaveAcao {
-  codigo?: string;
-  codigoAcao?: string;
 }
 
 interface LinhaTratativa {
@@ -53,8 +55,38 @@ interface LinhaTratativa {
   ocultaDerivarAcao?: boolean;
   podeEmitirAval?: boolean;
   ocultaEmitirAval?: boolean;
+  podeCriarAcao?: boolean;
+  ocultaGestaoAcoes?: boolean;
+  podeComentarTratativa?: boolean;
+  ocultaComentarTratativa?: boolean;
+  ocultaOperacoesDeAcao?: boolean;
   participantes?: unknown[] | null;
   acoes?: { responsavel?: string | null }[] | null;
+}
+
+interface LinhaComCodigo {
+  codigo?: string;
+  [flag: string]: unknown;
+}
+
+const FLAGS_DE_LINHA = /^(pode|oculta)[A-Z]/;
+
+/** Linhas devolvidas por um READ (uma, lista ou nenhuma), sem contagens nem valores simples. */
+function linhasDe(resultado: unknown): LinhaComCodigo[] {
+  const itens = Array.isArray(resultado) ? resultado : [resultado];
+  return itens.filter((linha): linha is LinhaComCodigo => !!linha && typeof linha === 'object');
+}
+
+/** Acrescenta à linha só as indicações que o cliente pediu (as colunas calculadas só existem quando selecionadas). */
+function aplicarIndicacoes(linha: LinhaComCodigo, indicacoes: object | undefined): void {
+  if (!indicacoes) return;
+  for (const [nome, valor] of Object.entries(indicacoes)) {
+    if (nome in linha) linha[nome] = valor;
+  }
+}
+
+function codigosDe(linhas: LinhaComCodigo[]): string[] {
+  return linhas.flatMap((linha) => (typeof linha.codigo === 'string' ? [linha.codigo] : []));
 }
 
 interface DefinicaoEnum {
@@ -150,10 +182,19 @@ export default class TratativaAppService extends cds.ApplicationService {
       const select = (req.query as unknown as { SELECT?: { columns?: { ref?: string[] }[] } }).SELECT;
       const colunas = select?.columns;
       if (!colunas) return;
-      const pedeFlag = colunas.some((c) => /^(pode|oculta)(Iniciar|Encerrar|Cancelar|Reabrir|EmitirAval|DefinirMetodologia|DerivarAcao)$/.test(c.ref?.[0] ?? ''));
+      const pedeFlag = colunas.some((c) => /^(pode|oculta)(Iniciar|Encerrar|Cancelar|Reabrir|EmitirAval|DefinirMetodologia|DerivarAcao|CriarAcao|GestaoAcoes|ComentarTratativa|OperacoesDeAcao)$/.test(c.ref?.[0] ?? ''));
       const temStatus = colunas.some((c) => c.ref?.[0] === 'status' || c.ref?.[0] === '*');
       const temCodigo = colunas.some((c) => c.ref?.[0] === 'codigo' || c.ref?.[0] === '*');
       if (pedeFlag && !temStatus) colunas.push({ ref: ['status'] });
+      if (pedeFlag && !temCodigo) colunas.push({ ref: ['codigo'] });
+    });
+
+    // Ações e Evidências: as indicações são calculadas pelo `codigo` da linha, então a coluna é garantida.
+    this.before('READ', ['Acoes', 'Evidencias'], (req) => {
+      const colunas = (req.query as unknown as { SELECT?: { columns?: { ref?: string[] }[] } }).SELECT?.columns;
+      if (!colunas) return;
+      const pedeFlag = colunas.some((c) => FLAGS_DE_LINHA.test(c.ref?.[0] ?? ''));
+      const temCodigo = colunas.some((c) => c.ref?.[0] === 'codigo' || c.ref?.[0] === '*');
       if (pedeFlag && !temCodigo) colunas.push({ ref: ['codigo'] });
     });
 
@@ -173,24 +214,32 @@ export default class TratativaAppService extends cds.ApplicationService {
       const matricula = normalizarMatricula(obterMatriculaUsuario(req));
       const linhas = (Array.isArray(resultado) ? resultado : [resultado]) as LinhaTratativa[];
       const codigos = linhas.flatMap((linha) => typeof linha?.codigo === 'string' ? [linha.codigo] : []);
-      const [situacoes, habilitadas, dados, acoesDoUsuario] = await Promise.all([
+      const [situacoes, habilitadas, dados, acoesDoUsuario, participacoes] = await Promise.all([
         lerSituacaoAval(codigos),
         validadorHabilitadoDaRequisicao(req, codigos),
         codigos.length
-          ? SELECT.from(`${NS}.Tratativas`).columns('codigo', 'status', 'metodologia').where({ codigo: { in: codigos } }) as unknown as
-            Promise<Array<{ codigo: string; status: string; metodologia: string | null }>>
+          ? SELECT.from(`${NS}.Tratativas`).columns('codigo', 'status', 'metodologia', 'responsavelPrincipal').where({ codigo: { in: codigos } }) as unknown as
+            Promise<Array<{ codigo: string; status: string; metodologia: string | null; responsavelPrincipal: string | null }>>
           : Promise.resolve([]),
         !gestor && codigos.length
           ? SELECT.from(`${NS}.Acoes`).columns('tratativa_codigo', 'responsavel').where({ tratativa_codigo: { in: codigos } }) as unknown as
             Promise<Array<{ tratativa_codigo: string; responsavel: string }>>
           : Promise.resolve([]),
+        !gestor && codigos.length
+          ? SELECT.from(`${NS}.ParticipantesTratativa`).columns('tratativa_codigo', 'matricula').where({ tratativa_codigo: { in: codigos } }) as unknown as
+            Promise<Array<{ tratativa_codigo: string; matricula: string }>>
+          : Promise.resolve([]),
       ]);
+      const comoParticipante = new Set(
+        participacoes.filter((p) => normalizarMatricula(p.matricula) === matricula).map((p) => p.tratativa_codigo),
+      );
       const metodologias = new Map(dados.map((linha) => [linha.codigo, linha]));
       const comAcaoDoUsuario = new Set(
         acoesDoUsuario.filter((acao) => normalizarMatricula(acao.responsavel) === matricula).map((acao) => acao.tratativa_codigo),
       );
       for (const linha of linhas) {
         if (!linha) continue;
+        const solicitadas = new Set(Object.keys(linha));
         const status = linha.status;
         const situacao = linha.codigo ? situacoes.get(linha.codigo) : undefined;
         const base = linha.codigo ? metodologias.get(linha.codigo) : undefined;
@@ -211,8 +260,34 @@ export default class TratativaAppService extends cds.ApplicationService {
         linha.ocultaCancelar = !linha.podeCancelar;
         linha.ocultaReabrir = !linha.podeReabrir;
         linha.ocultaResponsaveis = !gestor;
+        const comentaTratativa = gestor || (!!linha.codigo && (comoParticipante.has(linha.codigo) ||
+          (!!base?.responsavelPrincipal && normalizarMatricula(base.responsavelPrincipal) === matricula)));
+        linha.ocultaGestaoAcoes = !gestor;
+        linha.podeCriarAcao = gestor && alteravel;
+        linha.ocultaComentarTratativa = !comentaTratativa;
+        linha.podeComentarTratativa = comentaTratativa && alteravel;
+        linha.ocultaOperacoesDeAcao = !gestor && !(!!linha.codigo && comAcaoDoUsuario.has(linha.codigo));
+        // As colunas calculadas só existem quando o cliente as seleciona; as demais não voltam na resposta.
+        for (const nome of Object.keys(linha)) {
+          if (FLAGS_DE_LINHA.test(nome) && !solicitadas.has(nome)) delete (linha as Record<string, unknown>)[nome];
+        }
       }
     });
+
+    // Indicações por linha: uma consulta em lote ao banco, nunca lidas da linha devolvida (a máscara a anula).
+    this.after('READ', 'Acoes', async (resultado, req) => {
+      const linhas = linhasDe(resultado);
+      const indicacoes = await indicacoesAcoes(req, codigosDe(linhas));
+      for (const linha of linhas) aplicarIndicacoes(linha, linha.codigo ? indicacoes.get(linha.codigo) : undefined);
+    });
+
+    this.after('READ', 'Evidencias', async (resultado, req) => {
+      const linhas = linhasDe(resultado);
+      const indicacoes = await indicacoesEvidencias(req, codigosDe(linhas));
+      for (const linha of linhas) aplicarIndicacoes(linha, linha.codigo ? indicacoes.get(linha.codigo) : undefined);
+    });
+
+    this.on('regrasAnexoEvidencia', () => regrasAnexo());
 
     this.after('READ', '*', async function mascararLeitura(resultado, req) {
       const entidade = req.target as unknown as cds.entity;
@@ -325,26 +400,31 @@ export default class TratativaAppService extends cds.ApplicationService {
     const autor = (req: cds.Request) => ({ id: obterMatriculaUsuario(req), tipo: 'Usuario' as const });
     const codigoDe = (req: cds.Request) => String((req.params[0] as ChaveTratativa).codigo).toLowerCase();
 
-    this.on('criarSubacao', 'Tratativas', (req) => {
-      const { acaoMae, ...dados } = req.data as DadosCriacaoAcao & { acaoMae?: string | null };
-      return criarSubacao(codigoDe(req), String(acaoMae).toLowerCase(), dados, autor(req));
+    // Operações de linha: a Ação/Evidência vem do caminho (direto ou por contenção) e a Tratativa, do banco.
+    this.on('criarSubacao', 'Acoes', async (req) => {
+      const { codigoAcao, codigoTratativa } = await localizarAcaoDaLinha(req);
+      return criarSubacao(codigoTratativa, codigoAcao, req.data as DadosCriacaoAcao, autor(req));
     });
 
-    this.on('delegarAcao', 'Tratativas', async (req) => {
-      const { acao, novoResponsavel, justificativa } = req.data as {
-        acao?: string;
-        novoResponsavel?: string;
-        justificativa?: string;
-      };
-      await delegarAcao(codigoDe(req), String(acao).toLowerCase(), novoResponsavel!, justificativa!, autor(req));
+    this.on('delegarAcao', 'Acoes', async (req) => {
+      const { codigoAcao, codigoTratativa } = await localizarAcaoDaLinha(req);
+      const { novoResponsavel, justificativa } = req.data as { novoResponsavel?: string; justificativa?: string };
+      await delegarAcao(codigoTratativa, codigoAcao, novoResponsavel!, justificativa!, autor(req));
     });
 
-    this.on('anexarEvidencia', 'Tratativas', (req) =>
-      anexarEvidencia(req, codigoDe(req), req.data as DadosAnexoEvidencia, autor(req)),
-    );
+    this.on('anexarEvidencia', 'Acoes', async (req) => {
+      const { codigoAcao, codigoTratativa } = await localizarAcaoDaLinha(req);
+      return anexarEvidencia(req, codigoTratativa, { ...(req.data as DadosAnexoEvidencia), acao: codigoAcao }, autor(req));
+    });
 
-    this.on('removerEvidencia', 'Tratativas', async (req) => {
-      await removerEvidencia(req, codigoDe(req), req.data as DadosRemocaoEvidencia, autor(req));
+    this.on('comentarAcao', 'Acoes', async (req) => {
+      const { codigoAcao, codigoTratativa } = await localizarAcaoDaLinha(req);
+      return comentarAcao(req, codigoTratativa, { ...(req.data as DadosComentarioAcao), acao: codigoAcao });
+    });
+
+    this.on('removerEvidencia', 'Evidencias', async (req) => {
+      const { codigoEvidencia, codigoAcao, codigoTratativa } = await localizarEvidenciaDaLinha(req);
+      await removerEvidencia(req, codigoTratativa, { acao: codigoAcao, evidencia: codigoEvidencia }, autor(req));
     });
 
     this.on('comentarTratativa', 'Tratativas', (req) =>
@@ -367,8 +447,6 @@ export default class TratativaAppService extends cds.ApplicationService {
         autor(req),
       );
     });
-
-    this.on('comentarAcao', 'Tratativas', (req) => comentarAcao(req, codigoDe(req), req.data as DadosComentarioAcao));
 
     // Escopo pessoal por subconsulta/lista de chaves; $filter, $orderby, $top/$skip e $count seguem na query CQN.
     this.before('READ', 'MinhasAcoes', (req) => {
@@ -398,11 +476,8 @@ export default class TratativaAppService extends cds.ApplicationService {
       }
     });
     const alterarStatusAcao = async (req: cds.Request, status: 'Em andamento' | 'Concluída') => {
-      const chave = req.params[0] as ChaveAcao;
-      const codigoAcao = String(chave.codigo ?? chave.codigoAcao).toLowerCase();
-      const acao = await SELECT.one.from(`${NS}.Acoes`).columns('tratativa_codigo').where({ codigo: codigoAcao });
-      if (!acao) req.reject(404, 'Ação não encontrada.');
-      await mudarStatusAcao(req, String(acao.tratativa_codigo).toLowerCase(), codigoAcao, { status });
+      const { codigoAcao, codigoTratativa } = await localizarAcaoDaLinha(req);
+      await mudarStatusAcao(req, codigoTratativa, codigoAcao, { status });
     };
 
     this.on('iniciar', 'Acoes', (req) => alterarStatusAcao(req, 'Em andamento'));

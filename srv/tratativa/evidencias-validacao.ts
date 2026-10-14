@@ -10,7 +10,7 @@ export const TAMANHO_MAXIMO_ARQUIVO = 10 * 1024 * 1024; // 10.485.760 bytes
  * Pares de extensão e MIME types aceitos (normalizado para minúsculas).
  * R3: JPG, JPEG, PNG, PDF, DOCX, DOC, TXT, XLSX, XLS, CSV.
  */
-const FORMATOS_ACEITOS: Record<string, string[]> = {
+export const FORMATOS_ACEITOS: Record<string, string[]> = {
   '.jpg': ['image/jpeg', 'image/pjpeg'],
   '.jpeg': ['image/jpeg', 'image/pjpeg'],
   '.png': ['image/png'],
