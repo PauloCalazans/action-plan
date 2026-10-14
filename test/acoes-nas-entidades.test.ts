@@ -1555,3 +1555,147 @@ describe('Interface estática: cabeçalho, tabelas e anotações (CA1, CA2, CA6,
     for (const proibido of ['nomeArquivo', 'mimeType', 'conteudo']) expect(fragmento).not.toContain(`id="${proibido}"`);
   });
 });
+
+// ---------------------------------------------------------------------------------------------------------------
+// Verificação visual r1: V-1 (R-05) Evidência removida some das leituras do App, Gestor inclusive
+// ---------------------------------------------------------------------------------------------------------------
+describe('V-1 (R-05): o App lista só Evidências ativas, para o Gestor e para quem tem vínculo', () => {
+  const COMO: Array<[string, typeof comoGestor]> = [
+    ['Gestor', comoGestor],
+    ['M1001 (Responsável de uma Ação, sem papel de Gestor)', comoM1001],
+  ];
+
+  type Leitura = { tratativa: string; ativa: string; removida: string };
+  const codigosDe = (dados: unknown) =>
+    ((dados as { value?: Linha[] }).value ?? []).map((linha) => String(linha.codigo));
+
+  async function cenarioComRemocao(): Promise<Leitura> {
+    const tratativa = await novaTratativa();
+    const acao = await novaAcao(tratativa, 'M1001');
+    const ativa = await novaEvidencia(tratativa, acao);
+    const removida = await novaEvidencia(tratativa, acao);
+    await removerNoDominio(tratativa, acao, removida);
+    return { tratativa, ativa, removida };
+  }
+
+  it('Tratativas(t)?$expand=evidencias (Gestor; para não-Gestor a expansão aninhada é omitida por desenho) omite a removida e mantém a ativa', async () => {
+    const { tratativa, ativa, removida } = await cenarioComRemocao();
+
+    const r = await GET(`${BASE}/Tratativas(${tratativa})?$expand=evidencias`, comoGestor);
+
+    expect(r.status).toBe(200);
+    const codigos = ((r.data as { evidencias?: Linha[] }).evidencias ?? []).map((linha) => String(linha.codigo));
+    expect(codigos).toContain(ativa);
+    expect(codigos).not.toContain(removida);
+  });
+
+  describe.each(COMO)('como %s', (_nome, como) => {
+    it('Tratativas(t)/evidencias omite a removida, mantém a ativa e o $count reflete só a ativa', async () => {
+      const { tratativa, ativa, removida } = await cenarioComRemocao();
+
+      const r = await GET(`${BASE}/Tratativas(${tratativa})/evidencias?$count=true`, como);
+
+      expect(r.status).toBe(200);
+      expect(codigosDe(r.data)).toContain(ativa);
+      expect(codigosDe(r.data)).not.toContain(removida);
+      expect((r.data as Linha)['@odata.count']).toBe(1);
+    });
+
+    it('a coleção /Evidencias omite a removida, mantém a ativa e o $count reflete só a ativa', async () => {
+      const { tratativa, ativa, removida } = await cenarioComRemocao();
+
+      const r = await GET(`${BASE}/Evidencias?$count=true&$filter=tratativa_codigo eq '${tratativa}'`, como);
+
+      expect(r.status).toBe(200);
+      expect(codigosDe(r.data)).toContain(ativa);
+      expect(codigosDe(r.data)).not.toContain(removida);
+      expect((r.data as Linha)['@odata.count']).toBe(1);
+    });
+
+    it('o $count diminui depois de removerEvidencia (antes 2, depois 1)', async () => {
+      const tratativa = await novaTratativa();
+      const acao = await novaAcao(tratativa, 'M1001');
+      await novaEvidencia(tratativa, acao);
+      const segunda = await novaEvidencia(tratativa, acao);
+      const url = `${BASE}/Tratativas(${tratativa})/evidencias?$count=true`;
+
+      const antes = await GET(url, como);
+      await removerNoDominio(tratativa, acao, segunda);
+      const depois = await GET(url, como);
+
+      expect((antes.data as Linha)['@odata.count']).toBe(2);
+      expect((depois.data as Linha)['@odata.count']).toBe(1);
+    });
+  });
+});
+
+// ---------------------------------------------------------------------------------------------------------------
+// Verificação visual r1: V-2 (R-06) o visible das ações de linha depende só da página
+// ---------------------------------------------------------------------------------------------------------------
+describe('V-2 (R-06): o visible das ações de linha depende só da página, não da linha selecionada', () => {
+  type Modulo = Record<string, (this: unknown, pagina: unknown, selecionados: unknown[]) => Promise<boolean>>;
+
+  // Carrega o módulo de AMD com um sap.ui.define falso e dependências inertes (sem executar nada de UI).
+  function carregarModulo(): Modulo {
+    const fonte = textoDo(join(EXTENSAO, 'acoes', 'OperacoesLinha.js'));
+    let modulo: Modulo | undefined;
+    const sap = {
+      ui: {
+        define: (_deps: string[], fabrica: (...args: unknown[]) => Modulo) => {
+          modulo = fabrica({}, {}, {}, function () {}, {});
+        },
+      },
+    };
+    new Function('sap', fonte)(sap);
+    if (!modulo) throw new Error('OperacoesLinha.js não registrou o módulo.');
+    return modulo;
+  }
+
+  function contexto(propriedades: Record<string, unknown>) {
+    return { requestProperty: jest.fn((nome: string) => Promise.resolve(propriedades[nome])) };
+  }
+
+  const VISIVEIS_DE_LINHA = ['visivelOperacao', 'visivelRemover'];
+
+  it.each(VISIVEIS_DE_LINHA)('%s: página sem ocultação deixa visível mesmo com linha que pede ocultação', async (nome) => {
+    const modulo = carregarModulo();
+    const pagina = contexto({ ocultaOperacoesDeAcao: false });
+    const linha = contexto({ ocultaOperacoesDaLinha: true, ocultaRemover: true });
+
+    const visivel = await modulo[nome].call({}, pagina, [linha]);
+
+    expect(visivel).toBe(true);
+    expect(linha.requestProperty).not.toHaveBeenCalled();
+  });
+
+  it.each(VISIVEIS_DE_LINHA)('%s: página com ocultação oculta mesmo com linha que não pede ocultação', async (nome) => {
+    const modulo = carregarModulo();
+    const pagina = contexto({ ocultaOperacoesDeAcao: true });
+    const linha = contexto({ ocultaOperacoesDaLinha: false, ocultaRemover: false });
+
+    const visivel = await modulo[nome].call({}, pagina, [linha]);
+
+    expect(visivel).toBe(false);
+    expect(linha.requestProperty).not.toHaveBeenCalled();
+  });
+
+  it.each(VISIVEIS_DE_LINHA)('%s: com e sem seleção a resposta é a mesma e vem da página', async (nome) => {
+    const modulo = carregarModulo();
+    const pagina = contexto({ ocultaOperacoesDeAcao: false });
+
+    const semSelecao = await modulo[nome].call({}, pagina, []);
+    const umaLinha = await modulo[nome].call({}, pagina, [contexto({})]);
+    const duasLinhas = await modulo[nome].call({}, pagina, [contexto({}), contexto({})]);
+
+    expect([semSelecao, umaLinha, duasLinhas]).toEqual([true, true, true]);
+  });
+
+  it('o enabled continua por linha: habilitadoAnexar lê podeAnexarEvidencia da linha selecionada', async () => {
+    const modulo = carregarModulo();
+    const pagina = contexto({});
+    const linha = contexto({ podeAnexarEvidencia: true });
+
+    expect(await modulo.habilitadoAnexar.call({}, pagina, [linha])).toBe(true);
+    expect(linha.requestProperty).toHaveBeenCalledWith('podeAnexarEvidencia');
+  });
+});
