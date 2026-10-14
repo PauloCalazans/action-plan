@@ -1121,7 +1121,7 @@ describe('Indicações de disponibilidade (decisão 3)', () => {
     expect(lista.status).toBe(200);
     const linhasPorCodigo = porCodigo(lista.data);
     expect(apenasFlags(linhasPorCodigo.get(ativa))).toEqual({ ocultaRemover: false, podeRemover: true });
-    expect(apenasFlags(linhasPorCodigo.get(removida))).toEqual({ ocultaRemover: false, podeRemover: false });
+    expect(linhasPorCodigo.get(removida)).toBeUndefined();
     expect(apenasFlags(linhasPorCodigo.get(daEncerrada))).toEqual({ ocultaRemover: false, podeRemover: false });
 
     await cancelarTratativa(tratativa);
