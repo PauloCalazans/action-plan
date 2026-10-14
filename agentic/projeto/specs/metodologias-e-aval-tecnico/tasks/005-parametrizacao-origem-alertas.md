@@ -29,6 +29,10 @@ Expor a parametrização por Origem e a designação de Validadores (inclusive a
 ### Removidos
 - Nenhum.
 
+### Apoio de teste do grupo 3
+- `test/apoio/grupo3.ts` (helpers de coleção OData e de erro tipado do grupo 3; sem `expect(`)
+- `test/grupo3-suporte.test.ts` (prova que `AdministracaoService`, `AnaliticoService` e `TratativaAppService` estão expostos em OData V4)
+
 ### Débito D-01 (execução local, R-19)
 - `srv/tratativa/evidencias-storage.ts` (`import()` do módulo de armazenamento por `pathToFileURL(...).href`; hoje `anexarEvidencia` falha na execução local Windows com ERR_UNSUPPORTED_ESM_URL_SCHEME)
 - `test/evidencias-storage-carregamento.test.ts` (prova que o módulo é carregado a partir de um caminho absoluto)
