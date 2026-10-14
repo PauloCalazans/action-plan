@@ -642,7 +642,6 @@ describe('Máscara LGPD genérica do TratativaAppService', () => {
       ['Tratativas', cenario.descricao.slice(0, 18), comoUsuario],
       ['Tratativas', 'M9999', comoUsuario],
       ['Acoes', 'M1001', comoUsuario],
-      ['Participantes', 'M2002', comoUsuario],
       ['Historico', 'M9999', comoM2002],
     ] as const;
     for (const [entidade, termo, identidade] of buscas) {
@@ -658,6 +657,24 @@ describe('Máscara LGPD genérica do TratativaAppService', () => {
         ),
       ).toBe(false);
     }
+
+    const buscaParticipantesComum = await consulta(
+      'Participantes',
+      `$search=${encodeURIComponent('M2002')}`,
+      comoUsuario,
+    );
+    expect(buscaParticipantesComum.status).toBe(403);
+    expect(mensagemErro(buscaParticipantesComum.data)).toBe('Acesso negado.');
+
+    const buscaParticipantesGestor = await consulta(
+      'Participantes',
+      `$search=${encodeURIComponent('TERMO-SEM-CORRESPONDENCIA')}`,
+      comoGestor,
+    );
+    expect(buscaParticipantesGestor.status).toBe(200);
+    expect(
+      itens(buscaParticipantesGestor.data).some((linha) => linha.tratativa_codigo === cenario.tratativa),
+    ).toBe(true);
   });
 
   it('DC-19 permite filtros legítimos e preserva o comportamento do Gestor', async () => {
