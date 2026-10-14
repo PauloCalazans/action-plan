@@ -66,6 +66,18 @@
               "roles": [
                 "LeitorAnalitico"
               ]
+            },
+            "validador": {
+              "password": "",
+              "roles": [
+                "ValidadorTecnico"
+              ]
+            },
+            "validador-b": {
+              "password": "",
+              "roles": [
+                "ValidadorTecnico"
+              ]
             }
           }
         },
@@ -110,6 +122,18 @@
               "password": "",
               "roles": [
                 "LeitorAnalitico"
+              ]
+            },
+            "validador": {
+              "password": "",
+              "roles": [
+                "ValidadorTecnico"
+              ]
+            },
+            "validador-b": {
+              "password": "",
+              "roles": [
+                "ValidadorTecnico"
               ]
             }
           }

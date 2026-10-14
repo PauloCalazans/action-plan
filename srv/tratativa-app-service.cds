@@ -209,3 +209,33 @@ service TratativaAppService {
         'Responsável' as meuPapel : String(30)
   };
 }
+
+annotate TratativaAppService.Tratativas with @cds.search: {
+  descricao: false,
+  solicitante: false,
+  responsavelPrincipal: false
+};
+
+annotate TratativaAppService.Acoes with @cds.search: {
+  responsavel: false
+};
+
+annotate TratativaAppService.Participantes with @cds.search: {
+  matricula: false
+};
+
+annotate TratativaAppService.Evidencias with @cds.search: {
+  autorAnexo: false,
+  autorRemocao: false
+};
+
+annotate TratativaAppService.Historico with @cds.search: {
+  autor: false,
+  justificativa: false,
+  valorAnterior: false,
+  valorNovo: false
+};
+
+annotate TratativaAppService.MencoesComentario with @cds.search: {
+  matricula: false
+};

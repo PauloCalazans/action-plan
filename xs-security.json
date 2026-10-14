@@ -25,6 +25,10 @@
     {
       "name": "$XSAPPNAME.AplicativoOrigem",
       "description": "Aplicativo de Origem - Identidade técnica para abertura de tratativas via API"
+    },
+    {
+      "name": "$XSAPPNAME.ValidadorTecnico",
+      "description": "Validador Técnico - Avaliação técnica de tratativas"
     }
   ],
   "role-templates": [
@@ -55,6 +59,13 @@
       "scope-references": [
         "$XSAPPNAME.AplicativoOrigem"
       ]
+    },
+    {
+      "name": "ValidadorTecnico",
+      "description": "Papel de Validador Técnico",
+      "scope-references": [
+        "$XSAPPNAME.ValidadorTecnico"
+      ]
     }
   ],
   "role-collections": [
@@ -77,6 +88,13 @@
       "description": "Coleção de regras para Leitores Analíticos (Power BI / SAC)",
       "role-template-references": [
         "$XSAPPNAME.LeitorAnalitico"
+      ]
+    },
+    {
+      "name": "ActionPlan_ValidadorTecnico",
+      "description": "Coleção de regras para Validadores Técnicos",
+      "role-template-references": [
+        "$XSAPPNAME.ValidadorTecnico"
       ]
     }
   ],
