@@ -11,6 +11,7 @@ const { GET, POST } = cds.test(__dirname + '/..');
 const consultar = GET as unknown as Consulta;
 const enviar = POST as unknown as Envia;
 const BASE = '/api/tratativa/v1';
+const BASE_APP = '/api/app/v1';
 
 jest.setTimeout(60000);
 beforeAll(registrarCredenciais);
@@ -191,5 +192,42 @@ describe('Correções do grupo 2 (R-22): precedência R18 em definirMetodologia 
     const consulta = await consultarMetodologia(codigo);
     expect(consulta.data.metodologia).toBe('5 Porquês');
     expect(consulta.data.dados).toEqual(CINCO_PORQUES);
+  });
+});
+
+describe('Correções do grupo 2 (R-23): flags do App sem $select (I-04)', () => {
+  async function comAvalAprovado(): Promise<string> {
+    const codigo = await nova();
+    expect((await mudarStatus(enviar, codigo, { status: 'Em andamento' }, comoGestor)).status).toBe(204);
+    const aval = await emitirAval(
+      enviar,
+      codigo,
+      { parecer: 'Aprovado', fundamentacao: 'Eficacia confirmada em campo e evidencias revisadas.' },
+      comoValidador,
+    );
+    expect(aval.status).toBe(204);
+    return codigo;
+  }
+
+  it('controle: com $select das flags, podeEncerrar é true e ocultaEncerrar é false', async () => {
+    const codigo = await comAvalAprovado();
+    const r = await GET(`${BASE_APP}/Tratativas(${codigo})?$select=podeEncerrar,ocultaEncerrar`, comoGestor);
+    expect(r.status).toBe(200);
+    expect(r.data.podeEncerrar).toBe(true);
+    expect(r.data.ocultaEncerrar).toBe(false);
+  });
+
+  it.each([
+    ['sem $select', ''],
+    ['com $expand=acoes', '?$expand=acoes'],
+    ['com $expand=historico', '?$expand=historico'],
+    ['com $select=*', '?$select=*'],
+  ])('leitura por chave %s calcula as flags com o Aval aprovado vigente', async (_nome, consulta) => {
+    const codigo = await comAvalAprovado();
+    const r = await GET(`${BASE_APP}/Tratativas(${codigo})${consulta}`, comoGestor);
+    expect(r.status).toBe(200);
+    expect(r.data.status).toBe('Em andamento');
+    expect(r.data.podeEncerrar).toBe(true);
+    expect(r.data.ocultaEncerrar).toBe(false);
   });
 });
