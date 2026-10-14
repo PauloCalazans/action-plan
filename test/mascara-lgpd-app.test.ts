@@ -568,7 +568,7 @@ describe('Máscara LGPD genérica do TratativaAppService', () => {
       for (const entidadeRestrita of ['historico', 'evidencias']) {
         const resposta = await consulta(
           'Tratativas',
-          `$filter=${entidadeRestrita}/any(x:x/codigo eq ${cenario.tratativa})`,
+          `$filter=${entidadeRestrita}/any(x:x/tratativa_codigo eq ${cenario.tratativa})`,
           identidade,
         );
         expect(resposta.status).toBe(403);
