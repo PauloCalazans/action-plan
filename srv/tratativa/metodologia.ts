@@ -11,6 +11,8 @@ import { registrarHistorico, validarAutor } from './historico';
 import { recusar } from './recusa';
 import {
   validarCategoriaCausaRaiz,
+  ferramentaHomologada,
+  rotuloCausaMetodologia,
   validarDadosMetodologia,
   validarFerramentaMetodologia,
 } from './metodologia-validacao';
@@ -82,10 +84,15 @@ export async function definirMetodologia(
   if (ferramentaSolicitada === null && !atual?.metodologia) {
     recusar(400, 'O campo Ferramenta é obrigatório.', 'ferramenta');
   }
-  const ferramenta = ferramentaSolicitada === null ? null : validarFerramentaMetodologia(ferramentaSolicitada);
-  if (ferramenta && atual?.metodologia && ferramenta !== atual.metodologia && dados.confirmarSubstituicao !== true) {
+  const homologada = typeof ferramentaSolicitada === 'string' && ferramentaHomologada(ferramentaSolicitada);
+  if (
+    atual?.metodologia &&
+    (!homologada || ferramentaSolicitada !== atual.metodologia) &&
+    dados.confirmarSubstituicao !== true
+  ) {
     recusar(409, 'Tratativa já possui metodologia associada: confirme a substituição para alterar.');
   }
+  const ferramenta = ferramentaSolicitada === null ? null : validarFerramentaMetodologia(ferramentaSolicitada);
 
   let categoriaCausaRaiz: string | null = null;
   let metodologiaData: string | null = null;
@@ -190,7 +197,7 @@ export async function derivarAcaoDaMetodologia(
   return criarAcaoComCausa(
     codigo,
     acao,
-    { identificador, descricao: causaDescricao },
+    { identificador, descricao: causaDescricao, rotulo: rotuloCausaMetodologia(metodologia.metodologia, identificador) },
     { id: obterMatriculaUsuario(req), tipo: 'Usuario' },
   );
 }

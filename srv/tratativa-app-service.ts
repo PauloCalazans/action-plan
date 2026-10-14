@@ -112,7 +112,10 @@ export default class TratativaAppService extends cds.ApplicationService {
       const gestor = req.user.is('GestorTratativa');
       const linhas = (Array.isArray(resultado) ? resultado : [resultado]) as LinhaTratativa[];
       const codigos = linhas.flatMap((linha) => typeof linha?.codigo === 'string' ? [linha.codigo] : []);
-      const situacoes = await lerSituacaoAval(codigos);
+      const colunas = (req.query as unknown as { SELECT?: { columns?: { ref?: string[] }[] } }).SELECT?.columns;
+      const pedeFlag = !colunas || colunas.some((c) =>
+        c.ref?.[0] === '*' || /^(pode|oculta)(Iniciar|Encerrar|Cancelar|Reabrir)$/.test(c.ref?.[0] ?? ''));
+      const situacoes = pedeFlag ? await lerSituacaoAval(codigos) : new Map<string, never>();
       for (const linha of linhas) {
         if (!linha) continue;
         const status = linha.status;

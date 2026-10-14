@@ -73,13 +73,7 @@ export async function validadoresEfetivos(origemNormalizada: string | null): Pro
 }
 
 export async function usuarioEhValidadorHabilitado(req: Request, codigoTratativa: string): Promise<boolean> {
-  if (!req.user.is('ValidadorTecnico')) return false;
-  const tratativa = (await cds.db.run(
-    SELECT.one.from(`${NS}.Tratativas`).columns('origemNormalizada').where({ codigo: codigoTratativa }),
-  )) as { origemNormalizada: string | null } | undefined;
-  if (!tratativa) return false;
-  const { lista } = await validadoresEfetivos(tratativa.origemNormalizada);
-  return lista.length === 0 || lista.includes(normalizarMatricula(req.user.id));
+  return (await tratativasComValidadorHabilitado(req, [codigoTratativa])).has(codigoTratativa);
 }
 
 export async function tratativasComValidadorHabilitado(req: Request, codigos: string[]): Promise<Set<string>> {

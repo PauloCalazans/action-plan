@@ -27,7 +27,7 @@ export function criarAcao(codigoTratativa: string, dados: DadosCriacaoAcao, auto
 export function criarAcaoComCausa(
   codigoTratativa: string,
   dados: DadosCriacaoAcao,
-  causa: { identificador: string; descricao: string },
+  causa: { identificador: string; descricao: string; rotulo: string },
   autor: Autor,
 ): Promise<{ codigo: string }> {
   return criar(codigoTratativa, null, dados, autor, causa);
@@ -48,7 +48,7 @@ async function criar(
   acaoMae: string | null,
   dados: DadosCriacaoAcao,
   autor: Autor,
-  causa?: { identificador: string; descricao: string },
+  causa?: { identificador: string; descricao: string; rotulo: string },
 ): Promise<{ codigo: string }> {
   validarAutor(autor);
   const tratativa = await bloquearTratativa(codigoTratativa);
@@ -93,7 +93,9 @@ async function criar(
   await registrarHistorico(
     codigoTratativa,
     autor,
-    [{ evento: 'Criacao' }, ...(causa ? [{ evento: 'CriacaoAcaoComCausa' }] : [])],
+    [{ evento: 'Criacao' }, ...(causa
+      ? [{ evento: 'CriacaoAcaoComCausa', campo: 'causa', valorNovo: causa.identificador, justificativa: causa.rotulo }]
+      : [])],
     instante,
     codigo,
   );

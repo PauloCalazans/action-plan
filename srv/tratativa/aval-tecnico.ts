@@ -11,6 +11,8 @@ import { usuarioEhValidadorHabilitado } from './validador-tecnico';
 
 const NS = 'br.com.calazanstec';
 const PARECERES = ['Aprovado', 'Reprovado'];
+// Default declarado em ParametrosOrigem.prazoVerificacaoEficaciaDias (db/tratativa.cds).
+const PRAZO_VERIFICACAO_PADRAO = 30;
 const STATUS_ACAO_FINAL = ['Concluída', 'Cancelada'];
 
 export interface SituacaoAval {
@@ -51,7 +53,14 @@ interface LinhaHistorico {
   quando: string;
 }
 
+interface LinhaCancelamento {
+  tratativa_codigo: string;
+  acao_codigo: string;
+  quando: string;
+}
+
 interface LinhaAcao {
+  codigo: string;
   tratativa_codigo: string;
   status: string;
   criadoEm: string;
@@ -115,12 +124,13 @@ async function carregarSituacoes(codigos: string[]): Promise<{
   avales: LinhaAval[];
   historicos: LinhaHistorico[];
   acoes: LinhaAcao[];
+  cancelamentos: LinhaCancelamento[];
   prazos: Map<string, number>;
 }> {
   const ids = [...new Set(codigos)];
-  if (!ids.length) return { tratativas: [], avales: [], historicos: [], acoes: [], prazos: new Map() };
+  if (!ids.length) return { tratativas: [], avales: [], historicos: [], acoes: [], cancelamentos: [], prazos: new Map() };
 
-  const [tratativas, avales, historicos, acoes] = await Promise.all([
+  const [tratativas, avales, historicos, acoes, cancelamentos] = await Promise.all([
     cds.db.run(
       SELECT.from(`${NS}.Tratativas`)
         .columns('codigo', 'origemNormalizada', 'status', 'dataCriacao')
@@ -139,12 +149,17 @@ async function carregarSituacoes(codigos: string[]): Promise<{
     ) as Promise<LinhaHistorico[]>,
     cds.db.run(
       SELECT.from(`${NS}.Acoes`)
-        .columns('tratativa_codigo', 'status', 'criadoEm', 'dataConclusao')
+        .columns('codigo', 'tratativa_codigo', 'status', 'criadoEm', 'dataConclusao')
         .where({ tratativa_codigo: { in: ids } }),
     ) as Promise<LinhaAcao[]>,
+    cds.db.run(
+      SELECT.from(`${NS}.HistoricoAcoes`)
+        .columns('tratativa_codigo', 'acao_codigo', 'quando')
+        .where({ tratativa_codigo: { in: ids }, evento: 'Cancelamento' }),
+    ) as Promise<LinhaCancelamento[]>,
   ]);
   const prazos = await lerPrazos(tratativas.map((tratativa) => tratativa.origemNormalizada ?? ''));
-  return { tratativas, avales, historicos, acoes, prazos };
+  return { tratativas, avales, historicos, acoes, cancelamentos, prazos };
 }
 
 function montarSituacoes(
@@ -177,11 +192,15 @@ function montarSituacoes(
     const ultimaConclusao = maiorInstante(acoes
       .filter((acao) => acao.status === 'Concluída' && acao.dataConclusao)
       .map((acao) => instanteDeDataCivil(acao.dataConclusao)));
-    const base = maiorInstante([instanteInicio, ultimaConclusao]) ??
+    // Ação Cancelada não grava dataConclusao: o instante vem do evento Cancelamento (DC-04).
+    const canceladas = new Set(acoes.filter((acao) => acao.status === 'Cancelada').map((acao) => acao.codigo));
+    const ultimoCancelamento = maiorInstante(dados.cancelamentos
+      .filter((linha) => linha.tratativa_codigo === tratativa.codigo && canceladas.has(linha.acao_codigo))
+      .map((linha) => instante(linha.quando)));
+    const base = maiorInstante([instanteInicio, ultimaConclusao, ultimoCancelamento]) ??
       instante(`${tratativa.dataCriacao}T12:00:00.000Z`);
     const dataBase = base ? dataCivil(base) : null;
-    const prazo = dados.prazos.get(tratativa.origemNormalizada ?? '') ?? dados.prazos.get('*');
-    if (prazo === undefined) throw new Error('Parâmetro global de prazo de verificação de eficácia não encontrado.');
+    const prazo = dados.prazos.get(tratativa.origemNormalizada ?? '') ?? dados.prazos.get('*') ?? PRAZO_VERIFICACAO_PADRAO;
     const dataLimite = dataBase ? adicionarDias(dataBase, prazo) : null;
 
     resultado.set(tratativa.codigo, {

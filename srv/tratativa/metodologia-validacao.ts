@@ -23,19 +23,19 @@ const CAMPOS_POR_FERRAMENTA: Record<string, Record<string, Campo>> = {
     conclusao: { rotulo: 'Conclusão', minimo: 5, maximo: 1000, obrigatorio: true },
   },
   '5W2H': {
-    oQue: { rotulo: 'O que', minimo: 5, maximo: 500, obrigatorio: true },
-    porQue: { rotulo: 'Por que', minimo: 5, maximo: 500, obrigatorio: true },
-    onde: { rotulo: 'Onde', minimo: 3, maximo: 200, obrigatorio: true },
-    quando: { rotulo: 'Quando', minimo: 3, maximo: 200, obrigatorio: true },
-    quem: { rotulo: 'Quem', minimo: 3, maximo: 200, obrigatorio: true },
-    como: { rotulo: 'Como', minimo: 5, maximo: 500, obrigatorio: true },
+    oQue: { rotulo: 'O que', maximo: 500, obrigatorio: true },
+    porQue: { rotulo: 'Por que', maximo: 500, obrigatorio: true },
+    onde: { rotulo: 'Onde', maximo: 200, obrigatorio: true },
+    quando: { rotulo: 'Quando', maximo: 200, obrigatorio: true },
+    quem: { rotulo: 'Quem', maximo: 200, obrigatorio: true },
+    como: { rotulo: 'Como', maximo: 500, obrigatorio: true },
     quantoCusta: { rotulo: 'Quanto custa', maximo: 200 },
   },
   'PDCA/8D': {
-    planejar: { rotulo: 'Planejar', minimo: 5, maximo: 2000, obrigatorio: true },
-    executar: { rotulo: 'Executar', minimo: 5, maximo: 2000, obrigatorio: true },
-    checar: { rotulo: 'Checar', minimo: 5, maximo: 2000, obrigatorio: true },
-    agir: { rotulo: 'Agir', minimo: 5, maximo: 2000, obrigatorio: true },
+    planejar: { rotulo: 'Planejar', maximo: 2000, obrigatorio: true },
+    executar: { rotulo: 'Executar', maximo: 2000, obrigatorio: true },
+    checar: { rotulo: 'Checar', maximo: 2000, obrigatorio: true },
+    agir: { rotulo: 'Agir', maximo: 2000, obrigatorio: true },
   },
 };
 
@@ -48,6 +48,10 @@ const CATEGORIAS = [
   'Gestão/Planejamento',
 ];
 
+export function ferramentaHomologada(valor: string): boolean {
+  return Object.hasOwn(CAMPOS_POR_FERRAMENTA, valor);
+}
+
 export function validarFerramentaMetodologia(valor: unknown): string {
   if (typeof valor !== 'string' || !Object.hasOwn(CAMPOS_POR_FERRAMENTA, valor)) {
     recusar(400, 'Ferramenta de metodologia inválida.', 'ferramenta');
@@ -55,11 +59,21 @@ export function validarFerramentaMetodologia(valor: unknown): string {
   return valor as string;
 }
 
-export function validarCategoriaCausaRaiz(valor: unknown): string {
-  if (typeof valor !== 'string' || !CATEGORIAS.includes(valor)) {
+export function validarCategoriaCausaRaiz(valor: unknown): string | null {
+  if (valor == null) return null;
+  const texto = typeof valor === 'string' ? valor.trim() : valor;
+  if (texto === '') return null;
+  if (typeof texto !== 'string' || !CATEGORIAS.includes(texto)) {
     recusar(400, 'Categoria de causa raiz inválida.', 'categoriaCausaRaiz');
   }
-  return valor;
+  return texto;
+}
+
+export function rotuloCausaMetodologia(ferramenta: string, identificador: string): string {
+  const campo = Object.hasOwn(CAMPOS_POR_FERRAMENTA, ferramenta)
+    ? CAMPOS_POR_FERRAMENTA[ferramenta][identificador]
+    : undefined;
+  return campo ? `${ferramenta} — ${campo.rotulo}` : `${ferramenta} — ${identificador}`;
 }
 
 export function validarDadosMetodologia(ferramenta: string, valor: unknown): Record<string, string> {
