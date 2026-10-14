@@ -855,9 +855,16 @@ describe('Máscara LGPD genérica do TratativaAppService', () => {
       definitions: Record<string, DefinicaoCSN>;
     };
     const decididos: Record<string, string[]> = {
-      'TratativaAppService.Tratativas': ['descricao', 'solicitante', 'responsavelPrincipal'],
-      'TratativaAppService.Acoes': ['responsavel'],
+      'TratativaAppService.Tratativas': [
+        'descricao',
+        'solicitante',
+        'responsavelPrincipal',
+        'metodologiaData',
+        'metodologiaAutor',
+      ],
+      'TratativaAppService.Acoes': ['responsavel', 'causaDescricao'],
       'TratativaAppService.Participantes': ['matricula'],
+      'TratativaAppService.AvalesTecnicos': ['fundamentacao', 'validador'],
       'TratativaAppService.Evidencias': [
         'nomeArquivo',
         'descricao',
@@ -928,6 +935,7 @@ describe('Máscara LGPD genérica do TratativaAppService', () => {
       'TratativaAppService.Tratativas',
       'TratativaAppService.Acoes',
       'TratativaAppService.Participantes',
+      'TratativaAppService.AvalesTecnicos',
       'TratativaAppService.Evidencias',
       'TratativaAppService.Historico',
       'TratativaAppService.MencoesComentario',
