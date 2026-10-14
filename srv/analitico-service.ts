@@ -1,5 +1,6 @@
 import cds from '@sap/cds';
 import { aplicarOpcoesOdata, validarFiltros } from './analitico/filtros';
+import { dataCivil as dataCivilPlataforma } from './lib/relogio';
 
 const NS = 'br.com.calazanstec';
 
@@ -280,8 +281,98 @@ export default class AnaliticoService extends cds.ApplicationService {
       ).length;
       return { indicePercentual: criadas ? Number(((encerradas / criadas) * 100).toFixed(2)) : 100 };
     });
+    this.on('consultarTaxaEficacia', async (req) => {
+      const { periodoInicio, periodoFim } = req.data as { periodoInicio: string; periodoFim: string };
+      return { taxaPercentual: await taxaEficacia(periodoInicio, periodoFim) };
+    });
+    this.on('consultarTempoMedioVerificacaoEficacia', async (req) => {
+      const { periodoInicio, periodoFim } = req.data as { periodoInicio: string; periodoFim: string };
+      return { mediaDias: await tempoMedioVerificacao(periodoInicio, periodoFim) };
+    });
+    this.on('consultarAderenciaMetodologica', async (req) => {
+      const { periodoInicio, periodoFim } = req.data as { periodoInicio: string; periodoFim: string };
+      return { percentual: await aderenciaMetodologica(periodoInicio, periodoFim) };
+    });
     return super.init();
   }
+}
+
+const MS_POR_DIA = 86400000;
+
+/** Limites do período em instantes UTC, com 1 dia de folga; o corte exato é feito por data civil da plataforma. */
+function limitesComFolga(periodoInicio: string, periodoFim: string): { de: string; ate: string } {
+  const de = new Date(Date.parse(`${periodoInicio}T00:00:00.000Z`) - MS_POR_DIA).toISOString();
+  const ate = new Date(Date.parse(`${periodoFim}T00:00:00.000Z`) + 2 * MS_POR_DIA).toISOString();
+  return { de, ate };
+}
+
+function diasEntre(inicio: string, fim: string): number {
+  return (Date.parse(`${fim}T00:00:00.000Z`) - Date.parse(`${inicio}T00:00:00.000Z`)) / MS_POR_DIA;
+}
+
+function arredondar(valor: number, casas: number): number {
+  return Number(valor.toFixed(casas));
+}
+
+/** DC-14: primeiro Aval da Tratativa em todo o histórico, filtrado pelo período; eficaz se Aprovado. */
+async function taxaEficacia(periodoInicio: string, periodoFim: string): Promise<number> {
+  const { de, ate } = limitesComFolga(periodoInicio, periodoFim);
+  const [primeiros, primeirosAprovados] = (await Promise.all([
+    cds.db.run(
+      SELECT.from(`${NS}.AvalesTecnicos`)
+        .columns('tratativa_codigo', 'min(emitidoEm) as primeiro')
+        .groupBy('tratativa_codigo')
+        .having('min(emitidoEm) >=', de, 'and min(emitidoEm) <', ate),
+    ),
+    cds.db.run(
+      SELECT.from(`${NS}.AvalesTecnicos`)
+        .columns('tratativa_codigo', 'min(emitidoEm) as primeiro')
+        .where({ parecer: 'Aprovado' })
+        .groupBy('tratativa_codigo'),
+    ),
+  ])) as [Array<{ tratativa_codigo: string; primeiro: string }>, Array<{ tratativa_codigo: string; primeiro: string }>];
+
+  const aprovado = new Map(primeirosAprovados.map((linha) => [linha.tratativa_codigo, Date.parse(linha.primeiro)]));
+  const universo = primeiros.filter((linha) =>
+    dentroDoPeriodo(dataCivilPlataforma(new Date(linha.primeiro)), periodoInicio, periodoFim),
+  );
+  if (!universo.length) return 0;
+  const eficazes = universo.filter((linha) => aprovado.get(linha.tratativa_codigo) === Date.parse(linha.primeiro));
+  return arredondar((eficazes.length / universo.length) * 100, 2);
+}
+
+/** DC-14: média, em dias corridos entre datas civis, de `dataBaseVerificacao` até `emitidoEm` dos Avales do período. */
+async function tempoMedioVerificacao(periodoInicio: string, periodoFim: string): Promise<number> {
+  const { de, ate } = limitesComFolga(periodoInicio, periodoFim);
+  const avales = (await cds.db.run(
+    SELECT.from(`${NS}.AvalesTecnicos`)
+      .columns('emitidoEm', 'dataBaseVerificacao')
+      .where('emitidoEm >=', de, 'and emitidoEm <', ate, 'and dataBaseVerificacao is not null'),
+  )) as Array<{ emitidoEm: string; dataBaseVerificacao: string }>;
+  const dias = avales
+    .map((aval) => ({
+      emitido: dataCivilPlataforma(new Date(aval.emitidoEm)),
+      base: dataCivilPlataforma(new Date(aval.dataBaseVerificacao)),
+    }))
+    .filter(({ emitido }) => dentroDoPeriodo(emitido, periodoInicio, periodoFim))
+    .map(({ emitido, base }) => diasEntre(base, emitido));
+  return dias.length ? arredondar(dias.reduce((soma, valor) => soma + valor, 0) / dias.length, 1) : 0;
+}
+
+/** R15 d: percentual das Tratativas criadas no período com metodologia preenchida. */
+async function aderenciaMetodologica(periodoInicio: string, periodoFim: string): Promise<number> {
+  const [total, comMetodologia] = (await Promise.all([
+    cds.db.run(
+      SELECT.one.from(`${NS}.Tratativas`).columns('count(*) as total')
+        .where('dataCriacao >=', periodoInicio, 'and dataCriacao <=', periodoFim),
+    ),
+    cds.db.run(
+      SELECT.one.from(`${NS}.Tratativas`).columns('count(*) as total')
+        .where('dataCriacao >=', periodoInicio, 'and dataCriacao <=', periodoFim, 'and metodologia is not null'),
+    ),
+  ])) as [Total | undefined, Total | undefined];
+  const universo = Number(total?.total ?? 0);
+  return universo ? arredondar((Number(comMetodologia?.total ?? 0) / universo) * 100, 2) : 0;
 }
 
 async function encerramentosNoPeriodo(periodoInicio: string, periodoFim: string): Promise<Historico[]> {

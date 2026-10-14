@@ -34,6 +34,12 @@ annotate TratativaAppService.Tratativas with @(
     },
     {
       $Type: 'UI.DataFieldForAction',
+      Label: 'Emitir Aval Técnico',
+      Action: 'TratativaAppService.emitirAvalTecnico',
+      @UI.Hidden: ocultaEmitirAval
+    },
+    {
+      $Type: 'UI.DataFieldForAction',
       Label: 'Alterar Criticidade',
       Action: 'TratativaAppService.mudarCriticidade'
     },
@@ -138,6 +144,12 @@ annotate TratativaAppService.Tratativas with @(
     },
     {
       $Type: 'UI.ReferenceFacet',
+      ID: 'AvaliacoesTecnicasFacet',
+      Label: 'Avaliações Técnicas',
+      Target: 'avalesTecnicos/@UI.LineItem'
+    },
+    {
+      $Type: 'UI.ReferenceFacet',
       ID: 'EvidenciasFacet',
       Label: 'Evidências',
       Target: 'evidencias/@UI.LineItem'
@@ -203,6 +215,39 @@ annotate TratativaAppService.Acoes with @(
   ]
 );
 
+annotate TratativaAppService.AvalesTecnicos with @(
+  UI.LineItem: [
+    { $Type: 'UI.DataField', Value: parecer, @UI.Importance: #High },
+    { $Type: 'UI.DataField', Value: fundamentacao },
+    { $Type: 'UI.DataField', Value: validador },
+    { $Type: 'UI.DataField', Value: emitidoEm },
+    { $Type: 'UI.DataField', Value: vigente }
+  ]
+);
+
+annotate TratativaAppService.AvalesTecnicos with {
+  parecer       @title: 'Parecer';
+  fundamentacao @title: 'Fundamentação';
+  validador     @title: 'Validador';
+  emitidoEm     @title: 'Emitido em';
+  vigente       @title: 'Vigente';
+};
+
+annotate TratativaAppService.ValoresFerramentaMetodologia with {
+  codigo    @title: 'Código';
+  descricao @title: 'Descrição';
+};
+
+annotate TratativaAppService.ValoresMacrocausa with {
+  codigo    @title: 'Código';
+  descricao @title: 'Descrição';
+};
+
+annotate TratativaAppService.ValoresParecerAval with {
+  codigo    @title: 'Código';
+  descricao @title: 'Descrição';
+};
+
 annotate TratativaAppService.Evidencias with @(
   UI.LineItem: [
     { $Type: 'UI.DataField', Value: codigo },
@@ -251,6 +296,11 @@ annotate TratativaAppService.Tratativas with {
   descricao             @title: 'Descrição';
   solicitante           @title: 'Solicitante';
   responsavelPrincipal  @title: 'Responsável principal';
+  metodologia           @title: 'Metodologia';
+  categoriaCausaRaiz    @title: 'Categoria da causa raiz';
+  metodologiaData       @title: 'Análise da metodologia';
+  metodologiaAutor      @title: 'Autor da metodologia';
+  metodologiaAtualizadoEm @title: 'Metodologia atualizada em';
 };
 
 annotate TratativaAppService.Colaboradores with {
@@ -283,6 +333,8 @@ annotate TratativaAppService.Acoes with {
   evidenciaObrigatoria @title: 'Evidência obrigatória';
   dataConclusao        @title: 'Data de conclusão';
   responsavel          @title: 'Responsável';
+  causaIdentificador   @title: 'Identificador da causa';
+  causaDescricao       @title: 'Causa de origem';
 };
 
 annotate TratativaAppService.Participantes with {
@@ -358,6 +410,26 @@ annotate TratativaAppService.Tratativas with actions {
   removerEvidencia(acao @title: 'Ação', evidencia @title: 'Evidência');
   comentarTratativa(texto @title: 'Comentário' @UI.Placeholder: 'Registre o comentário sem incluir nomes ou dados sensíveis.', mencoes @title: 'Menções');
   comentarAcao(acao @title: 'Ação', texto @title: 'Comentário' @UI.Placeholder: 'Registre o comentário sem incluir nomes ou dados sensíveis.', mencoes @title: 'Menções');
+  definirMetodologia(
+    ferramenta @title: 'Ferramenta',
+    categoriaCausaRaiz @title: 'Categoria da causa raiz',
+    dados @title: 'Análise',
+    confirmarSubstituicao @title: 'Confirmar substituição'
+  );
+  derivarAcaoDaMetodologia(
+    causaIdentificador @title: 'Causa de origem' @Common.FieldControl: #ReadOnly,
+    descricao @title: 'Descrição' @UI.Placeholder: 'Descreva os fatos sem incluir nomes ou dados sensíveis.',
+    responsavel @title: 'Responsável',
+    prazo @title: 'Prazo',
+    prioridade @title: 'Prioridade',
+    evidenciaObrigatoria @title: 'Evidência obrigatória'
+  );
+  emitirAvalTecnico(
+    parecer @title: 'Parecer'
+      @UI.Placeholder: 'Selecione Aprovado para validar a eficácia comprovada das contramedidas ou Reprovado se o desvio persistir',
+    fundamentacao @title: 'Fundamentação'
+      @UI.Placeholder: 'Fundamente tecnicamente a comprovação de eficácia das ações ou o motivo detalhado da reprovação (mínimo de 20 caracteres). Evite dados sensíveis'
+  );
 };
 
 annotate TratativaAppService.criarTratativaAvulsa with (
@@ -395,13 +467,75 @@ annotate TratativaAppService.Tratativas with actions {
 
 annotate TratativaAppService.Tratativas with actions {
   iniciarTratativa @Core.OperationAvailable: in.podeIniciar
-    @Common.SideEffects: { TargetProperties: ['in/status', 'in/podeIniciar', 'in/podeEncerrar', 'in/podeCancelar', 'in/podeReabrir', 'in/ocultaIniciar', 'in/ocultaEncerrar', 'in/ocultaCancelar', 'in/ocultaReabrir'] };
+    @Common.SideEffects: { TargetProperties: ['in/status', 'in/podeIniciar', 'in/podeEncerrar', 'in/podeCancelar', 'in/podeReabrir', 'in/ocultaIniciar', 'in/ocultaEncerrar', 'in/ocultaCancelar', 'in/ocultaReabrir', 'in/podeEmitirAval', 'in/ocultaEmitirAval', 'in/podeDefinirMetodologia', 'in/ocultaDefinirMetodologia', 'in/podeDerivarAcao', 'in/ocultaDerivarAcao'] };
   encerrarTratativa @Core.OperationAvailable: in.podeEncerrar
-    @Common.SideEffects: { TargetProperties: ['in/status', 'in/podeIniciar', 'in/podeEncerrar', 'in/podeCancelar', 'in/podeReabrir', 'in/ocultaIniciar', 'in/ocultaEncerrar', 'in/ocultaCancelar', 'in/ocultaReabrir'] };
+    @Common.SideEffects: { TargetProperties: ['in/status', 'in/podeIniciar', 'in/podeEncerrar', 'in/podeCancelar', 'in/podeReabrir', 'in/ocultaIniciar', 'in/ocultaEncerrar', 'in/ocultaCancelar', 'in/ocultaReabrir', 'in/podeEmitirAval', 'in/ocultaEmitirAval', 'in/podeDefinirMetodologia', 'in/ocultaDefinirMetodologia', 'in/podeDerivarAcao', 'in/ocultaDerivarAcao'] };
   cancelarTratativa @Core.OperationAvailable: in.podeCancelar
-    @Common.SideEffects: { TargetProperties: ['in/status', 'in/podeIniciar', 'in/podeEncerrar', 'in/podeCancelar', 'in/podeReabrir', 'in/ocultaIniciar', 'in/ocultaEncerrar', 'in/ocultaCancelar', 'in/ocultaReabrir'] };
+    @Common.SideEffects: { TargetProperties: ['in/status', 'in/podeIniciar', 'in/podeEncerrar', 'in/podeCancelar', 'in/podeReabrir', 'in/ocultaIniciar', 'in/ocultaEncerrar', 'in/ocultaCancelar', 'in/ocultaReabrir', 'in/podeEmitirAval', 'in/ocultaEmitirAval', 'in/podeDefinirMetodologia', 'in/ocultaDefinirMetodologia', 'in/podeDerivarAcao', 'in/ocultaDerivarAcao'] };
   reabrirTratativa @Core.OperationAvailable: in.podeReabrir
-    @Common.SideEffects: { TargetProperties: ['in/status', 'in/podeIniciar', 'in/podeEncerrar', 'in/podeCancelar', 'in/podeReabrir', 'in/ocultaIniciar', 'in/ocultaEncerrar', 'in/ocultaCancelar', 'in/ocultaReabrir'] };
+    @Common.SideEffects: { TargetProperties: ['in/status', 'in/podeIniciar', 'in/podeEncerrar', 'in/podeCancelar', 'in/podeReabrir', 'in/ocultaIniciar', 'in/ocultaEncerrar', 'in/ocultaCancelar', 'in/ocultaReabrir', 'in/podeEmitirAval', 'in/ocultaEmitirAval', 'in/podeDefinirMetodologia', 'in/ocultaDefinirMetodologia', 'in/podeDerivarAcao', 'in/ocultaDerivarAcao'] };
+
+  emitirAvalTecnico @Core.OperationAvailable: in.podeEmitirAval
+    @Common.SideEffects: {
+      TargetProperties: ['in/podeEmitirAval', 'in/ocultaEmitirAval', 'in/podeEncerrar', 'in/ocultaEncerrar'],
+      TargetEntities: ['in/avalesTecnicos', 'in/historico']
+    };
+  definirMetodologia @Core.OperationAvailable: in.podeDefinirMetodologia
+    @Common.SideEffects: {
+      TargetProperties: ['in/metodologia', 'in/categoriaCausaRaiz', 'in/podeDerivarAcao', 'in/ocultaDerivarAcao'],
+      TargetEntities: ['in/historico']
+    };
+  derivarAcaoDaMetodologia @Core.OperationAvailable: in.podeDerivarAcao
+    @Common.SideEffects: {
+      TargetProperties: ['in/podeEmitirAval', 'in/ocultaEmitirAval', 'in/podeEncerrar', 'in/ocultaEncerrar'],
+      TargetEntities: ['in/acoes', 'in/historico']
+    };
+
+  emitirAvalTecnico(
+    parecer @(
+      Common.ValueListWithFixedValues: true,
+      Common.ValueList: {
+        CollectionPath: 'ValoresParecerAval',
+        Parameters: [
+          { $Type: 'Common.ValueListParameterInOut', LocalDataProperty: parecer, ValueListProperty: 'codigo' },
+          { $Type: 'Common.ValueListParameterDisplayOnly', ValueListProperty: 'descricao' }
+        ]
+      }
+    )
+  );
+
+  derivarAcaoDaMetodologia(
+    responsavel @(
+      Common.ValueList: {
+        CollectionPath: 'Colaboradores',
+        Parameters: [
+          { $Type: 'Common.ValueListParameterInOut', LocalDataProperty: responsavel, ValueListProperty: 'matricula' },
+          { $Type: 'Common.ValueListParameterDisplayOnly', ValueListProperty: 'nome' },
+          { $Type: 'Common.ValueListParameterDisplayOnly', ValueListProperty: 'email' }
+        ]
+      }
+    ),
+    prioridade @(
+      Common.ValueListWithFixedValues: true,
+      Common.ValueList: {
+        CollectionPath: 'ValoresPrioridade',
+        Parameters: [
+          { $Type: 'Common.ValueListParameterInOut', LocalDataProperty: prioridade, ValueListProperty: 'codigo' },
+          { $Type: 'Common.ValueListParameterDisplayOnly', ValueListProperty: 'descricao' }
+        ]
+      }
+    ),
+    evidenciaObrigatoria @(
+      Common.ValueListWithFixedValues: true,
+      Common.ValueList: {
+        CollectionPath: 'ValoresEvidenciaObrigatoria',
+        Parameters: [
+          { $Type: 'Common.ValueListParameterInOut', LocalDataProperty: evidenciaObrigatoria, ValueListProperty: 'codigo' },
+          { $Type: 'Common.ValueListParameterDisplayOnly', ValueListProperty: 'descricao' }
+        ]
+      }
+    )
+  );
 
   mudarCriticidade(
     criticidade @(

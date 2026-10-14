@@ -1,5 +1,8 @@
 import cds from '@sap/cds';
 import { normalizarMatricula, obterMatriculaUsuario } from './identidade';
+import { lerSituacaoAval, type SituacaoAval } from './aval-tecnico';
+import { tratativasComVinculoDiagnostico } from './metodologia';
+import { tratativasComValidadorHabilitado } from './validador-tecnico';
 
 const NS = 'br.com.calazanstec';
 const SERVICE = 'TratativaAppService';
@@ -42,6 +45,12 @@ type VarrerExpressao = (expressao: unknown, entidade: Entidade, ordem?: boolean)
 
 export interface ContextoMascara {
   gestor: boolean;
+  /** Tratativas em que o usuário tem vínculo diagnóstico (DC-15, DC-17). */
+  vinculoDiagnostico: Set<string>;
+  /** Tratativas em que o usuário é Validador Técnico habilitado (DC-01). */
+  validadorHabilitado: Set<string>;
+  /** Situação do Aval por código de Tratativa (`vigente`). */
+  situacaoAval: Map<string, SituacaoAval>;
 }
 
 type RegraMascara = {
@@ -51,16 +60,24 @@ type RegraMascara = {
   leitura?: 'livre' | 'porVinculo' | 'soGestor';
   aninhada?: 'mascarar' | 'omitir';
   fonte: string;
-  filtroVinculo?(req: cds.Request, matricula: string): Promise<Record<string, unknown>>;
+  filtroVinculo?(req: cds.Request, matricula: string): Promise<unknown[]>;
   navegacaoPorVinculo?: { origem: string; elemento: string };
   codigoTratativa?(linha: Linha): string | undefined;
   aplicar(linha: Linha, contexto: ContextoMascara, codigoTratativa?: string): void;
+  /** Aplicado a todos os papéis, inclusive o Gestor (campos derivados, como `vigente`). */
+  aplicarSempre?(linha: Linha, contexto: ContextoMascara, codigoTratativa?: string): void;
 };
 
-function mascararTratativa(linha: Linha): void {
+function temVinculo(conjunto: Set<string>, codigoTratativa?: string): boolean {
+  return !!codigoTratativa && conjunto.has(codigoTratativa);
+}
+
+function mascararTratativa(linha: Linha, contexto: ContextoMascara, codigoTratativa?: string): void {
   linha.descricao = null;
   linha.solicitante = null;
   linha.responsavelPrincipal = null;
+  linha.metodologiaAutor = null;
+  if (!temVinculo(contexto.vinculoDiagnostico, codigoTratativa)) linha.metodologiaData = null;
   if (Array.isArray(linha.participantes)) linha.participantes = [];
 }
 
@@ -68,8 +85,19 @@ function mascararParticipante(linha: Linha): void {
   linha.matricula = null;
 }
 
-function mascararAcao(linha: Linha): void {
+function mascararAcao(linha: Linha, contexto: ContextoMascara, codigoTratativa?: string): void {
   linha.responsavel = null;
+  if (!temVinculo(contexto.vinculoDiagnostico, codigoTratativa)) linha.causaDescricao = null;
+}
+
+function mascararAvalTecnico(linha: Linha, contexto: ContextoMascara, codigoTratativa?: string): void {
+  linha.validador = null;
+  if (!temVinculo(contexto.validadorHabilitado, codigoTratativa)) linha.fundamentacao = null;
+}
+
+function definirVigente(linha: Linha, contexto: ContextoMascara, codigoTratativa?: string): void {
+  const situacao = codigoTratativa ? contexto.situacaoAval.get(codigoTratativa) : undefined;
+  linha.vigente = situacao && typeof linha.id === 'string' ? situacao.idAvalVigente === linha.id : null;
 }
 
 function mascararEvidencia(linha: Linha): void {
@@ -101,16 +129,23 @@ function codigoTratativaDaLinha(linha: Linha): string | undefined {
 
 export const REGRAS_MASCARA: Record<string, RegraMascara> = {
   [`${SERVICE}.Tratativas`]: {
-    campos: ['descricao', 'solicitante', 'responsavelPrincipal'],
+    campos: ['descricao', 'solicitante', 'responsavelPrincipal', 'metodologiaData', 'metodologiaAutor'],
     fonte: `${NS}.Tratativas`,
     codigoTratativa: (linha) => typeof linha.codigo === 'string' ? linha.codigo : undefined,
     aplicar: mascararTratativa,
   },
   [`${SERVICE}.Acoes`]: {
-    campos: ['responsavel'],
+    campos: ['responsavel', 'causaDescricao'],
     fonte: `${NS}.Acoes`,
     codigoTratativa: codigoTratativaDaLinha,
     aplicar: mascararAcao,
+  },
+  [`${SERVICE}.AvalesTecnicos`]: {
+    campos: ['fundamentacao', 'validador'],
+    fonte: `${NS}.AvalesTecnicos`,
+    codigoTratativa: codigoTratativaDaLinha,
+    aplicar: mascararAvalTecnico,
+    aplicarSempre: definirVigente,
   },
   [`${SERVICE}.Participantes`]: {
     campos: ['matricula'],
@@ -124,9 +159,15 @@ export const REGRAS_MASCARA: Record<string, RegraMascara> = {
     leitura: 'porVinculo',
     aninhada: 'omitir',
     fonte: `${NS}.Evidencias`,
-    filtroVinculo: async (_req, matricula) => {
+    filtroVinculo: async (req, matricula) => {
       const codigos = await codigosAcoesVinculadas(matricula);
-      return { ativo: true, acao_codigo: { in: codigos.length ? codigos : [''] } };
+      const acoes = codigos.length ? codigos : [''];
+      if (!req.user.is('ValidadorTecnico')) return ['ativo = true and acao_codigo in', acoes];
+      const habilitadas = [...await tratativasComValidadorHabilitado(req, await candidatosEvidencia(req))];
+      return [
+        'ativo = true and (acao_codigo in', acoes,
+        'or tratativa_codigo in', habilitadas.length ? habilitadas : [''], ')',
+      ];
     },
     codigoTratativa: codigoTratativaDaLinha,
     aplicar: mascararEvidencia,
@@ -150,7 +191,7 @@ export const REGRAS_MASCARA: Record<string, RegraMascara> = {
     fonte: `${NS}.HistoricoTratativa`,
     filtroVinculo: async (_req, matricula) => {
       const codigos = await codigosTratativasVinculadas(matricula);
-      return { tratativa_codigo: { in: codigos.length ? codigos : [''] } };
+      return ['tratativa_codigo in', codigos.length ? codigos : ['']];
     },
     codigoTratativa: codigoTratativaDaLinha,
     aplicar: mascararHistorico,
@@ -214,28 +255,28 @@ function aplicarMascarasComCodigo(
   entidade: cds.entity,
   resultado: unknown,
   contexto: ContextoMascara,
-  codigoTratativaPai?: string,
 ): void {
-  if (contexto.gestor) return;
   const definicao = entidade as unknown as Entidade;
   percorrerLinhas(definicao, resultado, (linha) => {
     const regra = regraDa(definicao);
-    const codigoTratativa = regra?.codigoTratativa?.(linha) ?? codigoTratativaPai;
-    regra?.aplicar(linha, contexto, codigoTratativa);
+    // Vínculo fail-closed (DC-17): só o código da própria linha decide; nunca herdado do nó pai.
+    const codigoTratativa = regra?.codigoTratativa?.(linha);
+    regra?.aplicarSempre?.(linha, contexto, codigoTratativa);
+    if (!contexto.gestor) regra?.aplicar(linha, contexto, codigoTratativa);
     for (const [nome, elemento] of Object.entries(definicao.elements ?? {})) {
-      if (elemento['@PersonalData.IsPotentiallyPersonal'] && !regra?.campos.includes(nome)) {
+      if (!contexto.gestor && elemento['@PersonalData.IsPotentiallyPersonal'] && !regra?.campos.includes(nome)) {
         linha[nome] = null;
       }
       if (!ehAssociacao(elemento) || !(nome in linha)) continue;
       const alvo = elemento._target ?? entidadePorNome(elemento.target);
       if (!alvo) {
-          linha[nome] = ehParaMuitos(elemento) ? [] : null;
+        if (!contexto.gestor) linha[nome] = ehParaMuitos(elemento) ? [] : null;
         continue;
       }
-      if (regraDa(alvo)?.aninhada === 'omitir') {
+      if (!contexto.gestor && regraDa(alvo)?.aninhada === 'omitir') {
         linha[nome] = ehParaMuitos(elemento) ? [] : null;
       } else {
-        aplicarMascarasComCodigo(alvo as cds.entity, linha[nome], contexto, codigoTratativa);
+        aplicarMascarasComCodigo(alvo as cds.entity, linha[nome], contexto);
       }
     }
   });
@@ -594,6 +635,81 @@ async function codigosAcoesVinculadas(matricula: string): Promise<string[]> {
   return acoes.map((acao) => acao.codigo);
 }
 
+/** Tratativas candidatas à habilitação do Validador nas Evidências (DC-18 regra 2, r4 I4-01). */
+async function candidatosEvidencia(req: cds.Request): Promise<string[]> {
+  const segmentos = (whereConsulta(req).SELECT?.from?.ref ?? []) as Segmento[];
+  const primeiro = segmentos[0];
+  const entidade = idDoSegmento(primeiro);
+  const where = typeof primeiro === 'object' && primeiro !== null ? expressaoCaminho(primeiro.where) : undefined;
+  if (entidade === `${SERVICE}.Tratativas`) {
+    const codigo = valorDaChave(where, 'codigo');
+    if (codigo) return [codigo];
+  }
+  if (entidade === `${SERVICE}.Evidencias`) {
+    const codigo = valorDaChave(where, 'codigo');
+    if (codigo) {
+      const linha = (await SELECT.one.from(`${NS}.Evidencias`).columns('tratativa_codigo').where({ codigo })) as
+        { tratativa_codigo: string } | undefined;
+      return linha ? [linha.tratativa_codigo] : [];
+    }
+  }
+  const linhas = (await SELECT.from(`${NS}.Evidencias`)
+    .columns('tratativa_codigo')
+    .where({ ativo: true })
+    .groupBy('tratativa_codigo')) as Array<{ tratativa_codigo: string }>;
+  return linhas.map((linha) => linha.tratativa_codigo);
+}
+
+function coletarCodigos(
+  entidade: Entidade,
+  resultado: unknown,
+  acumulado: { codigos: Set<string>; temAvales: boolean },
+): void {
+  percorrerLinhas(entidade, resultado, (linha) => {
+    const regra = regraDa(entidade);
+    const codigo = regra?.codigoTratativa?.(linha);
+    if (codigo) acumulado.codigos.add(codigo);
+    if (entidade.name === `${SERVICE}.AvalesTecnicos`) acumulado.temAvales = true;
+    for (const [nome, elemento] of Object.entries(entidade.elements ?? {})) {
+      if (!ehAssociacao(elemento) || !(nome in linha)) continue;
+      const alvo = elemento._target ?? entidadePorNome(elemento.target);
+      if (alvo) coletarCodigos(alvo, linha[nome], acumulado);
+    }
+  });
+}
+
+const habilitadasPorRequisicao = new WeakMap<object, Map<string, Promise<Set<string>>>>();
+
+/** `tratativasComValidadorHabilitado` memoizado por requisição: máscara e flags pedem o mesmo conjunto. */
+export function validadorHabilitadoDaRequisicao(req: cds.Request, codigos: string[]): Promise<Set<string>> {
+  const cache = habilitadasPorRequisicao.get(req) ?? new Map<string, Promise<Set<string>>>();
+  habilitadasPorRequisicao.set(req, cache);
+  const chave = [...new Set(codigos)].sort().join(',');
+  const existente = cache.get(chave);
+  if (existente) return existente;
+  const consulta = tratativasComValidadorHabilitado(req, codigos);
+  cache.set(chave, consulta);
+  return consulta;
+}
+
+/** Contexto em lote da máscara: um percurso junta os códigos; vínculo e situação do Aval vêm de uma chamada cada. */
+export async function montarContextoMascara(
+  req: cds.Request,
+  entidade: cds.entity,
+  resultado: unknown,
+): Promise<ContextoMascara> {
+  const gestor = req.user.is('GestorTratativa');
+  const acumulado = { codigos: new Set<string>(), temAvales: false };
+  coletarCodigos(entidade as unknown as Entidade, resultado, acumulado);
+  const codigos = [...acumulado.codigos];
+  const [vinculoDiagnostico, validadorHabilitado, situacaoAval] = await Promise.all([
+    gestor || !codigos.length ? new Set<string>() : tratativasComVinculoDiagnostico(req, codigos),
+    gestor || !codigos.length ? new Set<string>() : validadorHabilitadoDaRequisicao(req, codigos),
+    acumulado.temAvales && codigos.length ? lerSituacaoAval(codigos) : new Map<string, SituacaoAval>(),
+  ]);
+  return { gestor, vinculoDiagnostico, validadorHabilitado, situacaoAval };
+}
+
 function whereConsulta(req: cds.Request): Consulta {
   return req.query as unknown as Consulta;
 }
@@ -622,7 +738,7 @@ async function registroPermitido(
   let query = SELECT.one.from(regra.fonte).where({ [chaveEntidade]: valorChave });
   if (regra.leitura === 'porVinculo') {
     if (!regra.filtroVinculo) return false;
-    query = query.where(await regra.filtroVinculo(req, matricula));
+    query = (query.where as (...condicoes: unknown[]) => typeof query).call(query, ...(await regra.filtroVinculo(req, matricula)));
   }
   return !!(await cds.db.run(query));
 }
@@ -785,6 +901,6 @@ export async function restricaoDeLeitura(req: cds.Request): Promise<void> {
       rejeitar(req);
     }
     const filtro = await regra.filtroVinculo(req, matricula);
-    whereConsulta(req).where?.(filtro);
+    whereConsulta(req).where?.(...filtro);
   }
 }

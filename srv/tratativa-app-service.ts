@@ -16,8 +16,10 @@ import {
   type DadosComentarioAcao,
 } from './tratativa/comentarios-inclusao';
 import { aplicarTemplateTratativa } from './templates/templates-aplicacao';
-import { aplicarMascaras, restricaoDeLeitura } from './tratativa/mascara-app';
+import { aplicarMascaras, montarContextoMascara, restricaoDeLeitura, validadorHabilitadoDaRequisicao } from './tratativa/mascara-app';
 import { lerSituacaoAval } from './tratativa/aval-tecnico';
+import { definirMetodologia, derivarAcaoDaMetodologia, type DadosDefinicaoMetodologia, type DadosDerivacaoMetodologia } from './tratativa/metodologia';
+import { emitirAvalTecnico } from './tratativa/aval-tecnico';
 
 const NS = 'br.com.calazanstec';
 
@@ -45,6 +47,12 @@ interface LinhaTratativa {
   ocultaEncerrar?: boolean;
   ocultaCancelar?: boolean;
   ocultaReabrir?: boolean;
+  podeDefinirMetodologia?: boolean;
+  ocultaDefinirMetodologia?: boolean;
+  podeDerivarAcao?: boolean;
+  ocultaDerivarAcao?: boolean;
+  podeEmitirAval?: boolean;
+  ocultaEmitirAval?: boolean;
   participantes?: unknown[] | null;
   acoes?: { responsavel?: string | null }[] | null;
 }
@@ -86,6 +94,47 @@ function termosBusca(expressao: unknown): string[] {
   return termosBusca(elemento.xpr);
 }
 
+interface ElementoComElementos {
+  name?: string;
+  elements?: Record<string, { target?: string; _target?: ElementoComElementos }>;
+}
+
+const CHAVES_DE_VINCULO: Record<string, string[]> = {
+  'TratativaAppService.Tratativas': ['codigo'],
+  'TratativaAppService.Acoes': ['tratativa_codigo'],
+  'TratativaAppService.AvalesTecnicos': ['id', 'tratativa_codigo'],
+};
+
+/** Acrescenta as colunas de vínculo (DC-17) ao nível e, recursivamente, às expansões `{ ref, expand }`. */
+function garantirChavesDoNivel(
+  entidade: ElementoComElementos | undefined,
+  colunas: unknown[] | undefined,
+  agrupado = false,
+): void {
+  if (!entidade || !Array.isArray(colunas)) return;
+  const itens = colunas as Array<'*' | { ref?: string[]; expand?: unknown[]; groupBy?: unknown[]; func?: string; xpr?: unknown }>;
+  // Nível agregado ($apply: groupBy ou colunas func/xpr): acrescentar chave mudaria o agrupamento e os totais.
+  // A linha agregada sai sem chave e a máscara trata o vínculo como ausente (fail-closed).
+  const agregado = agrupado || itens.some((c) => typeof c === 'object' && c !== null && ('func' in c || 'xpr' in c));
+  const pedeTudo = itens.some((c) => c === '*' || (typeof c === 'object' && c?.ref?.[0] === '*'));
+  if (!pedeTudo && !agregado) {
+    for (const chave of CHAVES_DE_VINCULO[entidade.name ?? ''] ?? []) {
+      if (!itens.some((c) => typeof c === 'object' && c?.ref?.length === 1 && c.ref[0] === chave && !('expand' in c))) {
+        colunas.push({ ref: [chave] });
+      }
+    }
+  }
+  for (const coluna of itens) {
+    if (typeof coluna !== 'object' || !coluna || !Array.isArray(coluna.expand) || !coluna.ref) continue;
+    let atual: ElementoComElementos | undefined = entidade;
+    for (const id of coluna.ref) {
+      const elemento: { target?: string; _target?: ElementoComElementos } | undefined = atual?.elements?.[id];
+      atual = elemento?._target ?? (elemento?.target ? (cds.model?.definitions[elemento.target] as unknown as ElementoComElementos) : undefined);
+    }
+    garantirChavesDoNivel(atual, coluna.expand, Array.isArray(coluna.groupBy) && coluna.groupBy.length > 0);
+  }
+}
+
 export default class TratativaAppService extends cds.ApplicationService {
   async init() {
     this.before('*', (req) => {
@@ -101,30 +150,57 @@ export default class TratativaAppService extends cds.ApplicationService {
       const select = (req.query as unknown as { SELECT?: { columns?: { ref?: string[] }[] } }).SELECT;
       const colunas = select?.columns;
       if (!colunas) return;
-      const pedeFlag = colunas.some((c) => /^(pode|oculta)(Iniciar|Encerrar|Cancelar|Reabrir)$/.test(c.ref?.[0] ?? ''));
+      const pedeFlag = colunas.some((c) => /^(pode|oculta)(Iniciar|Encerrar|Cancelar|Reabrir|EmitirAval|DefinirMetodologia|DerivarAcao)$/.test(c.ref?.[0] ?? ''));
       const temStatus = colunas.some((c) => c.ref?.[0] === 'status' || c.ref?.[0] === '*');
       const temCodigo = colunas.some((c) => c.ref?.[0] === 'codigo' || c.ref?.[0] === '*');
       if (pedeFlag && !temStatus) colunas.push({ ref: ['status'] });
       if (pedeFlag && !temCodigo) colunas.push({ ref: ['codigo'] });
     });
 
+    // As colunas de vínculo das máscaras (DC-17) são acrescentadas a cada nível, para a decisão fail-closed
+    // não esconder o dado de quem tem vínculo. Registrado depois de `restringirLeitura`: a varredura vê só a query do cliente.
+    this.before('READ', '*', function garantirChaves(req) {
+      const select = (req.query as unknown as { SELECT?: { columns?: unknown[]; groupBy?: unknown[] } }).SELECT;
+      garantirChavesDoNivel(
+        req.target as unknown as ElementoComElementos,
+        select?.columns,
+        Array.isArray(select?.groupBy) && select.groupBy.length > 0,
+      );
+    });
+
     this.after('READ', 'Tratativas', async (resultado, req) => {
       const gestor = req.user.is('GestorTratativa');
+      const matricula = normalizarMatricula(obterMatriculaUsuario(req));
       const linhas = (Array.isArray(resultado) ? resultado : [resultado]) as LinhaTratativa[];
       const codigos = linhas.flatMap((linha) => typeof linha?.codigo === 'string' ? [linha.codigo] : []);
-      const colunas = (req.query as unknown as { SELECT?: { columns?: unknown } }).SELECT?.columns;
-      // Só dispensa a situação quando a projeção é explícita e sem '*' (string ou ref) nem flags; ausência ou formas inesperadas calculam.
-      const projecaoExplicitaSemFlags = Array.isArray(colunas) && colunas.length > 0 && colunas.every((c) => {
-        if (typeof c !== 'object' || c === null) return false;
-        const ref = (c as { ref?: string[] }).ref?.[0];
-        return typeof ref === 'string' && ref !== '*' && !/^(pode|oculta)(Iniciar|Encerrar|Cancelar|Reabrir)$/.test(ref);
-      });
-      const pedeFlag = !projecaoExplicitaSemFlags;
-      const situacoes = pedeFlag ? await lerSituacaoAval(codigos) : new Map<string, never>();
+      const [situacoes, habilitadas, dados, acoesDoUsuario] = await Promise.all([
+        lerSituacaoAval(codigos),
+        validadorHabilitadoDaRequisicao(req, codigos),
+        codigos.length
+          ? SELECT.from(`${NS}.Tratativas`).columns('codigo', 'status', 'metodologia').where({ codigo: { in: codigos } }) as unknown as
+            Promise<Array<{ codigo: string; status: string; metodologia: string | null }>>
+          : Promise.resolve([]),
+        !gestor && codigos.length
+          ? SELECT.from(`${NS}.Acoes`).columns('tratativa_codigo', 'responsavel').where({ tratativa_codigo: { in: codigos } }) as unknown as
+            Promise<Array<{ tratativa_codigo: string; responsavel: string }>>
+          : Promise.resolve([]),
+      ]);
+      const metodologias = new Map(dados.map((linha) => [linha.codigo, linha]));
+      const comAcaoDoUsuario = new Set(
+        acoesDoUsuario.filter((acao) => normalizarMatricula(acao.responsavel) === matricula).map((acao) => acao.tratativa_codigo),
+      );
       for (const linha of linhas) {
         if (!linha) continue;
         const status = linha.status;
         const situacao = linha.codigo ? situacoes.get(linha.codigo) : undefined;
+        const base = linha.codigo ? metodologias.get(linha.codigo) : undefined;
+        const alteravel = base?.status === 'Aberta' || base?.status === 'Em andamento';
+        linha.podeDefinirMetodologia = alteravel && (gestor || (!!linha.codigo && comAcaoDoUsuario.has(linha.codigo)));
+        linha.podeDerivarAcao = gestor && alteravel && !!base?.metodologia;
+        linha.podeEmitirAval = !!linha.codigo && habilitadas.has(linha.codigo) && !!situacao?.aptaParaEmissao;
+        linha.ocultaDefinirMetodologia = !linha.podeDefinirMetodologia;
+        linha.ocultaDerivarAcao = !linha.podeDerivarAcao;
+        linha.ocultaEmitirAval = !linha.podeEmitirAval;
         linha.podeIniciar = gestor && status === 'Aberta';
         linha.podeEncerrar = gestor && status === 'Em andamento' &&
           !situacao?.acoesAbertas && !!situacao?.aprovadoVigente;
@@ -138,10 +214,9 @@ export default class TratativaAppService extends cds.ApplicationService {
       }
     });
 
-    this.after('READ', '*', (resultado, req) => {
-      aplicarMascaras(req.target as unknown as cds.entity, resultado, {
-        gestor: req.user.is('GestorTratativa'),
-      });
+    this.after('READ', '*', async function mascararLeitura(resultado, req) {
+      const entidade = req.target as unknown as cds.entity;
+      aplicarMascaras(entidade, resultado, await montarContextoMascara(req, entidade, resultado));
     });
 
     this.on('READ', 'Colaboradores', async (req) => {
@@ -175,6 +250,9 @@ export default class TratativaAppService extends cds.ApplicationService {
 
     this.on('READ', 'ValoresCriticidade', () => valoresEnum('Criticidade'));
     this.on('READ', 'ValoresPrioridade', () => valoresEnum('PrioridadeAcao'));
+    this.on('READ', 'ValoresFerramentaMetodologia', () => valoresEnum('FerramentaMetodologia'));
+    this.on('READ', 'ValoresMacrocausa', () => valoresEnum('MacrocausaCausaRaiz'));
+    this.on('READ', 'ValoresParecerAval', () => ['Aprovado', 'Reprovado'].map((codigo) => ({ codigo, descricao: codigo })));
     this.on('READ', 'ValoresEvidenciaObrigatoria', () => [
       { codigo: 'Sim', descricao: 'Sim' },
       { codigo: 'Não', descricao: 'Não' },
@@ -272,6 +350,23 @@ export default class TratativaAppService extends cds.ApplicationService {
     this.on('comentarTratativa', 'Tratativas', (req) =>
       comentarTratativa(req, codigoDe(req), req.data as DadosComentarioTratativa),
     );
+
+    this.on('definirMetodologia', 'Tratativas', async (req) => {
+      await definirMetodologia(req, codigoDe(req), req.data as DadosDefinicaoMetodologia, autor(req));
+    });
+
+    this.on('derivarAcaoDaMetodologia', 'Tratativas', (req) =>
+      derivarAcaoDaMetodologia(req, codigoDe(req), req.data as DadosDerivacaoMetodologia, autor(req)),
+    );
+
+    this.on('emitirAvalTecnico', 'Tratativas', async (req) => {
+      await emitirAvalTecnico(
+        req,
+        codigoDe(req),
+        req.data as { parecer?: unknown; fundamentacao?: unknown },
+        autor(req),
+      );
+    });
 
     this.on('comentarAcao', 'Tratativas', (req) => comentarAcao(req, codigoDe(req), req.data as DadosComentarioAcao));
 

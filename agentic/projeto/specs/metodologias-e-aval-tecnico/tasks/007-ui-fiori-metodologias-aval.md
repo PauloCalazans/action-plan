@@ -11,7 +11,8 @@ Levar metodologia, derivação de Ação e Aval Técnico à Object Page do app d
 
 ### Criados
 - `app/tratativas/webapp/ext/fragment/MetodologiaSection.fragment.xml`
-- `app/tratativas/webapp/ext/controller/MetodologiaExtension.js`
+- `app/tratativas/webapp/ext/controller/MetodologiaExtension.js` (removido na R-27: renomeado)
+- `app/tratativas/webapp/ext/controller/MetodologiaExtension.controller.js`
 - `test/ui-metodologias-aval.test.ts`
 
 ### Modificados

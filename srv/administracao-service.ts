@@ -19,6 +19,12 @@ import {
   type DadosParametrosIntegracaoSF,
 } from './integracoes/parametros-sf';
 import { listarAlertasEmitidos, type FiltrosListagemAlertas } from './alertas/consulta-alertas';
+import {
+  atualizarParametrosOrigem,
+  incluirValidadorOrigem,
+  removerValidadorOrigem,
+  type DadosParametrosOrigem,
+} from './administracao/parametros-origem';
 import { processarAlertas } from './alertas/processamento';
 
 /**
@@ -157,6 +163,15 @@ export default class AdministracaoService extends cds.ApplicationService {
         `Processamento concluído: ${relatorio.ocorrenciasAvaliadas} ocorrências avaliadas, ${relatorio.alertasGerados} alertas gerados, ${relatorio.notificacoesEnviadas} notificações enviadas, ${relatorio.falhas} falhas.`,
       );
       return relatorio;
+    });
+    this.on('atualizarParametrosOrigem', (req) => atualizarParametrosOrigem(req.data as DadosParametrosOrigem));
+    this.on('incluirValidadorOrigem', (req) => {
+      const { origem, matricula } = req.data as { origem?: unknown; matricula?: unknown };
+      return incluirValidadorOrigem(origem, matricula);
+    });
+    this.on('removerValidadorOrigem', (req) => {
+      const { origem, matricula } = req.data as { origem?: unknown; matricula?: unknown };
+      return removerValidadorOrigem(origem, matricula);
     });
     this.on('listarAlertasEmitidos', (req) => listarAlertasEmitidos(req.data as FiltrosListagemAlertas));
     return super.init();

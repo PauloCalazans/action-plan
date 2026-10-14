@@ -1,0 +1,168 @@
+<core:FragmentDefinition xmlns:core="sap.ui.core">
+  <VBox xmlns="sap.m" id="metodologiaRaiz" class="sapUiSmallMargin" visible="{metodologia>/visivel}">
+    <MessageStrip text="{i18n>metodologiaSemAcesso}" type="Information" showIcon="true" visible="{= !${metodologia>/podeVer} }" class="sapUiSmallMarginBottom"></MessageStrip>
+    <Form xmlns="sap.ui.layout.form" id="metodologiaForm" editable="true">
+      <layout>
+        <ColumnLayout columnsM="2" columnsL="3" columnsXL="4"/>
+      </layout>
+      <formContainers>
+      <FormContainer visible="{metodologia>/podeVer}">
+        <formElements>
+          <FormElement label="{i18n>campoFerramenta}">
+            <fields>
+              <Select xmlns="sap.m" id="metodologiaFerramenta" selectedKey="{metodologia>/ferramenta}" forceSelection="false" editable="{metodologia>/editavel}" tooltip="{i18n>campoFerramentaTooltip}" items="{path: '/ValoresFerramentaMetodologia'}">
+                <core:Item key="{codigo}" text="{descricao}"/>
+              </Select>
+            </fields>
+          </FormElement>
+          <FormElement label="{i18n>campoCategoria}">
+            <fields>
+              <ComboBox xmlns="sap.m" id="metodologiaCategoria" placeholder="{i18n>categoriaPlaceholder}" tooltip="{i18n>categoriaPlaceholder}" selectedKey="{metodologia>/categoria}" editable="{metodologia>/editavel}" items="{path: '/ValoresMacrocausa'}">
+                <core:Item key="{codigo}" text="{descricao}"/>
+              </ComboBox>
+            </fields>
+          </FormElement>
+        </formElements>
+      </FormContainer>
+      <FormContainer visible="{= ${metodologia>/ferramenta} === '3W' }">
+        <formElements>
+          <FormElement label="{i18n>campoOQue}">
+            <fields>
+              <TextArea xmlns="sap.m" value="{metodologia>/dados/oQue}" placeholder="{i18n>tresWOQue}" tooltip="{i18n>tresWOQue}" rows="2" growing="true" editable="{metodologia>/editavel}" width="100%"></TextArea>
+              <Button xmlns="sap.m" id="metodologiaDerivar-oQue" text="{i18n>metodologiaGerarAcao}" tooltip="{i18n>metodologiaGerarAcaoTooltip}" icon="sap-icon://add-activity" type="Transparent" visible="{metodologia>/podeDerivar}" enabled="{= !!${metodologia>/dados/oQue} }"></Button>
+            </fields>
+          </FormElement>
+          <FormElement label="{i18n>campoOnde}">
+            <fields>
+              <TextArea xmlns="sap.m" value="{metodologia>/dados/onde}" placeholder="{i18n>tresWOnde}" tooltip="{i18n>tresWOnde}" rows="2" growing="true" editable="{metodologia>/editavel}" width="100%"></TextArea>
+            </fields>
+          </FormElement>
+          <FormElement label="{i18n>campoQuando}">
+            <fields>
+              <TextArea xmlns="sap.m" value="{metodologia>/dados/quando}" placeholder="{i18n>tresWQuando}" tooltip="{i18n>tresWQuando}" rows="2" growing="true" editable="{metodologia>/editavel}" width="100%"></TextArea>
+            </fields>
+          </FormElement>
+        </formElements>
+      </FormContainer>
+      <FormContainer visible="{= ${metodologia>/ferramenta} === '5 Porquês' }">
+        <formElements>
+          <FormElement label="{i18n>campoProblema}">
+            <fields>
+              <TextArea xmlns="sap.m" value="{metodologia>/dados/problema}" placeholder="{i18n>cincoProblema}" tooltip="{i18n>cincoProblema}" rows="2" growing="true" editable="{metodologia>/editavel}" width="100%"></TextArea>
+            </fields>
+          </FormElement>
+          <FormElement label="{i18n>campoPorque1}">
+            <fields>
+              <TextArea xmlns="sap.m" value="{metodologia>/dados/porque1}" placeholder="{i18n>cincoPorque1}" tooltip="{i18n>cincoPorque1}" rows="2" growing="true" editable="{metodologia>/editavel}" width="100%"></TextArea>
+              <Button xmlns="sap.m" id="metodologiaDerivar-porque1" text="{i18n>metodologiaGerarAcao}" tooltip="{i18n>metodologiaGerarAcaoTooltip}" icon="sap-icon://add-activity" type="Transparent" visible="{metodologia>/podeDerivar}" enabled="{= !!${metodologia>/dados/porque1} }"></Button>
+            </fields>
+          </FormElement>
+          <FormElement label="{i18n>campoPorque2}">
+            <fields>
+              <TextArea xmlns="sap.m" value="{metodologia>/dados/porque2}" placeholder="{i18n>cincoPorque2}" tooltip="{i18n>cincoPorque2}" rows="2" growing="true" editable="{metodologia>/editavel}" width="100%"></TextArea>
+              <Button xmlns="sap.m" id="metodologiaDerivar-porque2" text="{i18n>metodologiaGerarAcao}" tooltip="{i18n>metodologiaGerarAcaoTooltip}" icon="sap-icon://add-activity" type="Transparent" visible="{metodologia>/podeDerivar}" enabled="{= !!${metodologia>/dados/porque2} }"></Button>
+            </fields>
+          </FormElement>
+          <FormElement label="{i18n>campoPorque3}">
+            <fields>
+              <TextArea xmlns="sap.m" value="{metodologia>/dados/porque3}" placeholder="{i18n>cincoPorque3}" tooltip="{i18n>cincoPorque3}" rows="2" growing="true" editable="{metodologia>/editavel}" width="100%"></TextArea>
+              <Button xmlns="sap.m" id="metodologiaDerivar-porque3" text="{i18n>metodologiaGerarAcao}" tooltip="{i18n>metodologiaGerarAcaoTooltip}" icon="sap-icon://add-activity" type="Transparent" visible="{metodologia>/podeDerivar}" enabled="{= !!${metodologia>/dados/porque3} }"></Button>
+            </fields>
+          </FormElement>
+          <FormElement label="{i18n>campoPorque4}">
+            <fields>
+              <TextArea xmlns="sap.m" value="{metodologia>/dados/porque4}" placeholder="{i18n>cincoPorque4}" tooltip="{i18n>cincoPorque4}" rows="2" growing="true" editable="{metodologia>/editavel}" width="100%"></TextArea>
+              <Button xmlns="sap.m" id="metodologiaDerivar-porque4" text="{i18n>metodologiaGerarAcao}" tooltip="{i18n>metodologiaGerarAcaoTooltip}" icon="sap-icon://add-activity" type="Transparent" visible="{metodologia>/podeDerivar}" enabled="{= !!${metodologia>/dados/porque4} }"></Button>
+            </fields>
+          </FormElement>
+          <FormElement label="{i18n>campoPorque5}">
+            <fields>
+              <TextArea xmlns="sap.m" value="{metodologia>/dados/porque5}" placeholder="{i18n>cincoPorque5}" tooltip="{i18n>cincoPorque5}" rows="2" growing="true" editable="{metodologia>/editavel}" width="100%"></TextArea>
+              <Button xmlns="sap.m" id="metodologiaDerivar-porque5" text="{i18n>metodologiaGerarAcao}" tooltip="{i18n>metodologiaGerarAcaoTooltip}" icon="sap-icon://add-activity" type="Transparent" visible="{metodologia>/podeDerivar}" enabled="{= !!${metodologia>/dados/porque5} }"></Button>
+            </fields>
+          </FormElement>
+          <FormElement label="{i18n>campoConclusao}">
+            <fields>
+              <TextArea xmlns="sap.m" value="{metodologia>/dados/conclusao}" placeholder="{i18n>cincoConclusao}" tooltip="{i18n>cincoConclusao}" rows="2" growing="true" editable="{metodologia>/editavel}" width="100%"></TextArea>
+              <Button xmlns="sap.m" id="metodologiaDerivar-conclusao" text="{i18n>metodologiaGerarAcao}" tooltip="{i18n>metodologiaGerarAcaoTooltip}" icon="sap-icon://add-activity" type="Transparent" visible="{metodologia>/podeDerivar}" enabled="{= !!${metodologia>/dados/conclusao} }"></Button>
+            </fields>
+          </FormElement>
+        </formElements>
+      </FormContainer>
+      <FormContainer visible="{= ${metodologia>/ferramenta} === '5W2H' }">
+        <formElements>
+          <FormElement label="{i18n>campoOQue}">
+            <fields>
+              <TextArea xmlns="sap.m" value="{metodologia>/dados/oQue}" placeholder="{i18n>w2hOQue}" tooltip="{i18n>w2hOQue}" rows="2" growing="true" editable="{metodologia>/editavel}" width="100%"></TextArea>
+            </fields>
+          </FormElement>
+          <FormElement label="{i18n>campoPorQue}">
+            <fields>
+              <TextArea xmlns="sap.m" value="{metodologia>/dados/porQue}" placeholder="{i18n>w2hPorQue}" tooltip="{i18n>w2hPorQue}" rows="2" growing="true" editable="{metodologia>/editavel}" width="100%"></TextArea>
+              <Button xmlns="sap.m" id="metodologiaDerivar-porQue" text="{i18n>metodologiaGerarAcao}" tooltip="{i18n>metodologiaGerarAcaoTooltip}" icon="sap-icon://add-activity" type="Transparent" visible="{metodologia>/podeDerivar}" enabled="{= !!${metodologia>/dados/porQue} }"></Button>
+            </fields>
+          </FormElement>
+          <FormElement label="{i18n>campoOnde}">
+            <fields>
+              <TextArea xmlns="sap.m" value="{metodologia>/dados/onde}" placeholder="{i18n>w2hOnde}" tooltip="{i18n>w2hOnde}" rows="2" growing="true" editable="{metodologia>/editavel}" width="100%"></TextArea>
+            </fields>
+          </FormElement>
+          <FormElement label="{i18n>campoQuando}">
+            <fields>
+              <TextArea xmlns="sap.m" value="{metodologia>/dados/quando}" placeholder="{i18n>w2hQuando}" tooltip="{i18n>w2hQuando}" rows="2" growing="true" editable="{metodologia>/editavel}" width="100%"></TextArea>
+            </fields>
+          </FormElement>
+          <FormElement label="{i18n>campoQuem}">
+            <fields>
+              <TextArea xmlns="sap.m" value="{metodologia>/dados/quem}" placeholder="{i18n>w2hQuem}" tooltip="{i18n>w2hQuem}" rows="2" growing="true" editable="{metodologia>/editavel}" width="100%"></TextArea>
+            </fields>
+          </FormElement>
+          <FormElement label="{i18n>campoComo}">
+            <fields>
+              <TextArea xmlns="sap.m" value="{metodologia>/dados/como}" placeholder="{i18n>w2hComo}" tooltip="{i18n>w2hComo}" rows="2" growing="true" editable="{metodologia>/editavel}" width="100%"></TextArea>
+              <Button xmlns="sap.m" id="metodologiaDerivar-como" text="{i18n>metodologiaGerarAcao}" tooltip="{i18n>metodologiaGerarAcaoTooltip}" icon="sap-icon://add-activity" type="Transparent" visible="{metodologia>/podeDerivar}" enabled="{= !!${metodologia>/dados/como} }"></Button>
+            </fields>
+          </FormElement>
+          <FormElement label="{i18n>campoQuantoCusta}">
+            <fields>
+              <TextArea xmlns="sap.m" value="{metodologia>/dados/quantoCusta}" placeholder="{i18n>w2hQuantoCusta}" tooltip="{i18n>w2hQuantoCusta}" rows="2" growing="true" editable="{metodologia>/editavel}" width="100%"></TextArea>
+            </fields>
+          </FormElement>
+        </formElements>
+      </FormContainer>
+      <FormContainer visible="{= ${metodologia>/ferramenta} === 'PDCA/8D' }">
+        <formElements>
+          <FormElement label="{i18n>campoPlanejar}">
+            <fields>
+              <TextArea xmlns="sap.m" value="{metodologia>/dados/planejar}" placeholder="{i18n>pdcaPlanejar}" tooltip="{i18n>pdcaPlanejar}" rows="2" growing="true" editable="{metodologia>/editavel}" width="100%"></TextArea>
+              <Button xmlns="sap.m" id="metodologiaDerivar-planejar" text="{i18n>metodologiaGerarAcao}" tooltip="{i18n>metodologiaGerarAcaoTooltip}" icon="sap-icon://add-activity" type="Transparent" visible="{metodologia>/podeDerivar}" enabled="{= !!${metodologia>/dados/planejar} }"></Button>
+            </fields>
+          </FormElement>
+          <FormElement label="{i18n>campoExecutar}">
+            <fields>
+              <TextArea xmlns="sap.m" value="{metodologia>/dados/executar}" placeholder="{i18n>pdcaExecutar}" tooltip="{i18n>pdcaExecutar}" rows="2" growing="true" editable="{metodologia>/editavel}" width="100%"></TextArea>
+              <Button xmlns="sap.m" id="metodologiaDerivar-executar" text="{i18n>metodologiaGerarAcao}" tooltip="{i18n>metodologiaGerarAcaoTooltip}" icon="sap-icon://add-activity" type="Transparent" visible="{metodologia>/podeDerivar}" enabled="{= !!${metodologia>/dados/executar} }"></Button>
+            </fields>
+          </FormElement>
+          <FormElement label="{i18n>campoChecar}">
+            <fields>
+              <TextArea xmlns="sap.m" value="{metodologia>/dados/checar}" placeholder="{i18n>pdcaChecar}" tooltip="{i18n>pdcaChecar}" rows="2" growing="true" editable="{metodologia>/editavel}" width="100%"></TextArea>
+              <Button xmlns="sap.m" id="metodologiaDerivar-checar" text="{i18n>metodologiaGerarAcao}" tooltip="{i18n>metodologiaGerarAcaoTooltip}" icon="sap-icon://add-activity" type="Transparent" visible="{metodologia>/podeDerivar}" enabled="{= !!${metodologia>/dados/checar} }"></Button>
+            </fields>
+          </FormElement>
+          <FormElement label="{i18n>campoAgir}">
+            <fields>
+              <TextArea xmlns="sap.m" value="{metodologia>/dados/agir}" placeholder="{i18n>pdcaAgir}" tooltip="{i18n>pdcaAgir}" rows="2" growing="true" editable="{metodologia>/editavel}" width="100%"></TextArea>
+              <Button xmlns="sap.m" id="metodologiaDerivar-agir" text="{i18n>metodologiaGerarAcao}" tooltip="{i18n>metodologiaGerarAcaoTooltip}" icon="sap-icon://add-activity" type="Transparent" visible="{metodologia>/podeDerivar}" enabled="{= !!${metodologia>/dados/agir} }"></Button>
+            </fields>
+          </FormElement>
+        </formElements>
+      </FormContainer>
+      </formContainers>
+    </Form>
+    <HBox class="sapUiSmallMarginTop">
+      <Button id="metodologiaSalvar" text="{i18n>metodologiaSalvar}" tooltip="{i18n>metodologiaSalvarTooltip}" type="Emphasized" visible="{metodologia>/editavel}" class="sapUiTinyMarginEnd"></Button>
+      <Button id="metodologiaRemover" text="{i18n>metodologiaRemover}" tooltip="{i18n>metodologiaRemoverTooltip}" visible="{metodologia>/podeRemover}"></Button>
+    </HBox>
+  </VBox>
+</core:FragmentDefinition>

@@ -1,5 +1,6 @@
 import cds from '@sap/cds';
 import { consultarParametrosAlertas } from './parametros';
+import { avaliarVerificacaoEficacia } from './regra-verificacao-eficacia';
 
 const NS = 'br.com.calazanstec';
 const MS_POR_DIA = 24 * 60 * 60 * 1000;
@@ -12,6 +13,7 @@ interface Tratativa {
   dataPrevistaConclusao: string;
   criadoEm: string;
   responsavelPrincipal?: string;
+  origemNormalizada?: string | null;
 }
 
 interface Acao {
@@ -36,10 +38,12 @@ interface Participante {
 
 export interface AlertaGerado {
   tipo: 'PrazoProximo' | 'PrazoVencido' | 'Inatividade' | 'EvidenciaPendente';
-  entidade: 'Tratativa' | 'Acao';
+  entidade: 'Tratativa' | 'Acao' | 'VerificacaoEficacia';
   tratativa: string;
   acao?: string;
   destinatario: string;
+  /** Data limite (AAAA-MM-DD) quando o prazo não vem da Tratativa nem da Ação. */
+  prazo?: string;
 }
 
 export interface AvaliacaoAlertas {
@@ -96,7 +100,7 @@ export async function avaliarAlertas(agora: Date): Promise<AvaliacaoAlertas> {
   ] = await Promise.all([
     consultarParametrosAlertas(),
     cds.db.run(SELECT.from(`${NS}.Tratativas`).columns(
-      'codigo', 'status', 'dataPrevistaConclusao', 'criadoEm', 'responsavelPrincipal',
+      'codigo', 'status', 'dataPrevistaConclusao', 'criadoEm', 'responsavelPrincipal', 'origemNormalizada',
     )),
     cds.db.run(SELECT.from(`${NS}.Acoes`).columns(
       'codigo', 'tratativa_codigo', 'status', 'prazo', 'responsavel', 'evidenciaObrigatoria',
@@ -181,6 +185,9 @@ export async function avaliarAlertas(agora: Date): Promise<AvaliacaoAlertas> {
       adicionarAlerta(alertas, 'EvidenciaPendente', 'Acao', tratativa.codigo, destinatarios, acao.codigo);
     }
   }
+
+  const ativas = tratativas.filter((tratativa) => tratativa.status === 'Em andamento');
+  alertas.push(...await avaliarVerificacaoEficacia(ativas, agora, parametros.diasAntecedenciaPrazoProximo));
 
   return { ocorrenciasAvaliadas: tratativas.length, alertas };
 }

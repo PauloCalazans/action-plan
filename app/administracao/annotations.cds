@@ -221,3 +221,102 @@ annotate AdministracaoService.ParametrosIntegracaoSF with {
   nivelUnidadeSF @title: 'Nível da unidade no SF';
   nivelAreaSF    @title: 'Nível da área no SF';
 };
+
+annotate AdministracaoService.atualizarParametrosOrigem with (
+  origem                       @title: 'Origem' @UI.Placeholder: 'Informe a Origem ou * para o padrão global.',
+  metodologiaSugerida          @title: 'Metodologia sugerida',
+  validadorPadrao              @title: 'Validador padrão' @UI.Placeholder: 'Informe o papel ou a equipe, sem nomes de pessoas.',
+  prazoVerificacaoEficaciaDias @title: 'Prazo de verificação (dias)'
+);
+
+annotate AdministracaoService.incluirValidadorOrigem with (
+  origem    @title: 'Origem' @UI.Placeholder: 'Informe a Origem ou * para a lista padrão.',
+  matricula @title: 'Matrícula'
+);
+
+annotate AdministracaoService.removerValidadorOrigem with (
+  origem    @title: 'Origem' @UI.Placeholder: 'Informe a Origem ou * para a lista padrão.',
+  matricula @title: 'Matrícula'
+);
+
+annotate AdministracaoService.ParametrosOrigem with @(
+  UI.SelectionPresentationVariant #ParametrosOrigem: {
+    Text: 'Parâmetros por Origem',
+    SelectionVariant: { SelectOptions: [] },
+    PresentationVariant: { Visualizations: ['@UI.LineItem'] }
+  },
+  UI.HeaderInfo: {
+    TypeName: 'Parâmetros da Origem',
+    TypeNamePlural: 'Parâmetros por Origem',
+    Title: { $Type: 'UI.DataField', Value: origem }
+  },
+  UI.LineItem: [
+    { $Type: 'UI.DataField', Value: origem },
+    { $Type: 'UI.DataField', Value: metodologiaSugerida },
+    { $Type: 'UI.DataField', Value: validadorPadrao },
+    { $Type: 'UI.DataField', Value: prazoVerificacaoEficaciaDias },
+    {
+      $Type: 'UI.DataFieldForAction',
+      Label: 'Salvar Parâmetros da Origem',
+      Action: 'AdministracaoService.EntityContainer/atualizarParametrosOrigem'
+    }
+  ],
+  UI.Identification: [
+    {
+      $Type: 'UI.DataFieldForAction',
+      Label: 'Salvar Parâmetros da Origem',
+      Action: 'AdministracaoService.EntityContainer/atualizarParametrosOrigem'
+    },
+    {
+      $Type: 'UI.DataFieldForAction',
+      Label: 'Incluir Validador',
+      Action: 'AdministracaoService.EntityContainer/incluirValidadorOrigem'
+    },
+    {
+      $Type: 'UI.DataFieldForAction',
+      Label: 'Remover Validador',
+      Action: 'AdministracaoService.EntityContainer/removerValidadorOrigem'
+    }
+  ],
+  UI.Facets: [
+    {
+      $Type: 'UI.ReferenceFacet',
+      ID: 'ParametrosOrigemFacet',
+      Label: 'Parâmetros da Origem',
+      Target: '@UI.FieldGroup#ParametrosOrigem'
+    },
+    {
+      $Type: 'UI.ReferenceFacet',
+      ID: 'ValidadoresOrigemFacet',
+      Label: 'Validadores Técnicos',
+      Target: 'validadores/@UI.LineItem'
+    }
+  ],
+  UI.FieldGroup #ParametrosOrigem: {
+    Data: [
+      { $Type: 'UI.DataField', Value: origem },
+      { $Type: 'UI.DataField', Value: metodologiaSugerida },
+      { $Type: 'UI.DataField', Value: validadorPadrao },
+      { $Type: 'UI.DataField', Value: prazoVerificacaoEficaciaDias }
+    ]
+  }
+);
+
+annotate AdministracaoService.ValidadoresOrigem with @(
+  UI.LineItem: [
+    { $Type: 'UI.DataField', Value: matricula }
+  ]
+);
+
+annotate AdministracaoService.ParametrosOrigem with {
+  origemNormalizada            @title: 'Chave da Origem';
+  origem                       @title: 'Origem';
+  metodologiaSugerida          @title: 'Metodologia sugerida';
+  validadorPadrao              @title: 'Validador padrão';
+  prazoVerificacaoEficaciaDias @title: 'Prazo de verificação (dias)';
+};
+
+annotate AdministracaoService.ValidadoresOrigem with {
+  ID        @title: 'Identificador';
+  matricula @title: 'Matrícula';
+};
