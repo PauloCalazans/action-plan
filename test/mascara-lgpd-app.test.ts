@@ -5,6 +5,7 @@ import { comoGestor, comoM1001, comoM2002, comoM9999, comoUsuario } from './apoi
 import { criarAcao, criarSubacao } from './apoio/acoes';
 import { atribuirResponsavelPrincipal, incluirParticipante } from './apoio/responsaveis';
 import { sufixoUnico, type Envia } from './apoio/tratativas';
+import { linhas } from './apoio/banco';
 
 const { GET, POST } = cds.test(__dirname + '/..');
 const enviar = POST as unknown as Envia;
@@ -689,20 +690,16 @@ describe('Máscara LGPD genérica do TratativaAppService', () => {
       `$filter=tratativa_codigo eq ${cenario.tratativa}`,
       comoGestor,
     );
-    expect(itens(evidenciasGestor.data).map((linha) => linha.codigo)).toEqual(
-      expect.arrayContaining([
-        cenario.evidencias.ativa,
-        cenario.evidencias.removida,
-        cenario.evidencias.subacao,
-      ]),
-    );
+    const codigosGestor = itens(evidenciasGestor.data).map((linha) => linha.codigo);
+    expect(codigosGestor).toEqual(expect.arrayContaining([cenario.evidencias.ativa, cenario.evidencias.subacao]));
+    expect(codigosGestor).not.toContain(cenario.evidencias.removida);
     const evidenciaRemovidaGestor = await GET(
       `${BASE}/Evidencias(${cenario.evidencias.removida})`,
       comoGestor,
     );
-    expect(evidenciaRemovidaGestor.status).toBe(200);
-    expect(evidenciaRemovidaGestor.data.autorAnexo).toBe('gestor');
-    expect(evidenciaRemovidaGestor.data.autorRemocao).toBe('gestor');
+    expect(evidenciaRemovidaGestor.status).toBe(404);
+    const [removidaNoBanco] = await linhas('Evidencias', { codigo: cenario.evidencias.removida });
+    expect(removidaNoBanco).toMatchObject({ ativo: false, autorAnexo: 'gestor', autorRemocao: 'gestor' });
     const historicoGestor = await consulta(
       'Historico',
       `$filter=tratativa_codigo eq ${cenario.tratativa}`,

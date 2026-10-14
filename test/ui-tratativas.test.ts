@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { fixarInstante, liberarRelogio } from './apoio/relogio';
 import { comoGestor, comoUsuario, semAuth } from './apoio/usuarios';
 import { sufixoUnico } from './apoio/tratativas';
+import { linhas } from './apoio/banco';
 
 const { GET, POST } = cds.test(__dirname + '/..');
 const BASE = '/api/app/v1';
@@ -257,8 +258,10 @@ describe('Gestão de Tratativas: serviço OData e interface declarativa', () => 
     const remocao = await POST(`${BASE}/Evidencias(${evidencia})/removerEvidencia`, {}, comoGestor);
     expect(remocao.status).toBe(204);
     const removida = await GET(`${BASE}/Evidencias(${evidencia})`, comoGestor);
-    expect(removida.status).toBe(200);
-    expect(removida.data.ativo).toBe(false);
+    expect(removida.status).toBe(404);
+    const [gravada] = await linhas('Evidencias', { codigo: evidencia });
+    expect(gravada.ativo).toBe(false);
+    expect(await linhas('HistoricoAcoes', { acao_codigo: acao, evento: 'RemocaoEvidencia' })).toHaveLength(1);
   });
 
   it('CA11 (Achado 4): comentarTratativa e comentarAcao registram comentários com menção pelo TratativaAppService', async () => {
