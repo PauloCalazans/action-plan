@@ -1,7 +1,7 @@
 # Task 002: aval-tecnico-emissao
 
 **Spec:** agentic/projeto/specs/metodologias-e-aval-tecnico/spec.md
-**Status:** draft
+**Status:** em-andamento
 **Branch:** metodologias-e-aval-tecnico/002-aval-encerramento-metodologias
 
 > **Grupo 2 (decisão do humano, 2026-10-13):** esta task e a(s) task(s) 003, 004 são executadas num único ciclo (um RED, um GREEN, uma revisão de diff) e publicadas num único PR, nesta branch. O escopo do grupo é a união dos "## Arquivos" abaixo; RED, GREEN e critérios de cada task incorporada continuam no documento dela.
