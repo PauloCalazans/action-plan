@@ -11,7 +11,7 @@ Plataforma corporativa de **tratativas e planos de ação** no SAP BTP. A **Orig
 - **Stack:** SAP CAP (Node.js + TypeScript), HANA Cloud, Fiori elements/UI5 em `app/`, SAP Build Work Zone como launchpad. SAP Build Apps fica fora deste repositório.
 
 ## Processo
-Todo trabalho segue `agentic/processo/ciclo.md`. Princípios em `agentic/processo/principios.md`. Papéis em `agentic/processo/papeis/`.
+Todo trabalho segue `agentic/processo/ciclo.md`. Princípios em `agentic/processo/principios.md`. Papéis: contrato do kit em `agentic/processo/papeis/` (não se edita neste projeto) e perfil do projeto em `agentic/projeto/papeis/` (stack, padrões e proibições daqui).
 
 ## Integração
 - Plataforma de PR: GitHub (`gh pr create` / `gh pr view`; sem CI por enquanto — `agentic/projeto/decisoes.md` D3)
