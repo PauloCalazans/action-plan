@@ -507,3 +507,60 @@ describe('Seção customizada da metodologia (task 007, Etapa 2)', () => {
     expect(extensao).not.toContain("from 'db/");
   });
 });
+
+// --- Etapa 3: diálogo do Aval e facet de avaliações (CSN e anotações) ---
+
+const PLACEHOLDER_PARECER = 'Selecione Aprovado para validar a eficácia comprovada das contramedidas ou Reprovado se o desvio persistir';
+const PLACEHOLDER_FUNDAMENTACAO = 'Fundamente tecnicamente a comprovação de eficácia das ações ou o motivo detalhado da reprovação (mínimo de 20 caracteres). Evite dados sensíveis';
+
+describe('Diálogo do Aval Técnico e facet de avaliações (task 007, Etapa 3)', () => {
+  it('CSN: o botão e o diálogo do Aval declaram Hidden, Value List de parecer e placeholders LGPD', async () => {
+    const modelo = (await cds.load(['srv', 'app'])) as unknown as {
+      definitions: Record<string, {
+        actions?: Record<string, { params?: Record<string, Record<string, unknown>> }>;
+        elements?: Record<string, Record<string, unknown>>;
+        [chave: string]: unknown;
+      }>;
+    };
+    const tratativas = modelo.definitions['TratativaAppService.Tratativas'] ?? {};
+
+    const identificacao = (tratativas['@UI.Identification'] ?? []) as Array<Record<string, unknown>>;
+    const botao = identificacao.find((entrada) => entrada.Action === 'TratativaAppService.emitirAvalTecnico');
+    expect(botao).toBeDefined();
+    expect(JSON.stringify(botao)).toContain('ocultaEmitirAval');
+
+    const parametros = tratativas.actions?.emitirAvalTecnico?.params ?? {};
+    expect(parametros.parecer?.['@Common.ValueListWithFixedValues']).toBe(true);
+    expect(parametros.parecer?.['@Common.ValueList.CollectionPath']).toBe('ValoresParecerAval');
+    expect(parametros.parecer?.['@UI.Placeholder']).toBe(PLACEHOLDER_PARECER);
+    expect(parametros.fundamentacao?.['@UI.Placeholder']).toBe(PLACEHOLDER_FUNDAMENTACAO);
+    expect(typeof parametros.parecer?.['@title']).toBe('string');
+    expect(typeof parametros.fundamentacao?.['@title']).toBe('string');
+  });
+
+  it('CSN: a facet de avaliações e o LineItem de AvalesTecnicos rotulam todos os campos', async () => {
+    const modelo = (await cds.load(['srv', 'app'])) as unknown as {
+      definitions: Record<string, {
+        elements?: Record<string, Record<string, unknown>>;
+        [chave: string]: unknown;
+      }>;
+    };
+    const tratativas = modelo.definitions['TratativaAppService.Tratativas'];
+    const facets = (tratativas?.['@UI.Facets'] ?? []) as Array<Record<string, unknown>>;
+    const facet = facets.find((entrada) => entrada.ID === 'AvaliacoesTecnicasFacet');
+    expect(facet).toBeDefined();
+    expect(facet?.Target).toBe('avalesTecnicos/@UI.LineItem');
+
+    const avales = modelo.definitions['TratativaAppService.AvalesTecnicos'];
+    expect(avales).toBeDefined();
+    const linha = (avales?.['@UI.LineItem'] ?? []) as Array<Record<string, unknown>>;
+    const valores = linha
+      .map((entrada) => (entrada.Value as Record<string, unknown> | undefined)?.['='])
+      .filter((valor): valor is string => typeof valor === 'string');
+    expect(valores).toEqual(expect.arrayContaining(['parecer', 'fundamentacao', 'validador', 'emitidoEm', 'vigente']));
+
+    for (const campo of ['parecer', 'fundamentacao', 'validador', 'emitidoEm', 'vigente']) {
+      expect(typeof avales?.elements?.[campo]?.['@title']).toBe('string');
+    }
+  });
+});
