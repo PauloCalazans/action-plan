@@ -90,7 +90,7 @@ export default class TratativaAppService extends cds.ApplicationService {
       if (req.user.is('AplicativoOrigem')) req.reject(403, 'Acesso negado.');
     });
 
-    this.before('READ', '*', async (req) => {
+    this.before('READ', '*', async function restringirLeitura(req) {
       await restricaoDeLeitura(req);
     });
 

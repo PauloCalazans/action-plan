@@ -38,6 +38,7 @@ type Select = {
 };
 type From = { ref?: unknown[]; SELECT?: Select; [chave: string]: unknown };
 type Segmento = string | { id?: string; where?: unknown; [chave: string]: unknown };
+type VarrerExpressao = (expressao: unknown, entidade: Entidade, ordem?: boolean) => void;
 
 export interface ContextoMascara {
   gestor: boolean;
@@ -50,8 +51,10 @@ type RegraMascara = {
   leitura?: 'livre' | 'porVinculo' | 'soGestor';
   aninhada?: 'mascarar' | 'omitir';
   fonte: string;
+  filtroVinculo?(req: cds.Request, matricula: string): Promise<Record<string, unknown>>;
   navegacaoPorVinculo?: { origem: string; elemento: string };
-  aplicar(linha: Linha, contexto: ContextoMascara): void;
+  codigoTratativa?(linha: Linha): string | undefined;
+  aplicar(linha: Linha, contexto: ContextoMascara, codigoTratativa?: string): void;
 };
 
 function mascararTratativa(linha: Linha): void {
@@ -75,7 +78,7 @@ function mascararEvidencia(linha: Linha): void {
 }
 
 function mascararComentario(linha: Linha): void {
-  linha.mencoes = [];
+  if (Object.hasOwn(linha, 'mencoes')) linha.mencoes = [];
 }
 
 function mascararMencao(linha: Linha): void {
@@ -92,20 +95,27 @@ function mascararHistorico(linha: Linha): void {
   }
 }
 
+function codigoTratativaDaLinha(linha: Linha): string | undefined {
+  return typeof linha.tratativa_codigo === 'string' ? linha.tratativa_codigo : undefined;
+}
+
 export const REGRAS_MASCARA: Record<string, RegraMascara> = {
   [`${SERVICE}.Tratativas`]: {
     campos: ['descricao', 'solicitante', 'responsavelPrincipal'],
     fonte: `${NS}.Tratativas`,
+    codigoTratativa: (linha) => typeof linha.codigo === 'string' ? linha.codigo : undefined,
     aplicar: mascararTratativa,
   },
   [`${SERVICE}.Acoes`]: {
     campos: ['responsavel'],
     fonte: `${NS}.Acoes`,
+    codigoTratativa: codigoTratativaDaLinha,
     aplicar: mascararAcao,
   },
   [`${SERVICE}.Participantes`]: {
     campos: ['matricula'],
     fonte: `${NS}.ParticipantesTratativa`,
+    codigoTratativa: codigoTratativaDaLinha,
     aplicar: mascararParticipante,
   },
   [`${SERVICE}.Evidencias`]: {
@@ -114,6 +124,11 @@ export const REGRAS_MASCARA: Record<string, RegraMascara> = {
     leitura: 'porVinculo',
     aninhada: 'omitir',
     fonte: `${NS}.Evidencias`,
+    filtroVinculo: async (_req, matricula) => {
+      const codigos = await codigosAcoesVinculadas(matricula);
+      return { ativo: true, acao_codigo: { in: codigos.length ? codigos : [''] } };
+    },
+    codigoTratativa: codigoTratativaDaLinha,
     aplicar: mascararEvidencia,
   },
   [`${SERVICE}.Comentarios`]: {
@@ -123,6 +138,7 @@ export const REGRAS_MASCARA: Record<string, RegraMascara> = {
     aninhada: 'omitir',
     fonte: `${NS}.Comentarios`,
     navegacaoPorVinculo: { origem: `${SERVICE}.Tratativas`, elemento: 'comentarios' },
+    codigoTratativa: codigoTratativaDaLinha,
     aplicar: mascararComentario,
   },
   [`${SERVICE}.Historico`]: {
@@ -132,6 +148,11 @@ export const REGRAS_MASCARA: Record<string, RegraMascara> = {
     leitura: 'porVinculo',
     aninhada: 'omitir',
     fonte: `${NS}.HistoricoTratativa`,
+    filtroVinculo: async (_req, matricula) => {
+      const codigos = await codigosTratativasVinculadas(matricula);
+      return { tratativa_codigo: { in: codigos.length ? codigos : [''] } };
+    },
+    codigoTratativa: codigoTratativaDaLinha,
     aplicar: mascararHistorico,
   },
   [`${SERVICE}.MencoesComentario`]: {
@@ -186,11 +207,21 @@ export function aplicarMascaras(
   resultado: unknown,
   contexto: ContextoMascara,
 ): void {
+  aplicarMascarasComCodigo(entidade, resultado, contexto);
+}
+
+function aplicarMascarasComCodigo(
+  entidade: cds.entity,
+  resultado: unknown,
+  contexto: ContextoMascara,
+  codigoTratativaPai?: string,
+): void {
   if (contexto.gestor) return;
   const definicao = entidade as unknown as Entidade;
   percorrerLinhas(definicao, resultado, (linha) => {
     const regra = regraDa(definicao);
-    regra?.aplicar(linha, contexto);
+    const codigoTratativa = regra?.codigoTratativa?.(linha) ?? codigoTratativaPai;
+    regra?.aplicar(linha, contexto, codigoTratativa);
     for (const [nome, elemento] of Object.entries(definicao.elements ?? {})) {
       if (elemento['@PersonalData.IsPotentiallyPersonal'] && !regra?.campos.includes(nome)) {
         linha[nome] = null;
@@ -204,7 +235,7 @@ export function aplicarMascaras(
       if (regraDa(alvo)?.aninhada === 'omitir') {
         linha[nome] = ehParaMuitos(elemento) ? [] : null;
       } else {
-        aplicarMascaras(alvo as cds.entity, linha[nome], contexto);
+        aplicarMascarasComCodigo(alvo as cds.entity, linha[nome], contexto, codigoTratativa);
       }
     }
   });
@@ -222,7 +253,7 @@ function resolverRef(
   req: cds.Request,
   base: Entidade,
   referencia: unknown,
-  varrerExpressao: (expressao: unknown, entidade: Entidade) => void,
+  varrerExpressao: VarrerExpressao,
   bloquearTravessia: boolean,
 ): Entidade | undefined {
   if (!Array.isArray(referencia) || referencia.length === 0) falhar(req);
@@ -276,7 +307,7 @@ function resolverColuna(
   req: cds.Request,
   base: Entidade,
   referencia: unknown,
-  varrerExpressao: (expressao: unknown, entidade: Entidade) => void,
+  varrerExpressao: VarrerExpressao,
 ): Entidade | undefined {
   if (!Array.isArray(referencia) || referencia.length === 0) falhar(req);
   let entidade: Entidade | undefined = base;
@@ -302,12 +333,13 @@ function validarExpressao(
   req: cds.Request,
   expressao: unknown,
   base: Entidade,
-  varrerExpressao: (expressao: unknown, entidade: Entidade) => void,
+  varrerExpressao: VarrerExpressao,
+  ordem = false,
 ): void {
   if (Array.isArray(expressao)) {
     for (const item of expressao) {
       if (typeof item === 'string') continue;
-      validarExpressao(req, item, base, varrerExpressao);
+      validarExpressao(req, item, base, varrerExpressao, ordem);
     }
     return;
   }
@@ -321,7 +353,11 @@ function validarExpressao(
   }
   if (item.param === true) return;
   if (Object.hasOwn(item, 'ref')) {
-    if (chaves.some((chave) => !['ref', 'as', 'sort', 'nulls', 'implicit'].includes(chave))) falhar(req);
+    const permitidas = ordem ? ['ref', 'sort', 'nulls', 'implicit'] : ['ref'];
+    if (chaves.some((chave) => !permitidas.includes(chave))) falhar(req);
+    if (item.sort !== undefined && !['asc', 'desc'].includes(String(item.sort).toLowerCase())) falhar(req);
+    if (item.nulls !== undefined && !['first', 'last'].includes(String(item.nulls).toLowerCase())) falhar(req);
+    if (item.implicit !== undefined && item.implicit !== true) falhar(req);
     resolverRef(req, base, item.ref, varrerExpressao, true);
     return;
   }
@@ -336,7 +372,13 @@ function validarExpressao(
     return;
   }
   if (Object.hasOwn(item, 'func')) {
-    if (chaves.some((chave) => !['func', 'args'].includes(chave)) || typeof item.func !== 'string') falhar(req);
+    if (
+      chaves.some((chave) => !['func', 'args'].includes(chave)) ||
+      typeof item.func !== 'string' ||
+      !Array.isArray(item.args)
+    ) {
+      falhar(req);
+    }
     validarExpressao(req, item.args, base, varrerExpressao);
     return;
   }
@@ -362,7 +404,7 @@ function varrerSelect(
   req: cds.Request,
   select: Select,
   fallback: Entidade,
-  varrerExpressao: (expressao: unknown, entidade: Entidade) => void,
+  varrerExpressao: VarrerExpressao,
 ): void {
   const permitidas = new Set([
     'from',
@@ -407,13 +449,14 @@ function varrerSelect(
   if (select.where !== undefined) varrerExpressao(select.where, entidade);
   if (select.having !== undefined) varrerExpressao(select.having, entidade);
   if (select.groupBy !== undefined) varrerExpressao(select.groupBy, entidade);
-  if (select.orderBy !== undefined) varrerExpressao(select.orderBy, entidade);
+  if (select.orderBy !== undefined) varrerExpressao(select.orderBy, entidade, true);
   if (select.columns !== undefined) {
     if (!Array.isArray(select.columns)) falhar(req);
     for (const coluna of select.columns) {
       if (coluna === '*') continue;
       if (!coluna || typeof coluna !== 'object') falhar(req);
       const item = coluna as Record<string, unknown>;
+      // CAP adds this internal marker to nested expands; OData clients cannot submit it as a column.
       if (item.val === 1 && item.as === '$parent' && Object.keys(item).every((chave) => ['val', 'as'].includes(chave))) {
         continue;
       }
@@ -421,13 +464,20 @@ function varrerSelect(
         if (Array.isArray(item.ref) && item.ref.length === 1 && item.ref[0] === '*') continue;
         if (
           Object.keys(item).some((chave) =>
-            !['ref', 'as', 'expand', 'inline', 'where', 'having', 'groupBy', 'orderBy', 'limit'].includes(chave),
+            !['ref', 'as', 'expand', 'where', 'having', 'groupBy', 'orderBy'].includes(chave),
           )
         ) {
           falhar(req);
         }
+        if (
+          item.as !== undefined &&
+          (item.expand !== undefined || item.where !== undefined || item.having !== undefined ||
+            item.groupBy !== undefined || item.orderBy !== undefined)
+        ) {
+          falhar(req);
+        }
         const baseExpandida = resolverColuna(req, entidade, item.ref, varrerExpressao);
-        const expansao = item.expand ?? item.inline;
+        const expansao = item.expand;
         if (
           expansao !== undefined ||
           item.where !== undefined ||
@@ -447,10 +497,24 @@ function varrerSelect(
           }, baseExpandida, varrerExpressao);
         }
         if (item.as !== undefined) resolverRef(req, entidade, item.ref, varrerExpressao, true);
-      } else if (item.func === 'count' && item.as === '$count' && Array.isArray(item.args)) {
+      } else if (
+        item.func === 'count' &&
+        item.as === '$count' &&
+        Array.isArray(item.args) &&
+        Object.keys(item).every((chave) => ['func', 'args', 'as'].includes(chave))
+      ) {
         validarExpressao(req, item.args, entidade, varrerExpressao);
       } else if (Object.hasOwn(item, 'xpr') || Object.hasOwn(item, 'func')) {
-        if (Object.keys(item).some((chave) => !['xpr', 'func', 'args', 'as'].includes(chave))) falhar(req);
+        if (
+          (Object.hasOwn(item, 'xpr') && Object.hasOwn(item, 'func')) ||
+          Object.keys(item).some((chave) =>
+            Object.hasOwn(item, 'xpr')
+              ? !['xpr', 'as'].includes(chave)
+              : !['func', 'args', 'as'].includes(chave),
+          )
+        ) {
+          falhar(req);
+        }
         validarExpressao(req, item, entidade, varrerExpressao);
       } else {
         falhar(req);
@@ -464,7 +528,8 @@ function varrerQuery(req: cds.Request): void {
   const select = consulta.SELECT;
   const entidade = req.target as unknown as Entidade;
   if (!select) return;
-  const varrer = (expressao: unknown, base: Entidade) => validarExpressao(req, expressao, base, varrer);
+  const varrer: VarrerExpressao = (expressao, base, ordem) =>
+    validarExpressao(req, expressao, base, varrer, ordem);
   const from = select.from;
   if (from?.ref) {
     let atual: Entidade = entidadePorNome(idDoSegmento(from.ref[0] as Segmento)) ?? falhar(req);
@@ -537,16 +602,6 @@ function injetarLista(req: cds.Request, coluna: string, valores: string[]): void
   whereConsulta(req).where?.({ [coluna]: { in: valores.length ? valores : [''] } });
 }
 
-async function filtrarEvidencias(req: cds.Request, matricula: string): Promise<void> {
-  const codigos = await codigosAcoesVinculadas(matricula);
-  whereConsulta(req).where?.({ ativo: true });
-  injetarLista(req, 'acao_codigo', codigos);
-}
-
-async function filtrarHistorico(req: cds.Request, matricula: string): Promise<void> {
-  injetarLista(req, 'tratativa_codigo', await codigosTratativasVinculadas(matricula));
-}
-
 async function registroPermitido(
   req: cds.Request,
   entidade: Entidade,
@@ -566,14 +621,8 @@ async function registroPermitido(
   if (!chaveEntidade || !valorChave) return false;
   let query = SELECT.one.from(regra.fonte).where({ [chaveEntidade]: valorChave });
   if (regra.leitura === 'porVinculo') {
-    if (entidade.name === `${SERVICE}.Evidencias`) {
-      query = query.where({ ativo: true });
-      const codigos = await codigosAcoesVinculadas(matricula);
-      query = query.where({ acao_codigo: { in: codigos.length ? codigos : [''] } });
-    } else if (entidade.name === `${SERVICE}.Historico`) {
-      const codigos = await codigosTratativasVinculadas(matricula);
-      query = query.where({ tratativa_codigo: { in: codigos.length ? codigos : [''] } });
-    }
+    if (!regra.filtroVinculo) return false;
+    query = query.where(await regra.filtroVinculo(req, matricula));
   }
   return !!(await cds.db.run(query));
 }
@@ -636,6 +685,13 @@ async function verificarSegmentos(
     const regra = regraDa(entidade);
     if (regra?.leitura === 'soGestor') rejeitar(req);
     if (regra?.leitura === 'porVinculo') {
+      if (!regra.filtroVinculo) {
+        const segmento = segmentos[indice] as Segmento;
+        const where = typeof segmento === 'object' && segmento !== null
+          ? expressaoCaminho(segmento.where)
+          : undefined;
+        if (!where) rejeitar(req);
+      }
       const permitido = await registroPermitido(req, entidade, segmentos[indice] as Segmento, matricula);
       if (!permitido) rejeitar(req, 404);
     }
@@ -682,7 +738,7 @@ export async function restricaoDeLeitura(req: cds.Request): Promise<void> {
   const select = (req.query as unknown as Consulta).SELECT;
   if (!gestor) varrerQuery(req);
   if (req.target.name === `${SERVICE}.Participantes` && select?.search !== undefined) {
-    injetarLista(req, 'ID', []);
+    if (!gestor) rejeitar(req);
   }
   if (gestor) return;
 
@@ -710,7 +766,7 @@ export async function restricaoDeLeitura(req: cds.Request): Promise<void> {
       entidadeAnterior?.name === regraFinal.navegacaoPorVinculo.origem &&
       idFinal === regraFinal.navegacaoPorVinculo.elemento
     ) {
-      await filtrarComentariosDaTratativa(req, segmentos[0] as Segmento, matricula);
+      await filtrarComentariosDaTratativa(req, segmentos[segmentos.length - 2] as Segmento, matricula);
       return;
     }
   }
@@ -718,7 +774,17 @@ export async function restricaoDeLeitura(req: cds.Request): Promise<void> {
   const regra = regraDa(req.target as unknown as Entidade);
   if (regra?.leitura === 'soGestor') rejeitar(req);
   if (regra?.leitura === 'porVinculo') {
-    if (req.target.name === `${SERVICE}.Evidencias`) await filtrarEvidencias(req, matricula);
-    if (req.target.name === `${SERVICE}.Historico`) await filtrarHistorico(req, matricula);
+    if (!regra.filtroVinculo) {
+      const segmentoFinal = segmentos[segmentos.length - 1] as Segmento;
+      const where = typeof segmentoFinal === 'object' && segmentoFinal !== null
+        ? expressaoCaminho(segmentoFinal.where)
+        : undefined;
+      if (where && !await registroPermitido(req, req.target as unknown as Entidade, segmentoFinal, matricula)) {
+        rejeitar(req, 404);
+      }
+      rejeitar(req);
+    }
+    const filtro = await regra.filtroVinculo(req, matricula);
+    whereConsulta(req).where?.(filtro);
   }
 }

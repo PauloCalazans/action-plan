@@ -224,8 +224,6 @@ annotate TratativaAppService.Participantes with @cds.search: {
   matricula: false
 };
 
-annotate TratativaAppService.Participantes with @cds.search: false;
-
 annotate TratativaAppService.Evidencias with @cds.search: {
   autorAnexo: false,
   autorRemocao: false
