@@ -20,6 +20,11 @@ service TratativaAppService {
         responsavelPrincipal,
         dataCriacao,
         dataPrevistaConclusao,
+        metodologia,
+        categoriaCausaRaiz,
+        metodologiaData,
+        metodologiaAutor,
+        metodologiaAtualizadoEm,
         false as ocultaResponsaveis : Boolean,
         false as podeIniciar        : Boolean,
         false as podeEncerrar       : Boolean,
@@ -29,11 +34,18 @@ service TratativaAppService {
         false as ocultaEncerrar     : Boolean,
         false as ocultaCancelar     : Boolean,
         false as ocultaReabrir      : Boolean,
+        false as podeDefinirMetodologia    : Boolean,
+        false as ocultaDefinirMetodologia  : Boolean,
+        false as podeDerivarAcao           : Boolean,
+        false as ocultaDerivarAcao         : Boolean,
+        false as podeEmitirAval            : Boolean,
+        false as ocultaEmitirAval          : Boolean,
         acoes         : Composition of many Acoes on acoes.tratativa = $self,
         participantes : Composition of many Participantes on participantes.tratativa = $self,
         evidencias    : Composition of many Evidencias on evidencias.tratativa = $self,
         comentarios   : Composition of many Comentarios on comentarios.tratativa = $self,
-        historico     : Association to many Historico on historico.tratativa = $self
+        historico     : Association to many Historico on historico.tratativa = $self,
+        avalesTecnicos : Association to many AvalesTecnicos on avalesTecnicos.tratativa = $self
   } actions {
     @requires: 'GestorTratativa'
     @Core.OperationAvailable: in.podeIniciar
@@ -83,6 +95,18 @@ service TratativaAppService {
 
     @requires: 'authenticated-user'
     action comentarAcao(acao : String, texto : String, mencoes : many String) returns ResultadoComentario;
+
+    @requires: 'authenticated-user'
+    @Core.OperationAvailable: in.podeDefinirMetodologia
+    action definirMetodologia(ferramenta : String, categoriaCausaRaiz : String, dados : LargeString, confirmarSubstituicao : Boolean);
+
+    @requires: 'GestorTratativa'
+    @Core.OperationAvailable: in.podeDerivarAcao
+    action derivarAcaoDaMetodologia(causaIdentificador : String, descricao : String, responsavel : String, prazo : Date, prioridade : String, evidenciaObrigatoria : String) returns ResultadoCriacaoAcao;
+
+    @requires: 'ValidadorTecnico'
+    @Core.OperationAvailable: in.podeEmitirAval
+    action emitirAvalTecnico(parecer : String, fundamentacao : String);
   };
 
   type ResultadoCriacaoAcao {
@@ -133,6 +157,24 @@ service TratativaAppService {
   }
 
   @readonly
+  entity ValoresFerramentaMetodologia {
+    key codigo    : String(20);
+        descricao : String(50);
+  }
+
+  @readonly
+  entity ValoresMacrocausa {
+    key codigo    : String(50);
+        descricao : String(50);
+  }
+
+  @readonly
+  entity ValoresParecerAval {
+    key codigo    : String(20);
+        descricao : String(50);
+  }
+
+  @readonly
   entity ValoresEvidenciaObrigatoria {
     key codigo    : String(10);
         descricao : String(50);
@@ -150,10 +192,23 @@ service TratativaAppService {
         evidenciaObrigatoria,
         dataConclusao,
         responsavel,
+        causaIdentificador,
+        causaDescricao,
         acaoMae
   } actions {
     action iniciar();
     action concluir();
+  };
+
+  @readonly
+  entity AvalesTecnicos as projection on m.AvalesTecnicos {
+    key id,
+        tratativa,
+        parecer,
+        fundamentacao,
+        validador,
+        emitidoEm,
+        false as vigente : Boolean
   };
 
   @readonly
@@ -213,11 +268,19 @@ service TratativaAppService {
 annotate TratativaAppService.Tratativas with @cds.search: {
   descricao: false,
   solicitante: false,
-  responsavelPrincipal: false
+  responsavelPrincipal: false,
+  metodologiaAutor: false,
+  metodologiaData: false
 };
 
 annotate TratativaAppService.Acoes with @cds.search: {
-  responsavel: false
+  responsavel: false,
+  causaDescricao: false
+};
+
+annotate TratativaAppService.AvalesTecnicos with @cds.search: {
+  validador: false,
+  fundamentacao: false
 };
 
 annotate TratativaAppService.Participantes with @cds.search: {

@@ -163,6 +163,37 @@ service AdministracaoService {
     horaExecucaoUtc              : Integer
   ) returns DetalheParametrosAlertas;
 
+  type DetalheParametrosOrigem {
+    origem                       : String(100);
+    metodologiaSugerida          : String(20);
+    validadorPadrao              : String(100);
+    prazoVerificacaoEficaciaDias : Integer;
+    validadores                  : many String(50);
+  }
+
+  /** R13 (016): cria ou atualiza a parametrização da Origem (`*` é o baseline global), exclusivo do Administrador. */
+  @restrict: [{ grant: '*', to: 'Administrador' }]
+  action atualizarParametrosOrigem(
+    origem                       : String,
+    metodologiaSugerida          : String,
+    validadorPadrao              : String,
+    prazoVerificacaoEficaciaDias : Integer
+  ) returns DetalheParametrosOrigem;
+
+  /** R7, R12 d (016): inclui um Validador Técnico na lista da Origem (`*` para a lista padrão). */
+  @restrict: [{ grant: '*', to: 'Administrador' }]
+  action incluirValidadorOrigem(
+    origem    : String,
+    matricula : String
+  ) returns DetalheParametrosOrigem;
+
+  /** R7, R12 d (016): remove um Validador Técnico da lista da Origem (`*` para a lista padrão). */
+  @restrict: [{ grant: '*', to: 'Administrador' }]
+  action removerValidadorOrigem(
+    origem    : String,
+    matricula : String
+  ) returns DetalheParametrosOrigem;
+
   /** R12: execução sob demanda do processamento dos alertas, exclusiva do Administrador. */
   @restrict: [{ grant: '*', to: 'Administrador' }]
   action executarProcessamentoAlertas() returns RelatorioProcessamentoAlertas;
@@ -193,4 +224,14 @@ service AdministracaoService {
   @Capabilities: { InsertRestrictions.Insertable: false, DeleteRestrictions.Deletable: false }
   @restrict    : [{ grant: '*', to: 'Administrador' }]
   entity ParametrosIntegracaoSF as projection on m.ParametrosIntegracaoSF;
+
+  @readonly
+  @Capabilities: { InsertRestrictions.Insertable: false, DeleteRestrictions.Deletable: false }
+  @restrict    : [{ grant: '*', to: 'Administrador' }]
+  entity ParametrosOrigem as projection on m.ParametrosOrigem;
+
+  @readonly
+  @Capabilities: { InsertRestrictions.Insertable: false, DeleteRestrictions.Deletable: false }
+  @restrict    : [{ grant: '*', to: 'Administrador' }]
+  entity ValidadoresOrigem as projection on m.ValidadoresOrigem;
 }

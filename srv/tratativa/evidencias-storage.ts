@@ -4,6 +4,7 @@
 import cds from '@sap/cds';
 import path from 'path';
 import fs from 'fs';
+import { pathToFileURL } from 'node:url';
 
 export interface StorageModule {
   salvar: (id: string, conteudo: Buffer) => Promise<void>;
@@ -37,8 +38,8 @@ export async function getStorage(): Promise<StorageModule> {
       }
     }
     
-    // ESM dynamic import
-    const imported = await import(modulePath);
+    // ESM dynamic import: no Windows o especificador precisa ser uma URL de arquivo (D-01).
+    const imported = await import(pathToFileURL(path.resolve(modulePath)).href);
     storageModule = imported.default || imported;
   }
   if (!storageModule) {

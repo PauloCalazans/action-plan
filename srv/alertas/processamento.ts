@@ -30,7 +30,10 @@ function formatarPrazoUtc(data: Date): string {
   return `${dia}/${mes}/${ano}`;
 }
 
-function formatarTipoAlerta(tipo: AlertaGerado['tipo']): string {
+function formatarTipoAlerta(tipo: AlertaGerado['tipo'], entidade?: AlertaGerado['entidade']): string {
+  if (entidade === 'VerificacaoEficacia') {
+    return tipo === 'PrazoVencido' ? 'Verificação de Eficácia Vencida' : 'Verificação de Eficácia Próxima do Prazo';
+  }
   const tipos: Record<AlertaGerado['tipo'], string> = {
     PrazoProximo: 'Prazo Próximo',
     PrazoVencido: 'Prazo Vencido',
@@ -40,9 +43,9 @@ function formatarTipoAlerta(tipo: AlertaGerado['tipo']): string {
   return tipos[tipo];
 }
 
-function montarMensagem(alerta: Pick<AlertaGerado, 'tipo' | 'entidade' | 'tratativa' | 'acao' | 'destinatario'>, titulo: string, prazo: Date, url: string): { assunto: string; corpo: string } {
+function montarMensagem(alerta: Pick<AlertaGerado, 'tipo' | 'entidade' | 'tratativa' | 'acao' | 'destinatario' | 'prazo'>, titulo: string, prazo: Date, url: string): { assunto: string; corpo: string } {
   const acao = alerta.acao ? `Ação: ${alerta.acao}\n` : '';
-  const tipo = formatarTipoAlerta(alerta.tipo);
+  const tipo = formatarTipoAlerta(alerta.tipo, alerta.entidade);
   const assunto = `${tipo} - ${alerta.tratativa}`;
   const corpo = [
     `Tipo: ${tipo}`,
@@ -159,7 +162,7 @@ export async function processarAlertas(agora: Date): Promise<RelatorioProcessame
     }
 
     const tratativa = tratarivaResumo.get(alerta.tratativa) ?? { titulo: 'Tratativa', dataPrevistaConclusao: agora.toISOString() };
-    const prazoBase = alerta.acao ? (acoesResumo.get(alerta.acao)?.prazo ?? tratativa.dataPrevistaConclusao) : tratativa.dataPrevistaConclusao;
+    const prazoBase = alerta.prazo ?? (alerta.acao ? (acoesResumo.get(alerta.acao)?.prazo ?? tratativa.dataPrevistaConclusao) : tratativa.dataPrevistaConclusao);
     const dataPrazo = new Date(`${prazoBase}T00:00:00.000Z`);
     const url = `https://plataforma.empresa.com/tratativas/${alerta.tratativa}`;
 

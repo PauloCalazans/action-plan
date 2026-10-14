@@ -50,7 +50,8 @@
       "libs": {
         "sap.fe.templates": {},
         "sap.m": {},
-        "sap.ui.core": {}
+        "sap.ui.core": {},
+        "sap.ui.layout": {}
       }
     },
     "contentDensities": {
@@ -114,8 +115,31 @@
           "name": "sap.fe.templates.ObjectPage",
           "options": {
             "settings": {
-              "contextPath": "/Tratativas"
+              "contextPath": "/Tratativas",
+              "content": {
+                "body": {
+                  "sections": {
+                    "MetodologiaSection": {
+                      "template": "br.com.calazanstec.actionplan.tratativas.ext.fragment.MetodologiaSection",
+                      "title": "{i18n>metodologiaTitulo}",
+                      "position": {
+                        "placement": "After",
+                        "anchor": "PlanoAcaoFacet"
+                      }
+                    }
+                  }
+                }
+              }
             }
+          }
+        }
+      }
+    },
+    "extends": {
+      "extensions": {
+        "sap.ui.controllerExtensions": {
+          "sap.fe.templates.ObjectPage.ObjectPageController": {
+            "controllerName": "br.com.calazanstec.actionplan.tratativas.ext.controller.MetodologiaExtension"
           }
         }
       }

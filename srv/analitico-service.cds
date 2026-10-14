@@ -1,6 +1,7 @@
 using { br.com.calazanstec.analitico.operacional as op } from './analitico/operacional';
 using { br.com.calazanstec.analitico.gestao as gs } from './analitico/gestao';
 using { br.com.calazanstec.analitico.executivo as ex } from './analitico/executivo';
+using { br.com.calazanstec.analitico.eficacia as ef } from './analitico/eficacia';
 
 @path    : '/api/analitico/v1'
 @requires: 'authenticated-user'
@@ -49,6 +50,21 @@ service AnaliticoService {
   @readonly
   entity EvidenciasPendentes as projection on ex.EvidenciasPendentesView;
 
+  @readonly
+  entity ParetoCausasRaizes as projection on ef.ParetoCausasRaizesView;
+
+  type RetornoTaxaEficacia {
+    taxaPercentual : Decimal(5,2);
+  }
+
+  type RetornoTempoMedioVerificacaoEficacia {
+    mediaDias : Decimal(6,1);
+  }
+
+  type RetornoAderenciaMetodologica {
+    percentual : Decimal(5,2);
+  }
+
   type RetornoCumprimentoPrazo {
     taxaPercentual : Decimal(5,2);
   }
@@ -72,4 +88,7 @@ service AnaliticoService {
   function consultarTendenciaMensal(periodoInicio : String, periodoFim : String) returns many ItemTendenciaMensal;
   function consultarIndiceResolucao(periodoInicio : String, periodoFim : String) returns RetornoIndiceResolucao;
   function consultarTratativasVencidas(dataCorte : String) returns Totalizador;
+  function consultarTaxaEficacia(periodoInicio : String, periodoFim : String) returns RetornoTaxaEficacia;
+  function consultarTempoMedioVerificacaoEficacia(periodoInicio : String, periodoFim : String) returns RetornoTempoMedioVerificacaoEficacia;
+  function consultarAderenciaMetodologica(periodoInicio : String, periodoFim : String) returns RetornoAderenciaMetodologica;
 }
