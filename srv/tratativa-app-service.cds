@@ -255,6 +255,9 @@ service TratativaAppService {
   @readonly
   entity Evidencias as projection on m.Evidencias {
     *,
+    virtual null as conteudo : LargeBinary
+      @Core.MediaType: mimeType
+      @Core.ContentDisposition.Filename: nomeArquivo,
     false as ocultaRemover : Boolean,
     false as podeRemover   : Boolean
   } where ativo = true actions {

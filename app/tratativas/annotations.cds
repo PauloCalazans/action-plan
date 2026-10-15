@@ -207,7 +207,7 @@ annotate TratativaAppService.ValoresParecerAval with {
 annotate TratativaAppService.Evidencias with @(
   UI.LineItem: [
     { $Type: 'UI.DataField', Value: codigo },
-    { $Type: 'UI.DataField', Value: nomeArquivo },
+    { $Type: 'UI.DataField', Value: conteudo },
     { $Type: 'UI.DataField', Value: mimeType },
     { $Type: 'UI.DataField', Value: tamanho },
     { $Type: 'UI.DataField', Value: descricao },
@@ -303,6 +303,7 @@ annotate TratativaAppService.Participantes with {
 annotate TratativaAppService.Evidencias with {
   codigo       @title: 'Código';
   nomeArquivo  @title: 'Nome do arquivo';
+  conteudo     @title: 'Nome do arquivo';
   mimeType     @title: 'Tipo do arquivo';
   tamanho      @title: 'Tamanho';
   descricao    @title: 'Descrição';
