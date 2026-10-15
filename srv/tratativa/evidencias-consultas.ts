@@ -248,6 +248,58 @@ export async function listarEvidenciasTratativa(
   return evidencias;
 }
 
+export interface DadosDownloadEvidencia {
+  codigoTratativa: string;
+  codigoAcao: string;
+  codigoEvidencia: string;
+  responsavelAcao: string;
+  mimeType: string;
+  tamanho: number;
+}
+
+/**
+ * Núcleo do download (R4, R6, R12): autorização dinâmica (Gestor, Responsável da Ação ou Validador Técnico
+ * habilitado), recuperação do binário e auditoria DownloadEvidencia ANTES de entregá-lo. Se a auditoria
+ * falhar, a transação é revertida e o binário não é entregue. Compartilhado por TratativaService e App.
+ */
+export async function processarDownloadEvidencia(
+  req: cds.Request,
+  dados: DadosDownloadEvidencia,
+  mensagemRecusa403: string = 'Forbidden',
+): Promise<Buffer> {
+  const ehGestor = req.user.is('GestorTratativa');
+  const ehResponsavel = usuarioAutenticadoEhMatricula(req, dados.responsavelAcao);
+  const ehValidador = await usuarioEhValidadorHabilitado(req, dados.codigoTratativa);
+
+  if (!ehGestor && !ehResponsavel && !ehValidador) {
+    recusar(403, mensagemRecusa403);
+  }
+
+  const storage = await getStorage();
+  const conteudoBuffer = await storage.obter(dados.codigoEvidencia);
+
+  if (!conteudoBuffer) {
+    throw new Error('Arquivo não encontrado no repositório de armazenamento.');
+  }
+
+  await registrarHistorico(
+    dados.codigoTratativa,
+    { id: obterMatriculaUsuario(req), tipo: 'Usuario' },
+    [
+      {
+        evento: 'DownloadEvidencia',
+        evidencia: dados.codigoEvidencia,
+        mimeType: dados.mimeType,
+        tamanho: dados.tamanho,
+      },
+    ],
+    new Date(),
+    dados.codigoAcao,
+  );
+
+  return conteudoBuffer;
+}
+
 /**
  * R11, R12 (006 etapa 4): baixa Evidência com conteúdo em Base64 e auditoria prévia.
  * Exceção à D9: download não bloqueia a Tratativa (permite concorrência de downloads).
@@ -288,38 +340,17 @@ export async function baixarEvidencia(
   
   if (!evidencia || !evidencia.ativo) recusar(404, 'Evidência não encontrada.');
 
-  // Etapa 6: Autorização dinâmica (Gestor ou Responsável da Ação)
-  const ehGestor = req.user.is('GestorTratativa');
-  const ehResponsavel = usuarioAutenticadoEhMatricula(req, acao.responsavel);
-  const ehValidador = await usuarioEhValidadorHabilitado(req, codigoTratativa);
-
-  if (!ehGestor && !ehResponsavel && !ehValidador) {
-    recusar(403, 'Forbidden');
-  }
-
-  // Recuperar o binário do repositório de armazenamento
-  const storage = await getStorage();
-  const conteudoBuffer = await storage.obter(codigoEvidencia);
-
-  if (!conteudoBuffer) {
-    throw new Error('Arquivo não encontrado no repositório de armazenamento.');
-  }
-
-  // Gravar auditoria ANTES de entregar o binário (R12 c)
-  // Se falhar, a transação é revertida e o binário não é entregue
-  await registrarHistorico(
-    codigoTratativa,
-    { id: obterMatriculaUsuario(req), tipo: 'Usuario' },
-    [
-      {
-        evento: 'DownloadEvidencia',
-        evidencia: codigoEvidencia,
-        mimeType: evidencia.mimeType,
-        tamanho: evidencia.tamanho,
-      },
-    ],
-    new Date(),
-    codigoAcao,
+  const conteudoBuffer = await processarDownloadEvidencia(
+    req,
+    {
+      codigoTratativa,
+      codigoAcao,
+      codigoEvidencia,
+      responsavelAcao: acao.responsavel,
+      mimeType: evidencia.mimeType,
+      tamanho: evidencia.tamanho,
+    },
+    'Forbidden',
   );
 
   // Codificar em Base64 para devolução
