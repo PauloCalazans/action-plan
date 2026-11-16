@@ -1,4 +1,6 @@
 # Modo automático: com enabled: true o orquestrador encadeia tasks e publica PRs sem confirmação.
 # Nunca faz merge. Alterar este arquivo é decisão humana.
 enabled: true
-# Gate 1 delegado ao orquestrador por Paulo Calazans (2026-10-08, decisão D11). Gate 2 (merge) permanece humano.
+# Gate 1 delegado ao orquestrador: D<n> da decisão vigente que o delega (agentic/projeto/decisoes.md).
+# Vale só com enabled: true. Vazio = Gate 1 humano. Regras: agentic/processo/ciclo.md, "Gate 1 delegado".
+gate1: D11

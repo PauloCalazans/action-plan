@@ -4,7 +4,11 @@
 # A varredura de marcador considera só arquivos sob DIRS_TESTE (documentação e scripts podem citar o padrão).
 . "$(dirname "$0")/lib-agentic.sh"
 cd "$agentic_raiz" || exit 1
-base=${1:-$(agentic_base)}
+if [ -n "${1:-}" ]; then
+  base=$(git merge-base HEAD "$1") || agentic_falha "base inválida: $1"
+else
+  base=$(agentic_base)
+fi
 status=0
 
 if [ -n "$MARCADOR_DESABILITADO" ]; then

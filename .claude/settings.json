@@ -43,12 +43,12 @@
       "Edit(**/agentic/config)",
       "Edit(agentic/auto-mode)",
       "Edit(**/agentic/auto-mode)",
-      "Edit(agentic/mecanismos/githooks/**)",
-      "Edit(**/agentic/mecanismos/githooks/**)",
-      "Edit(agentic/mecanismos/scripts/**)",
-      "Edit(**/agentic/mecanismos/scripts/**)",
+      "Edit(agentic/mecanismos/**)",
+      "Edit(**/agentic/mecanismos/**)",
       "Edit(agentic/baseline-skips)",
       "Edit(**/agentic/baseline-skips)",
+      "Edit(.git/agentic/**)",
+      "Edit(**/.git/agentic/**)",
       "Edit(.gitleaksignore)",
       "Edit(**/.gitleaksignore)"
     ],
@@ -61,10 +61,7 @@
     "SessionStart": [
       {
         "hooks": [
-          {
-            "type": "command",
-            "command": "sh \"$(git rev-parse --show-toplevel)/agentic/mecanismos/scripts/status-projeto.sh\""
-          }
+          { "type": "command", "command": "sh \"$CLAUDE_PROJECT_DIR/agentic/mecanismos/scripts/status-projeto.sh\"" }
         ]
       }
     ],
@@ -72,10 +69,7 @@
       {
         "matcher": "Bash",
         "hooks": [
-          {
-            "type": "command",
-            "command": "sh \"$(git rev-parse --show-toplevel)/.claude/hooks/pre-tool-use.sh\""
-          }
+          { "type": "command", "command": "sh \"$CLAUDE_PROJECT_DIR/.claude/hooks/pre-tool-use.sh\"" }
         ]
       }
     ]

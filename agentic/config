@@ -4,6 +4,8 @@ BRANCH_PRINCIPAL="main"
 BRANCHES_PROTEGIDAS="main master"
 # Comando que roda build + lint + testes + arquitetura da stack (usado pelo verify.sh).
 CMD_VERIFY_STACK="npm run build && npm run lint && npm test && npm run arch"
+# Opcional. Comando rápido do laço (lint e testes tocados). Vazio = o verify --rapido usa o CMD_VERIFY_STACK.
+CMD_VERIFY_RAPIDO=""
 # Comando que roda só os testes (usado pelo verifica-red.sh no commit RED).
 CMD_TESTE="npm test"
 # Opcional: comando que roda só UM arquivo/classe de teste; {} é trocado pelo caminho relativo do arquivo
@@ -22,3 +24,9 @@ MARCADOR_ASSERCAO="expect\("
 # Glob dos relatórios JUnit XML gerados pelo CMD_VERIFY_STACK. Vazio = verificação degradada.
 RELATORIO_TESTES="reports/junit/*.xml"
 GITLEAKS_BIN="gitleaks"
+# Opcional. Vazio = checagem pulada com aviso. Comando que valida o contrato executável (esqueleto compila,
+# arquitetura respeitada), rodado na raiz do worktree pelo verifica-artefato.sh antes do Gate 1.
+CMD_VALIDA_CONTRATO=""
+# Opcional. Vazio = checagem pulada com aviso. Globs separados por espaço dos caminhos que são gatilho N3:
+# arquivo de task ou mudança que casa com um deles exige item N3 citado.
+CAMINHOS_N3=""

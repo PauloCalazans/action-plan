@@ -24,7 +24,7 @@ elif [ "$agentic_rc" -ne 0 ]; then
 fi
 
 # --- Segredos: camada 2, palavras-chave com valor literal (o gitleaks não pega senha genérica).
-# Chave: contém senha|password|passwd|secret|segredo|api[_-]key|token (com prefixo/sufixo, ponto ou hífen:
+# Chave: contém senha|password|passwd|secret|segredo|api[_-]?key|token (com prefixo/sufixo, ponto ou hífen:
 # PGPASSWORD, spring.datasource.password, jwt-secret-key), seguida de ':', '=' ou ':='.
 # Valor entre aspas: varrido em qualquer arquivo. Valor sem aspas: só em arquivos de configuração/shell
 # (yml, yaml, properties, env, .env*, sh, bash, zsh, conf, cfg, ini, toml, mk, Makefile, Dockerfile*,
