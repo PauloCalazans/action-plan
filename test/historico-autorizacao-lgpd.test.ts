@@ -7,6 +7,7 @@ import { atribuirResponsavelPrincipal, incluirParticipante, delegarAcao } from '
 import { anexarEvidencia } from './apoio/evidencias';
 import { comentarTratativa } from './apoio/comentarios';
 import { consultarHistoricoTratativa, type Consulta } from './apoio/historico';
+import { fixarInstante, liberarRelogio } from './apoio/relogio';
 
 // Etapa 3 (RED): autorização dinâmica, segregação de menor privilégio e mascaramento LGPD.
 // CA9, CA10, CA11, CA12, CA12a, CA13, CA14, CA15, CA27a, CA35, CA36, CA37, CA38, CA39, CA40, CA41, CA42.
@@ -16,6 +17,10 @@ const enviar = POST as unknown as Envia;
 const consultar = GET as unknown as Consulta;
 
 jest.setTimeout(60000);
+
+beforeAll(() => fixarInstante('2026-10-13T12:00:00Z'));
+beforeEach(() => fixarInstante('2026-10-13T12:00:00Z'));
+afterEach(liberarRelogio);
 
 beforeAll(registrarCredenciais);
 

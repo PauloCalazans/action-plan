@@ -21,6 +21,9 @@ const PARECER_APROVADO = { parecer: 'Aprovado', fundamentacao: 'Eficacia confirm
 jest.setTimeout(60000);
 
 beforeAll(registrarCredenciais);
+beforeEach(() => {
+  fixarInstante('2026-10-13T12:00:00Z');
+});
 afterEach(liberarRelogio);
 
 async function nova(): Promise<string> {
@@ -222,8 +225,10 @@ describe('Aval Técnico — emissão e consulta pelo TratativaService (task 002)
       'Aval Técnico não pode ser emitido: exige nova Ação corretiva concluída ou cancelada criada após a última reprovação.',
     );
 
+    fixarInstante('2026-10-13T12:05:00Z');
     const novaAcao = await acaoConcluida(codigo);
     expect(novaAcao).not.toBe(acao);
+    fixarInstante('2026-10-13T12:10:00Z');
     const segundaEmissao = await emitirAval(enviar, codigo, PARECER_APROVADO, comoValidador);
     expect(segundaEmissao.status).toBe(204);
     const final = await consultarAval(consultar, codigo, comoGestor);

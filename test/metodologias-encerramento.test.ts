@@ -4,6 +4,7 @@ import { linhas } from './apoio/banco';
 import { comoValidador, emitirAval, consultarAval } from './apoio/aval';
 import { semearTratativaEncerradaLegada } from './apoio/legado';
 import { registrarCredenciais } from './apoio/credenciais';
+import { fixarInstante, liberarRelogio } from './apoio/relogio';
 import { criarAvulsa, mudarStatus, type Envia } from './apoio/tratativas';
 import { comoGestor } from './apoio/usuarios';
 
@@ -16,6 +17,10 @@ const FUNDAMENTACAO = 'Eficacia confirmada por testes em campo e evidencias revi
 
 jest.setTimeout(60000);
 beforeAll(registrarCredenciais);
+beforeEach(() => {
+  fixarInstante('2026-10-13T12:00:00Z');
+});
+afterEach(liberarRelogio);
 
 async function nova(): Promise<string> {
   const r = await criarAvulsa(enviar, { titulo: `Encerramento ${Date.now()}` });
@@ -128,6 +133,7 @@ describe('Encerramento condicionado ao Aval Técnico (task 003)', () => {
     expect(semAvalNovo.status).toBe(409);
     expect(erro(semAvalNovo).message).toBe(EXIGE_NOVO_AVAL);
 
+    fixarInstante('2026-10-13T12:05:00Z');
     await aprovar(codigo);
     const comAvalNovo = await mudarStatus(enviar, codigo, { status: 'Encerrada' }, comoGestor);
     expect(comAvalNovo.status).toBe(204);

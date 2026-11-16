@@ -7,6 +7,7 @@ import { delegarAcao } from './apoio/responsaveis';
 import { linhas } from './apoio/banco';
 import { instalarEspiao, type Espiao } from './apoio/banco-espiao';
 import { criarAcao, criarSubacao, mudarStatusAcao, editarAcao } from './apoio/acoes';
+import { fixarInstante, liberarRelogio } from './apoio/relogio';
 
 const UUID_INEXISTENTE = '00000000-0000-4000-8000-000000000000';
 
@@ -16,6 +17,10 @@ const consultar = GET;
 jest.setTimeout(60000);
 
 let espiao: Espiao;
+beforeAll(() => fixarInstante('2026-10-13T12:00:00Z'));
+beforeEach(() => fixarInstante('2026-10-13T12:00:00Z'));
+afterEach(liberarRelogio);
+
 beforeAll(async () => {
   await registrarCredenciais();
   espiao = instalarEspiao();

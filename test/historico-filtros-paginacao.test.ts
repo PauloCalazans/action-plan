@@ -4,6 +4,7 @@ import { criarAvulsa, editar, mudarStatus, sufixoUnico, type Envia } from './apo
 import { comoGestor } from './apoio/usuarios';
 import { criarAcao } from './apoio/acoes';
 import { consultarHistoricoTratativa, type Consulta } from './apoio/historico';
+import { fixarInstante, liberarRelogio } from './apoio/relogio';
 
 // Etapa 2 (RED): filtros avançados e validações de paginação.
 // CA21, CA22, CA22a, CA23, CA24, CA25, CA26, CA27, CA27a, CA28, CA29, CA30, CA31, CA32, CA33, CA34.
@@ -13,6 +14,10 @@ const enviar = POST as unknown as Envia;
 const consultar = GET as unknown as Consulta;
 
 jest.setTimeout(60000);
+
+beforeAll(() => fixarInstante('2026-10-13T12:00:00Z'));
+beforeEach(() => fixarInstante('2026-10-13T12:00:00Z'));
+afterEach(liberarRelogio);
 
 beforeAll(registrarCredenciais);
 

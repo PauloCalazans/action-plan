@@ -6,8 +6,13 @@ import { comentarAcao, listarComentariosAcao } from './apoio/comentarios';
 import { atribuirResponsavelPrincipal, incluirParticipante, delegarAcao } from './apoio/responsaveis';
 import { criarAcao, criarSubacao, mudarStatusAcao } from './apoio/acoes';
 import { registrarCredenciais } from './apoio/credenciais';
+import { fixarInstante, liberarRelogio } from './apoio/relogio';
 
 const { GET, POST } = cds.test(__dirname + '/..');
+
+beforeAll(() => fixarInstante('2026-10-13T12:00:00Z'));
+beforeEach(() => fixarInstante('2026-10-13T12:00:00Z'));
+afterEach(liberarRelogio);
 
 beforeAll(async () => {
   await registrarCredenciais();

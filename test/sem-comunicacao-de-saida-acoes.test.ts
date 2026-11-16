@@ -1,6 +1,7 @@
 import cds from '@sap/cds';
 import { criarAcao, criarSubacao, editarAcao, mudarStatusAcao } from './apoio/acoes';
 import { registrarCredenciais } from './apoio/credenciais';
+import { fixarInstante, liberarRelogio } from './apoio/relogio';
 import { criarAvulsa, type Envia } from './apoio/tratativas';
 import { comoGestor } from './apoio/usuarios';
 
@@ -14,6 +15,10 @@ const enviar = POST as unknown as Envia;
 jest.setTimeout(60000);
 
 beforeAll(registrarCredenciais);
+beforeEach(() => {
+  fixarInstante('2026-10-13T12:00:00Z');
+});
+afterEach(liberarRelogio);
 
 describe('CA86: nenhuma comunicação de saída nas operações de Ação', () => {
   it('criação, subação, transição e edição de Ações não chamam fetch externo nem https.request', async () => {

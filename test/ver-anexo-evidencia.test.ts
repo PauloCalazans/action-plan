@@ -22,6 +22,7 @@ import {
 import { atribuirResponsavelPrincipal, incluirParticipante } from './apoio/responsaveis';
 import { abrirPorApp, criarAvulsa, mudarStatus, sufixoUnico, type Envia } from './apoio/tratativas';
 import { comoApp, comoGestor, comoM1001, comoM2002, comoM9999, comoUsuario, semAuth } from './apoio/usuarios';
+import { fixarInstante, liberarRelogio } from './apoio/relogio';
 
 // Acesso ao anexo da Evidência pela tabela do App (/api/app/v1): propriedade de mídia `conteudo`
 // nos DOIS caminhos do Fiori elements (direto e por contenção). Autorização, 404 e auditoria seguem o download 006.
@@ -47,6 +48,10 @@ const comoMatricula = (matricula: string) => ({
 const comoM3003 = comoMatricula('M3003');
 
 let espiao: Espiao;
+
+beforeAll(() => fixarInstante('2026-10-13T12:00:00Z'));
+beforeEach(() => fixarInstante('2026-10-13T12:00:00Z'));
+afterEach(liberarRelogio);
 
 beforeAll(async () => {
   await registrarCredenciais();
