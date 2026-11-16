@@ -6,7 +6,7 @@ cd "$agentic_raiz" || exit 1
 [ -f agentic/.estado/settings.pendente.json ] || { echo "Não há agentic/.estado/settings.pendente.json (rode bootstrap/instalar.sh)."; exit 1; }
 if [ -f .claude/settings.json ]; then
   echo "Já existe .claude/settings.json — não sobrescrito."
-  echo "Faça o merge manual de agentic/.estado/settings.pendente.json (permissions.deny, hooks, enabledPlugins) e rode de novo depois de remover o pendente."
+  echo "Faça o merge manual de agentic/.estado/settings.pendente.json (permissions.deny, hooks, enabledPlugins) em .claude/settings.json, commite o resultado e apague o pendente; não é preciso rodar este script de novo."
   exit 1
 fi
 mkdir -p .claude
