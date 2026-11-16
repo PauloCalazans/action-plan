@@ -7,6 +7,7 @@ import { criarAvulsa, mudarStatus, sufixoUnico, type Envia } from './apoio/trata
 import { comoApp, comoGestor, comoM9999, semAuth } from './apoio/usuarios';
 import { criarAcao, mudarStatusAcao } from './apoio/acoes';
 import { consultarHistoricoTratativa, type Consulta } from './apoio/historico';
+import { fixarInstante, liberarRelogio } from './apoio/relogio';
 
 // Etapa 4 (RED): precedência consolidada D10, imutabilidade absoluta e integridade.
 // CA5, CA6, CA16, CA43, CA44, CA45, CA46, CA47, CA48, CA49, CA50, CA51, CA52, CA53.
@@ -20,6 +21,10 @@ const UUID_INEXISTENTE = '00000000-0000-4000-8000-000000000000';
 jest.setTimeout(60000);
 
 let espiao: Espiao;
+beforeAll(() => fixarInstante('2026-10-13T12:00:00Z'));
+beforeEach(() => fixarInstante('2026-10-13T12:00:00Z'));
+afterEach(liberarRelogio);
+
 beforeAll(async () => {
   await registrarCredenciais();
   espiao = instalarEspiao();

@@ -18,6 +18,9 @@ const UUID_INEXISTENTE = '00000000-0000-4000-8000-000000000000';
 
 jest.setTimeout(60000);
 beforeAll(registrarCredenciais);
+beforeEach(() => {
+  fixarInstante('2026-10-13T12:00:00Z');
+});
 afterEach(liberarRelogio);
 
 async function nova(): Promise<string> {

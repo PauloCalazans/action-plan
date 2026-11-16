@@ -8,6 +8,7 @@ import { criarAcao } from './apoio/acoes';
 import { emitirAval, comoValidador } from './apoio/aval';
 import { encerrarComAval } from './apoio/encerramento';
 import { registrarCredenciais } from './apoio/credenciais';
+import { fixarInstante, liberarRelogio } from './apoio/relogio';
 
 const { POST, GET } = cds.test(__dirname + '/..');
 const enviar = POST as unknown as Envia;
@@ -18,6 +19,10 @@ const HISTORICO_TRATATIVA = 'br.com.calazanstec.HistoricoTratativa';
 jest.setTimeout(60000);
 
 let espiao: Espiao;
+beforeAll(() => fixarInstante('2026-10-13T12:00:00Z'));
+beforeEach(() => fixarInstante('2026-10-13T12:00:00Z'));
+afterEach(liberarRelogio);
+
 beforeAll(async () => {
   await registrarCredenciais();
   espiao = instalarEspiao();

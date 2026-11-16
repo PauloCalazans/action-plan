@@ -6,6 +6,7 @@ import { criarAcao, criarSubacao } from './apoio/acoes';
 import { atribuirResponsavelPrincipal, incluirParticipante } from './apoio/responsaveis';
 import { sufixoUnico, type Envia } from './apoio/tratativas';
 import { linhas } from './apoio/banco';
+import { fixarInstante, liberarRelogio } from './apoio/relogio';
 
 const { GET, POST } = cds.test(__dirname + '/..');
 const enviar = POST as unknown as Envia;
@@ -71,6 +72,10 @@ async function anexo(
   if (resposta.status !== 200) throw new Error(`Falha ao anexar Evidência: HTTP ${resposta.status}`);
   return codigo(resposta.data);
 }
+
+beforeAll(() => fixarInstante('2026-10-13T12:00:00Z'));
+beforeEach(() => fixarInstante('2026-10-13T12:00:00Z'));
+afterEach(liberarRelogio);
 
 beforeAll(async () => {
   const sufixo = sufixoUnico().replace(/-/g, '');

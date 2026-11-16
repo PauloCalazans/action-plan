@@ -18,6 +18,7 @@ import {
   type Consulta,
 } from './apoio/responsaveis';
 import { linhas } from './apoio/banco';
+import { fixarInstante, liberarRelogio } from './apoio/relogio';
 import { comoApp, comoGestor, semAuth } from './apoio/usuarios';
 
 const { GET, POST } = cds.test(__dirname + '/..');
@@ -32,9 +33,11 @@ type Erro = { error?: { message?: string; target?: string } };
 const erroDe = (resposta: { data?: unknown }) => (resposta.data as Erro | undefined)?.error;
 
 beforeEach(() => {
+  fixarInstante('2026-10-13T12:00:00Z');
   limparPessoas();
   limparEstrutura();
 });
+afterEach(liberarRelogio);
 
 describe('integração SuccessFactors — estrutura, resiliência e precedência D10 (etapa 4)', () => {
   describe('CA13: operações de tratativa continuam disponíveis sem o SuccessFactors', () => {

@@ -18,6 +18,9 @@ const consultar = GET as unknown as Consulta;
 
 jest.setTimeout(60000);
 
+beforeAll(() => fixarInstante('2026-10-13T12:00:00Z'));
+beforeEach(() => fixarInstante('2026-10-13T12:00:00Z'));
+
 beforeAll(registrarCredenciais);
 afterEach(liberarRelogio);
 

@@ -16,6 +16,7 @@ import {
 import { atribuirResponsavelPrincipal, incluirParticipante } from './apoio/responsaveis';
 import { abrirPorApp, criarAvulsa, mudarStatus, sufixoUnico, type Envia } from './apoio/tratativas';
 import { comoApp, comoGestor, comoM1001, comoM2002, comoM9999, comoUsuario, semAuth } from './apoio/usuarios';
+import { fixarInstante, liberarRelogio } from './apoio/relogio';
 
 // Operações de linha no TratativaAppService (/api/app/v1): Ação e Evidência acionadas pela linha selecionada.
 // Cada operação é exercitada pelos DOIS caminhos (direto e por contenção), como o Fiori elements as invoca
@@ -41,6 +42,10 @@ const comoMatricula = (matricula: string) => ({
 const comoM3003 = comoMatricula('M3003');
 
 let espiao: Espiao;
+
+beforeAll(() => fixarInstante('2026-10-13T12:00:00Z'));
+beforeEach(() => fixarInstante('2026-10-13T12:00:00Z'));
+afterEach(liberarRelogio);
 
 beforeAll(async () => {
   await registrarCredenciais();
