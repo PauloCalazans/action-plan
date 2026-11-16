@@ -4,6 +4,7 @@
 **Status:** draft
 
 ## Decisões
+<!-- numere 1, 2, 3… sem o prefixo `D`: o prefixo é das decisões do projeto (agentic/projeto/decisoes.md) -->
 1. <decisão> — **Por quê:** <…> — **Verificado por:** <mecanismo | por revisão>
 
 ## Contrato executável
@@ -13,6 +14,14 @@
 ```
 <saída>
 ```
+- Declaração de corpos: <!-- todo corpo do contrato que não é o stub da stack, com o porquê; esperado: vazia ou só acesso trivial a dado -->
+  - Nenhum.
+
+## Impacto
+<!-- Toda linha `medido` (das buscas do `## Impacto` do brief, conferida no trecho, com arquivo:linha). Sem impacto fora dos arquivos novos: escreva `- Nenhum (só arquivos novos).` -->
+| Alterado (símbolo, rota, schema, regra) | Quem usa hoje (arquivo:linha, medido) | Em ## Arquivos de | Teste existente afetado | Regra de outra spec → emenda |
+|---|---|---|---|---|
+| <símbolo alterado> | <arquivo:linha> | <task NNN> | <teste ou "nenhum"> | <spec e regra, ou "nenhuma"> |
 
 ## Tasks
 | Task | Objetivo | Branch |

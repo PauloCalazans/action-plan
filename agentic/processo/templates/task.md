@@ -2,8 +2,9 @@
 
 **Spec:** agentic/projeto/specs/<nome>/spec.md
 **Status:** pendente
-<!-- pendente | em-andamento | em-revisão | publicada  (integrada não é escrito: deriva do git) -->
+<!-- pendente | em-revisão | publicada  (em-andamento e integrada não são escritos: derivam do git) -->
 **Branch:** <spec>/<NNN>-<nome>
+<!-- Branch empilhada (modo automático, só com plataforma de PR, task anterior ainda não integrada): acrescente a linha **Base:** <branch da task anterior>. -->
 
 ## Objetivo
 <uma frase>
@@ -23,7 +24,13 @@
 
 ## Critérios de pronto
 - <critério de aceite da spec coberto por esta task>
+<!-- Anote cada critério: `CA<n> (<R…>): <texto> → test: <arquivo>::<nome>` (mais de um teste: separe por `; `). O arquivo anotado precisa ser tocado por um commit test(red):. -->
 - `sh agentic/mecanismos/scripts/verify.sh` verde
 
 ## Questões em aberto
 - <…>
+
+## Rulings
+<!-- Decisões do orquestrador não previstas na spec, no design ou nesta task (agentic/processo/ciclo.md, "Rulings"). -->
+- R-1 (<fase>): <o quê> — por quê: <…> — descartado: <alternativa>
+<!-- ou: - Nenhuma. -->
